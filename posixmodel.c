@@ -463,39 +463,111 @@ static int model_opendir(struct posixmodel *m, struct inode *cwd,
 /*   return 0; */
 /* } */
 
-static void inode_output(struct inode *i,
-                         hashset *read_from_directories,
-                         hashset *read_from_files,
-                         hashset *written_to_files) {
+static void inode_output_sizes(struct inode *i,
+                               int *num_read_from_directories,
+                               int *num_read_from_files,
+                               int *num_written_to_files,
+                               long *read_from_directories,
+                               long *read_from_files,
+                               long *written_to_files) {
   if (i->type == is_directory) {
     if (i->is_read) {
       char *iname = model_realpath(i);
-      /* printf("l: %s\n", iname); */
-      insert_to_hashset(read_from_directories, iname);
+      *num_read_from_directories += 1;
+      *read_from_directories += strlen(iname) + 1;
       free(iname);
     }
     for (struct hash_entry *e = i->c.children.first; e; e = e->next) {
-      inode_output((struct inode *)e,
-                   read_from_directories, read_from_files, written_to_files);
+      inode_output_sizes((struct inode *)e,
+                         num_read_from_directories, num_read_from_files,
+                         num_written_to_files,
+                         read_from_directories, read_from_files,
+                         written_to_files);
     }
     return;
   }
   if (i->is_written) {
     char *iname = model_realpath(i);
-    /* printf("w: %s\n", iname); */
-    insert_to_hashset(written_to_files, iname);
+    *num_written_to_files += 1;
+    *written_to_files += strlen(iname)+1;
     free(iname);
   } else if (i->is_read) {
     char *iname = model_realpath(i);
-    /* printf("r: %s\n", iname); */
-    insert_to_hashset(read_from_files, iname);
+    *num_read_from_files += 1;
+    *read_from_files += strlen(iname)+1;
+    free(iname);
+  }
+}
+
+static void inode_output(struct inode *i,
+                         char ***directory_array,
+                         char ***read_array,
+                         char ***write_array,
+                         char **directory_ptr,
+                         char **read_ptr,
+                         char **write_ptr) {
+  if (i->type == is_directory) {
+    if (i->is_read) {
+      char *iname = model_realpath(i);
+      char *from = iname;
+      **directory_array = *directory_ptr;
+      *directory_array += 1;
+      while (*from) {
+        *(*directory_ptr)++ = *from++; // copy the key and advance the string;
+      }
+      *(*directory_ptr)++ = 0; // add the null termination
+      free(iname);
+    }
+    for (struct hash_entry *e = i->c.children.first; e; e = e->next) {
+      inode_output((struct inode *)e,
+                   directory_array, read_array, write_array,
+                   directory_ptr, read_ptr, write_ptr);
+    }
+    return;
+  }
+  if (i->is_written) {
+    char *iname = model_realpath(i);
+    char *from = iname;
+    **write_array = *write_ptr;
+    *write_array += 1;
+    while (*from) {
+      *(*write_ptr)++ = *from++; // copy the key and advance the string;
+    }
+    *(*write_ptr)++ = 0; // add the null termination
+    free(iname);
+  } else if (i->is_read) {
+    char *iname = model_realpath(i);
+    char *from = iname;
+    **read_array = *read_ptr;
+    *read_array += 1;
+    while (*from) {
+      *(*read_ptr)++ = *from++; // copy the key and advance the string;
+    }
+    *(*read_ptr)++ = 0; // add the null termination
     free(iname);
   }
 }
 
 static void model_output(struct posixmodel *m,
-                         hashset *read_from_directories,
-                         hashset *read_from_files,
-                         hashset *written_to_files) {
-  inode_output(m->root, read_from_directories, read_from_files, written_to_files);
+                         char ***read_from_directories,
+                         char ***read_from_files,
+                         char ***written_to_files) {
+  int num_directories = 0, num_read = 0, num_written = 0;
+  long size_directories = 0, size_read = 0, size_written = 0;
+  inode_output_sizes(m->root, &num_directories, &num_read, &num_written,
+                     &size_directories, &size_read, &size_written);
+  *read_from_directories = malloc((num_directories + 1)*sizeof(char *)
+                                  + size_directories);
+  *read_from_files = malloc((num_read + 1)*sizeof(char *) + size_read);
+  *written_to_files = malloc((num_written + 1)*sizeof(char *) + size_written);
+  (*read_from_directories)[num_directories] = 0;
+  (*read_from_files)[num_read] = 0;
+  (*written_to_files)[num_written] = 0;
+  char **da = *read_from_directories;
+  char **ra = *read_from_files;
+  char **wa = *written_to_files;
+  char *dp = (char *)(*read_from_directories + num_directories + 1);
+  char *rp = (char *)(*read_from_files + num_read + 1);
+  char *wp = (char *)(*written_to_files + num_written + 1);
+  inode_output(m->root, &da, &ra, &wa, &dp, &rp, &wp);
 }

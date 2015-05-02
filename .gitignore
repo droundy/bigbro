@@ -7,3 +7,6 @@ nolib-bigbro
 __pycache__
 *.a
 .fac
+*.err
+*.out
+*.test

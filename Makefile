@@ -9,7 +9,7 @@ syscalls/freebsd.h : syscalls syscalls/freebsd.py syscalls/freebsd/syscalls.mast
 syscalls/linux.h : syscalls syscalls/gentables.py syscalls/linux.py syscalls/linux/unistd_32.h syscalls/linux/unistd_64.h
 	python3 syscalls/linux.py > syscalls/linux.h
 
-bigbro.o : bigbro.c bigbro.h errors.h hashset.c hashset.h intmap.c intmap.h iterablehash.c iterablehash.h posixmodel.c posixmodel.h syscalls/darwin.h syscalls/freebsd.h syscalls/linux.h
+bigbro.o : bigbro.c bigbro.h errors.h intmap.c intmap.h iterablehash.c iterablehash.h posixmodel.c posixmodel.h syscalls/darwin.h syscalls/freebsd.h syscalls/linux.h
 	gcc -Wall -Werror -O2 -std=c99 -g -mtune=native -c bigbro.c
 
 libbigbro.a : bigbro.o

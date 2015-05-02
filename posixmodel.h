@@ -1,7 +1,6 @@
 #ifndef POSIXMODEL_H
 #define POSIXMODEL_H
 
-#include "hashset.c"
 #include "intmap.c"
 
 #include <sys/types.h>
@@ -67,10 +66,5 @@ static void model_rename(struct posixmodel *m, struct inode *cwd,
 
 static struct inode *model_creat(struct posixmodel *m, struct inode *cwd,
                                  const char *path);
-
-static void model_output(struct posixmodel *m,
-                         hashset *read_from_directories,
-                         hashset *read_from_files,
-                         hashset *written_to_files);
 
 #endif
