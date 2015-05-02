@@ -1,0 +1,9 @@
+*~
+syscalls/*.h
+*.o
+*.tum
+bigbro
+nolib-bigbro
+__pycache__
+*.a
+.fac
