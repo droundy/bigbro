@@ -12,19 +12,19 @@ static unsigned long hash_function(const char *strinput) {
   return hash;
 }
 
-void init_hash_table(struct hash_table *h, int size) {
+static void init_hash_table(struct hash_table *h, int size) {
   h->size = size;
   h->num_entries = 0;
   h->first = 0;
   h->table = calloc(sizeof(struct hash_entry *), size);
 }
 
-void free_hash_table(struct hash_table *h) {
+static void free_hash_table(struct hash_table *h) {
   free(h->table); /* assume entries are already freed */
 }
 
 /* Find the data stored under str in the hash */
-struct hash_entry * lookup_in_hash(struct hash_table *hash, const char *str) {
+static struct hash_entry * lookup_in_hash(struct hash_table *hash, const char *str) {
   unsigned long h = hash_function(str) % hash->size;
   struct hash_entry *e = hash->table[h];
   while (e) {
@@ -36,7 +36,7 @@ struct hash_entry * lookup_in_hash(struct hash_table *hash, const char *str) {
 }
 
 /* Add the entry to the hash */
-void add_to_hash(struct hash_table *hash, struct hash_entry *e) {
+static void add_to_hash(struct hash_table *hash, struct hash_entry *e) {
   assert(!lookup_in_hash(hash, e->key));
   hash->num_entries++;
   unsigned long h = hash_function(e->key) % hash->size;
@@ -51,7 +51,7 @@ void add_to_hash(struct hash_table *hash, struct hash_entry *e) {
   }
 }
 
-void remove_from_hash(struct hash_table *hash, struct hash_entry *e) {
+static void remove_from_hash(struct hash_table *hash, struct hash_entry *e) {
   assert(lookup_in_hash(hash, e->key));
   struct hash_entry *x = hash->first;
   if (x == e) {

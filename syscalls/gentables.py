@@ -4,7 +4,7 @@ import re, os
 
 def bool_table(name, syscalls, sysnames, postfix):
     print("""
-const int %s%s[] = {""" % (name, postfix))
+static const int %s%s[] = {""" % (name, postfix))
 
     successive_borings = ''
     for i in range(len(sysnames)-1):
@@ -30,7 +30,7 @@ const int %s%s[] = {""" % (name, postfix))
 
 def argument_table(name, syscall_argument, sysnames, postfix):
     print("""
-const int %s%s[] = {""" % (name, postfix))
+static const int %s%s[] = {""" % (name, postfix))
 
     successive_borings = ''
     for i in range(len(sysnames)-1):
@@ -58,7 +58,7 @@ const int %s%s[] = {""" % (name, postfix))
 def tables(sysnames, postfix):
     maxnum = len(sysnames)-1
     print("""
-const char *syscalls%s[] = {""" % postfix)
+static const char *syscalls%s[] = {""" % postfix)
     for i in range(len(sysnames)-1):
         print('  /*%4d */ "%s",' % (i, sysnames[i]))
     print('  "%s"' % sysnames[-1])

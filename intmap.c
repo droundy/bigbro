@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void init_intmap(struct intmap *m) {
+static void init_intmap(struct intmap *m) {
   m->size = 128;
   m->num_ints = 0;
   m->table = malloc(m->size*sizeof(struct intmap_entry));
@@ -12,7 +12,7 @@ void init_intmap(struct intmap *m) {
   m->data = 0;
 }
 
-struct intmap *dup_intmap(struct intmap *m) {
+static struct intmap *dup_intmap(struct intmap *m) {
   struct intmap *o = malloc(sizeof(struct intmap));
   o->size = m->size;
   o->num_ints = m->num_ints;
@@ -24,7 +24,7 @@ struct intmap *dup_intmap(struct intmap *m) {
   return o;
 }
 
-void free_intmap(struct intmap *m, void (*free_datum)(void *)) {
+static void free_intmap(struct intmap *m, void (*free_datum)(void *)) {
   if (free_datum) {
     for (int i=0;i<m->data_size;i++) {
       if (m->data[i]) {
@@ -49,7 +49,7 @@ static void place_whichdatum(struct intmap *m, int key, int whichdatum) {
   m->num_ints += 1;
 }
 
-void add_to_intmap(struct intmap *m, int key, void *datum) {
+static void add_to_intmap(struct intmap *m, int key, void *datum) {
   int whichdatum = -1;
   for (int i=0;i<m->data_size;i++) {
     if (!m->data[i]) {
@@ -80,7 +80,7 @@ void add_to_intmap(struct intmap *m, int key, void *datum) {
   place_whichdatum(m, key, whichdatum);
 }
 
-void *lookup_intmap(struct intmap *m, int key) {
+static void *lookup_intmap(struct intmap *m, int key) {
   unsigned int h = (unsigned int)key % m->size;
   while (m->table[h].whichdatum != -1 && m->table[h].key != key) {
     h++;
@@ -91,7 +91,7 @@ void *lookup_intmap(struct intmap *m, int key) {
   return 0;
 }
 
-void remove_intmapping(struct intmap *m, int key, void (*free_datum)(void *)) {
+static void remove_intmapping(struct intmap *m, int key, void (*free_datum)(void *)) {
   unsigned int h = (unsigned int)key % m->size;
   while (m->table[h].whichdatum != -1 && m->table[h].key != key) {
     h++;

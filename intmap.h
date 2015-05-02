@@ -12,13 +12,13 @@ struct intmap {
   void **data;
 };
 
-void init_intmap(struct intmap *m);
-void free_intmap(struct intmap *m, void (*free_datum)(void *));
-struct intmap *dup_intmap(struct intmap *m);
+static void init_intmap(struct intmap *m);
+static void free_intmap(struct intmap *m, void (*free_datum)(void *));
+static struct intmap *dup_intmap(struct intmap *m);
 
-void *lookup_intmap(struct intmap *m, int key);
+static void *lookup_intmap(struct intmap *m, int key);
 
-void add_to_intmap(struct intmap *m, int key, void *datum);
-void remove_intmapping(struct intmap *m, int key, void (*free_datum)(void *));
+static void add_to_intmap(struct intmap *m, int key, void *datum);
+static void remove_intmapping(struct intmap *m, int key, void (*free_datum)(void *));
 
 #endif

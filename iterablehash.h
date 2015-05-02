@@ -12,14 +12,14 @@ struct hash_table {
   struct hash_entry **table;
 };
 
-void init_hash_table(struct hash_table *h, int size);
-void free_hash_table(struct hash_table *h);
+static void init_hash_table(struct hash_table *h, int size);
+static void free_hash_table(struct hash_table *h);
 
 /* Find the data stored under str in the hash */
-struct hash_entry * lookup_in_hash(struct hash_table *hash, const char *str);
+static struct hash_entry * lookup_in_hash(struct hash_table *hash, const char *str);
 
 /* Add the entry to the hash */
-void add_to_hash(struct hash_table *hash, struct hash_entry *e);
-void remove_from_hash(struct hash_table *hash, struct hash_entry *e);
+static void add_to_hash(struct hash_table *hash, struct hash_entry *e);
+static void remove_from_hash(struct hash_table *hash, struct hash_entry *e);
 
 #endif
