@@ -2,6 +2,10 @@
 
 import string, os, glob, sys
 
+platform = sys.platform
+if platform == 'linux2':
+    platform = 'linux'
+
 os.system('rm -rf testing-flags');
 os.mkdir('testing-flags');
 with open('testing-flags/test.c', 'w') as f:
@@ -32,9 +36,9 @@ print("""
 < syscalls/freebsd.h
 < syscalls/darwin.h
 
-| ar rc libbigbro.a bigbro-%s.o; ranlib libbigbro.a
+| ar rc libbigbro.a bigbro-%s.o && ranlib libbigbro.a
 > libbigbro.a
-""" % (cc, cflags, sys.platform, sys.platform))
+""" % (cc, cflags, platform, platform))
 
 print("""
 | %s %s -o bigbro -L. fileaccesses.c -lbigbro
@@ -47,7 +51,7 @@ print("""
 < syscalls/freebsd.h
 < syscalls/darwin.h
 > nolib-bigbro
-""" % (cc, cflags, sys.platform))
+""" % (cc, cflags, platform))
 
 for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
