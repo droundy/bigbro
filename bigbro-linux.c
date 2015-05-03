@@ -39,8 +39,6 @@ static inline void debugprintf(const char *format, ...) {
   va_end(args);
 }
 
-#ifdef __linux__
-
 static inline char *debug_realpath(struct inode *i) {
   // WARNING: only use this function as an input to debugprintf!
   if (debug_output) return model_realpath(i);
@@ -613,5 +611,3 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   }
   return 0;
 }
-
-#endif
