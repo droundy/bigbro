@@ -2,12 +2,16 @@
 
 from __future__ import print_function
 
-import glob, os, importlib
+import glob, os, importlib, sys
+
+platform = sys.platform
+if platform == 'linux2':
+    platform = 'linux'
 
 assert not os.system('rm -rf tests/*.test')
 print('building bigbro...')
 print('==================')
-assert not os.system('sh build.sh')
+assert not os.system('sh build-%s.sh' % platform)
 
 numfailures = 0
 

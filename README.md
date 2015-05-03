@@ -35,7 +35,7 @@ Building
 
 To build bigbro, you just need run:
 
-    sh build.sh
+    sh build-linux.sh
 
 To build it and run the test suite, run:
 
