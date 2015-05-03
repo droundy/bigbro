@@ -18,7 +18,8 @@ int main(int argc, char **argv) {
   }
   if (num > 1000) {
     printf("We are finally all done!\n");
-    fopen("tmp.forks", "w");
+    chdir("tmp/subdir1");
+    fopen("deepdir/forks", "w");
     exit(0);
   }
   pid_t child = fork();

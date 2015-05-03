@@ -5,7 +5,7 @@ def passes(err):
         return False
     if 'libc' not in err:
         return False
-    tmpfiles = re.compile(r'w: /[^\n]+/tmp.forks\n', re.M).findall(err)
+    tmpfiles = re.compile(r'w: /[^\n]+/tmp/subdir1/deepdir/forks\n', re.M).findall(err)
     if len(tmpfiles) != 1:
         return False
     written = re.compile(r'w: /[^\n]+\n', re.M).findall(err)
