@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import string, os, glob
+import string, os, glob, sys
 
 os.system('rm -rf testing-flags');
 os.mkdir('testing-flags');
@@ -27,14 +27,14 @@ print('# cc=', repr(cc)) # in future, we should set this dynamically
 print('# cflags=', repr(cflags))
 
 print("""
-| %s %s -c bigbro.c
+| %s %s -c bigbro-%s.c
 < syscalls/linux.h
 < syscalls/freebsd.h
 < syscalls/darwin.h
 
-| ar rc libbigbro.a bigbro.o; ranlib libbigbro.a
+| ar rc libbigbro.a bigbro-%s.o; ranlib libbigbro.a
 > libbigbro.a
-""" % (cc, cflags))
+""" % (cc, cflags, sys.platform, sys.platform))
 
 print("""
 | %s %s -o bigbro -L. fileaccesses.c -lbigbro
@@ -42,12 +42,12 @@ print("""
 """ % (cc, cflags))
 
 print("""
-| %s %s -o nolib-bigbro fileaccesses.c bigbro.c
+| %s %s -o nolib-bigbro fileaccesses.c bigbro-%s.c
 < syscalls/linux.h
 < syscalls/freebsd.h
 < syscalls/darwin.h
 > nolib-bigbro
-""" % (cc, cflags))
+""" % (cc, cflags, sys.platform))
 
 for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
