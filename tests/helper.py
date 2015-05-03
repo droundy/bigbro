@@ -39,6 +39,7 @@ def count_readdir(err, num):
 
 def count_reads(err, num):
     fs = re.compile(r'r: /[^\n]+\n', re.M).findall(err)
+    fs = [f for f in fs if 'r: /proc/' not in f]
     if len(fs) != num:
         print('  did not read', num, fs)
         return False
