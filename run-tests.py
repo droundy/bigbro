@@ -17,11 +17,11 @@ for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
     test = base+'.test'
     if '-static' in testc:
-        if os.system('${CC-gcc} -static -O2 -o %s %s' % (test, testc)):
+        if os.system('${CC-gcc} -Wall -static -O2 -o %s %s' % (test, testc)):
             print('%s fails to compile, skipping test' % testc)
             continue
     else:
-        if os.system('${CC-gcc} -O2 -o %s %s' % (test, testc)):
+        if os.system('${CC-gcc} -Wall -O2 -o %s %s' % (test, testc)):
             print('%s fails to compile, skipping test' % testc)
             continue
     os.system('rm -rf tmp*')

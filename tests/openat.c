@@ -6,6 +6,6 @@
 
 int main() {
   int tmpd = open("tmp", O_RDONLY | O_DIRECTORY);
-  openat(tmpd, "openat", O_WRONLY | O_CREAT | O_EXCL);
+  openat(tmpd, "openat", O_WRONLY | O_CREAT | O_EXCL, 0666);
   return 0;
 }
