@@ -1,11 +1,11 @@
 import re
 
 def passes(err):
-    if 'tests/vforktest.test' not in err:
+    if 'tests/vforks.test' not in err:
         return False
     if 'libc' not in err:
         return False
-    tmpfiles = re.compile(r'w: /[^\n]+/tmp.vforktest\n', re.M).findall(err)
+    tmpfiles = re.compile(r'w: /[^\n]+/tmp.vforks\n', re.M).findall(err)
     if len(tmpfiles) != 1:
         return False
     written = re.compile(r'w: /[^\n]+\n', re.M).findall(err)

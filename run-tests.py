@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import glob, os, importlib
 
+assert not os.system('rm -rf tests/*.test')
 assert not os.system('fac --makefile Makefile bigbro')
 assert not os.system('fac')
 
