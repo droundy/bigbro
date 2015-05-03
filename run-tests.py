@@ -17,6 +17,8 @@ for test in glob.glob('tests/*.test'):
     os.mkdir('tmp/subdir1')
     os.mkdir('tmp/subdir1/deepdir')
     os.mkdir('tmp/subdir2')
+    os.system('echo test > tmp/subdir2/test')
+    os.system('echo foo > tmp/foo')
     assert not os.system('./bigbro %s 2> %s.err 1> %s.out'
                          % (test, base, base));
     err = open(base+'.err','r').read()
