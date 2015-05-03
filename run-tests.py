@@ -5,13 +5,25 @@ from __future__ import print_function
 import glob, os, importlib
 
 assert not os.system('rm -rf tests/*.test')
-assert not os.system('fac --makefile Makefile bigbro')
-assert not os.system('fac')
+print('building bigbro...')
+print('==================')
+assert not os.system('sh build.sh')
 
 numfailures = 0
 
-for test in glob.glob('tests/*.test'):
-    base = test[:-5]
+print('running tests:')
+print('==============')
+for testc in glob.glob('tests/*.c'):
+    base = testc[:-2]
+    test = base+'.test'
+    if '-static' in testc:
+        if os.system('${CC-gcc} -static -O2 -o %s %s' % (test, testc)):
+            print('%s fails to compile, skipping test' % testc)
+            continue
+    else:
+        if os.system('${CC-gcc} -O2 -o %s %s' % (test, testc)):
+            print('%s fails to compile, skipping test' % testc)
+            continue
     os.system('rm -rf tmp*')
     os.mkdir('tmp')
     os.mkdir('tmp/subdir1')

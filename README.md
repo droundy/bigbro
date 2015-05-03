@@ -29,3 +29,14 @@ and is as easy to use as `strace`:
 
 The purpose of `bigbro` is primarily to enable easy testing of
 `libbigbro`.
+
+Building
+--------
+
+To build bigbro, you just need run:
+
+    sh build.sh
+
+To build it and run the test suite, run:
+
+    python3 run-tests.py

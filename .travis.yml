@@ -1,0 +1,8 @@
+language: c
+compiler:
+  - gcc
+  - clang
+script: python3 run-tests.py
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y python3
