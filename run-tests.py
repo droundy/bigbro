@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 
+from __future__ import print_function
+
 import glob, os, importlib
+
+assert not os.system('fac --makefile Makefile bigbro')
+assert not os.system('fac')
 
 for test in glob.glob('tests/*.test'):
     base = test[:-5]
