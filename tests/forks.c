@@ -16,9 +16,24 @@ int main(int argc, char **argv) {
   } else {
     sscanf(argv[1], "%d", &num);
   }
+  if (num == 7) {
+    chdir("tmp");
+    argv[0] = "../tests/forks.test";
+  }
+  if (num == 37) {
+    chdir("subdir2");
+    argv[0] = "../../tests/forks.test";
+  }
+  if (num == 73) {
+    chdir("..");
+    argv[0] = "../tests/forks.test";
+  }
+  if (num == 137) {
+    chdir("subdir1");
+    argv[0] = "../../tests/forks.test";
+  }
   if (num > 1000) {
     printf("We are finally all done!\n");
-    chdir("tmp/subdir1");
     fopen("deepdir/forks", "w");
     exit(0);
   }

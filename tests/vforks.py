@@ -1,6 +1,6 @@
 import re
 
-def passes(err):
+def passes(out, err):
     if 'tests/vforks.test' not in err:
         return False
     if 'libc' not in err:

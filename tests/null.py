@@ -1,4 +1,4 @@
-def passes(err):
+def passes(out, err):
     if 'tests/null.test' not in err:
         return False
     if 'libc' not in err:

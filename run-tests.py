@@ -12,6 +12,7 @@ numfailures = 0
 
 for test in glob.glob('tests/*.test'):
     base = test[:-5]
+    os.system('rm -rf tmp*')
     os.mkdir('tmp')
     os.mkdir('tmp/subdir1')
     os.mkdir('tmp/subdir1/deepdir')
@@ -19,9 +20,10 @@ for test in glob.glob('tests/*.test'):
     assert not os.system('./bigbro %s 2> %s.err 1> %s.out'
                          % (test, base, base));
     err = open(base+'.err','r').read()
+    out = open(base+'.out','r').read()
     m = importlib.import_module('tests.'+base[6:])
     # print(err)
-    if m.passes(err):
+    if m.passes(out, err):
         print(test, "passes")
     else:
         print(test, "FAILS!")
