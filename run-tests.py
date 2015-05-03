@@ -15,8 +15,8 @@ assert not os.system('sh build-%s.sh' % platform)
 
 numfailures = 0
 
-print('running tests:')
-print('==============')
+print('running C tests:')
+print('================')
 for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
     test = base+'.test'
@@ -45,6 +45,32 @@ for testc in glob.glob('tests/*.c'):
         print(test, "passes")
     else:
         print(test, "FAILS!")
+        numfailures += 1
+    os.system('rm -rf tmp*')
+
+test = None # to avoid bugs below where we refer to test
+print()
+print('running sh tests:')
+print('=================')
+for testsh in glob.glob('tests/*.sh'):
+    base = testsh[:-3]
+    os.system('rm -rf tmp*')
+    os.mkdir('tmp')
+    os.mkdir('tmp/subdir1')
+    os.mkdir('tmp/subdir1/deepdir')
+    os.mkdir('tmp/subdir2')
+    os.system('echo test > tmp/subdir2/test')
+    os.system('echo foo > tmp/foo')
+    assert not os.system('./bigbro sh %s 2> %s.err 1> %s.out'
+                         % (testsh, base, base));
+    err = open(base+'.err','r').read()
+    out = open(base+'.out','r').read()
+    m = importlib.import_module('tests.'+base[6:])
+    # print(err)
+    if m.passes(out, err):
+        print(testsh, "passes")
+    else:
+        print(testsh, "FAILS!")
         numfailures += 1
     os.system('rm -rf tmp*')
 
