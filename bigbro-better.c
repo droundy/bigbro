@@ -38,7 +38,7 @@
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
 
-static const int debug_output = 0;
+static const int debug_output = 1;
 
 static inline void debugprintf(const char *format, ...) {
   va_list args;
@@ -474,6 +474,17 @@ static int save_syscall_access(pid_t child, hashset *read_h,
     debugprintf("%d: %s(%d) -> %d\n", child, name, fd, retval);
     if (retval >= 0) {
       read_dir_fd(child, fd, read_h, readdir_h);
+    }
+  } else if (!strcmp(name, "chdir")) {
+    char *arg = read_a_string(child, get_syscall_arg(regs, 0));
+    /* not actually a file, but this gets symlinks in the chdir path */
+    read_file_at(child, -1, arg, read_h);
+    int retval = wait_for_return_value(child, read_h, readdir_h, written_h);
+    if (arg) {
+      debugprintf("%d: chdir(%s) -> %d\n", child, arg, retval);
+      free(arg);
+    } else {
+      debugprintf("%d: chdir(NULL) -> %d\n", child, retval);
     }
   }
 

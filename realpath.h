@@ -59,6 +59,7 @@ static inline char *nice_realpath(const char *name, char *resolved,
     /* As per Single Unix Specification V2 we must return an error if
        the name argument points to an empty string.  */
     errno = (ENOENT);
+    printf("ENOENT\n");
     return NULL;
   }
 
@@ -66,7 +67,10 @@ static inline char *nice_realpath(const char *name, char *resolved,
 
   if (resolved == NULL) {
     rpath = malloc(path_max);
-    if (rpath == NULL) return NULL;
+    if (rpath == NULL) {
+      printf("malloc failed\n");
+      return NULL;
+    }
   } else {
     rpath = resolved;
   }
@@ -75,6 +79,7 @@ static inline char *nice_realpath(const char *name, char *resolved,
   if (name[0] != '/') {
     /* only handle absolute paths! */
     rpath[0] = '\0';
+    printf("not absolute\n");
     goto error;
     /* if (!getcwd(rpath, path_max)) { */
     /*   rpath[0] = '\0'; */
@@ -119,6 +124,7 @@ static inline char *nice_realpath(const char *name, char *resolved,
           errno = (ENAMETOOLONG);
           if (dest > rpath + 1) dest--;
           *dest = '\0';
+          printf("msdgg\n");
           goto error;
         }
         new_size = rpath_limit - rpath;
@@ -127,8 +133,11 @@ static inline char *nice_realpath(const char *name, char *resolved,
         } else {
           new_size += path_max;
         }
-        new_rpath = (char *) realloc (rpath, new_size);
-        if (new_rpath == NULL) goto error;
+        new_rpath = (char *) realloc(rpath, new_size);
+        if (new_rpath == NULL) {
+          printf("remalloc failed here\n");
+          goto error;
+        }
         rpath = new_rpath;
         rpath_limit = rpath + new_size;
 
@@ -138,11 +147,16 @@ static inline char *nice_realpath(const char *name, char *resolved,
       dest = mempcpy(dest, start, end - start);
       *dest = '\0';
 
-      if (lstat(rpath, &st) < 0) goto error;
+      if (lstat(rpath, &st) < 0) {
+        st.st_mode = 0; /* don't treat it as a symlink */
+        /* printf("lstat %s failed\n", rpath); */
+        /* goto error; */
+      }
 
-      if (S_ISLNK (st.st_mode)) {
+      if (S_ISLNK(st.st_mode)) {
         if (++num_links > MAXSYMLINKS) {
           errno = (ELOOP);
+          printf("loopdsgdsgmalloc failed\n");
           goto error;
         }
 
@@ -150,7 +164,10 @@ static inline char *nice_realpath(const char *name, char *resolved,
         if (!buf) buf = malloc(path_max);
         size_t len;
         n = readlink(rpath, buf, path_max - 1);
-        if (n < 0) goto error;
+        if (n < 0) {
+          printf("readlink failed\n");
+          goto error;
+        }
         buf[n] = '\0';
 
         if (!extra_buf) extra_buf = malloc(path_max);
@@ -158,6 +175,7 @@ static inline char *nice_realpath(const char *name, char *resolved,
         len = strlen (end);
         if ((long int) (n + len) >= path_max) {
           errno = (ENAMETOOLONG);
+          printf("malldsdgsdshoc failed\n");
           goto error;
         }
 
@@ -173,8 +191,9 @@ static inline char *nice_realpath(const char *name, char *resolved,
             while ((--dest)[-1] != '/');
           }
         }
-      } else if (!S_ISDIR (st.st_mode) && *end != '\0') {
+      } else if (!S_ISDIR(st.st_mode) && *end != '\0') {
         errno = (ENOTDIR);
+        printf("notdire failed\n");
         goto error;
       }
     }

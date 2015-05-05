@@ -35,8 +35,12 @@ for testc in glob.glob('tests/*.c'):
     os.mkdir('tmp/subdir2')
     os.system('echo test > tmp/subdir2/test')
     os.system('echo foo > tmp/foo')
-    assert not os.system('./bigbro %s 2> %s.err 1> %s.out'
-                         % (test, base, base));
+    cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
+    if os.system(cmd):
+        os.system('cat %s.out' % base);
+        os.system('cat %s.err' % base);
+        print("command failed:", cmd)
+        exit(1)
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
     m = importlib.import_module('tests.'+base[6:])
@@ -46,7 +50,6 @@ for testc in glob.glob('tests/*.c'):
     else:
         print(test, "FAILS!")
         numfailures += 1
-    os.system('rm -rf tmp*')
 
 test = None # to avoid bugs below where we refer to test
 print()
@@ -64,8 +67,12 @@ for testsh in glob.glob('tests/*.sh'):
     os.system('echo test > tmp/subdir2/test')
     os.system('echo foo > tmp/foo')
     os.system('ln -s ../foo tmp/subdir1/foo_symlink')
-    assert not os.system('./bigbro sh %s 2> %s.err 1> %s.out'
-                         % (testsh, base, base));
+    cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+    if os.system(cmd):
+        os.system('cat %s.out' % base);
+        os.system('cat %s.err' % base);
+        print("command failed:", cmd)
+        exit(1)
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
     m = importlib.import_module('tests.'+base[6:])
@@ -75,7 +82,6 @@ for testsh in glob.glob('tests/*.sh'):
     else:
         print(testsh, "FAILS!")
         numfailures += 1
-    os.system('rm -rf tmp*')
 
 if numfailures > 0:
     print("\nTests FAILED!!!")
