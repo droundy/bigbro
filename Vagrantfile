@@ -23,24 +23,24 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.define "trusty32" do |trusty32|
     trusty32.vm.box = "ubuntu/trusty32"
-    trusty32.vm.autostart = false
+    #trusty32.vm.autostart = false
 
     trusty32.vm.provision :shell, path: "vagrant/provision-trusty.sh"
   end
 
-  config.vm.define "freebsd64" do |freebsd64|
-    freebsd64.vm.box = "chef/freebsd-10.0"
-    freebsd64.vm.autostart = false
+  # config.vm.define "freebsd64" do |freebsd64|
+  #   freebsd64.vm.box = "chef/freebsd-10.0"
+  #   #freebsd64.vm.autostart = false
 
-    freebsd64.vm.provision :shell, path: "vagrant/provision-freebsd.sh"
-  end
+  #   freebsd64.vm.provision :shell, path: "vagrant/provision-freebsd.sh"
+  # end
 
-  config.vm.define "freebsd32" do |freebsd32|
-    freebsd32.vm.box = "chef/freebsd-9.2-i386"
-    freebsd32.vm.autostart = false
+  # config.vm.define "freebsd32" do |freebsd32|
+  #   freebsd32.vm.box = "chef/freebsd-9.2-i386"
+  #   #freebsd32.vm.autostart = false
 
-    freebsd32.vm.provision :shell, path: "vagrant/provision-freebsd.sh"
-  end
+  #   freebsd32.vm.provision :shell, path: "vagrant/provision-freebsd.sh"
+  # end
 
   # config.vm.define "win7" do |win7|
   #   win7.vm.box = "http://aka.ms/vagrant-win7-ie11"
