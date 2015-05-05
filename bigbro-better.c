@@ -38,7 +38,7 @@
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
 
-static const int debug_output = 1;
+static const int debug_output = 0;
 
 static inline void debugprintf(const char *format, ...) {
   va_list args;
@@ -154,7 +154,7 @@ static pid_t wait_for_syscall(hashset *read_h, hashset *readdir_h,
     long signal_to_send_back = 0;
     child = waitpid(-firstborn, &status, __WALL);
     if (child == -1) error(1, errno, "trouble waiting");
-    if (WIFSTOPPED(status) && WSTOPSIG(status) & 0x80) {
+    if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
       return child;
     } else if (WIFEXITED(status)) {
       debugprintf("%d: exited -> %d\n", child, -WEXITSTATUS(status));
@@ -242,6 +242,7 @@ static const char *get_registers(pid_t child, void **voidregs,
     *voidregs = regs;
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_64;
     if ((uint64_t)regs->orig_rax >= sizeof(syscalls_64)/sizeof(syscalls_64[0])) {
+      debugprintf("%d: weird system call number:  %ld\n", child, regs->orig_rax);
       free(regs);
       return 0;
     }
@@ -269,8 +270,9 @@ static int save_syscall_access(pid_t child, hashset *read_h,
 
   const char *name = get_registers(child, &regs, &get_syscall_arg);
   if (!name) {
-    free(regs);
-    return -1;
+    /* we can't read the registers right, but let's not give up! */
+    debugprintf("%d: Unable to read registers?!\n", child);
+    return 0;
   }
 
   debugprintf("%d: %s(?)\n", child, name);

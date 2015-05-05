@@ -40,15 +40,18 @@ int main(int argc, char **argv) {
          &read_from_files, &written_to_files);
   free(args);
 
-  for (int i=0; read_from_directories[i]; i++) {
-    fprintf(stderr, "l: %s\n", read_from_directories[i]);
-  }
-  for (int i=0; read_from_files[i]; i++) {
-    fprintf(stderr, "r: %s\n", read_from_files[i]);
-  }
-  for (int i=0; written_to_files[i]; i++) {
-    fprintf(stderr, "w: %s\n", written_to_files[i]);
-  }
+  if (read_from_directories)
+    for (int i=0; read_from_directories[i]; i++) {
+      fprintf(stderr, "l: %s\n", read_from_directories[i]);
+    }
+  if (read_from_files)
+    for (int i=0; read_from_files[i]; i++) {
+      fprintf(stderr, "r: %s\n", read_from_files[i]);
+    }
+  if (written_to_files)
+    for (int i=0; written_to_files[i]; i++) {
+      fprintf(stderr, "w: %s\n", written_to_files[i]);
+    }
   free(read_from_directories);
   free(read_from_files);
   free(written_to_files);
