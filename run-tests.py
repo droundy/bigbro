@@ -59,8 +59,11 @@ for testsh in glob.glob('tests/*.sh'):
     os.mkdir('tmp/subdir1')
     os.mkdir('tmp/subdir1/deepdir')
     os.mkdir('tmp/subdir2')
+    os.system('ln -s ../subdir1 tmp/subdir2/symlink')
+    os.system('ln -s `pwd` tmp/root_symlink')
     os.system('echo test > tmp/subdir2/test')
     os.system('echo foo > tmp/foo')
+    os.system('ln -s ../foo tmp/subdir1/foo_symlink')
     assert not os.system('./bigbro sh %s 2> %s.err 1> %s.out'
                          % (testsh, base, base));
     err = open(base+'.err','r').read()
