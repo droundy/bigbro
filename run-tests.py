@@ -67,6 +67,13 @@ for testsh in glob.glob('tests/*.sh'):
     os.system('echo test > tmp/subdir2/test')
     os.system('echo foo > tmp/foo')
     os.system('ln -s ../foo tmp/subdir1/foo_symlink')
+    if os.path.exists(testsh+'.prep'):
+        cmd = 'sh %s.prep 2> %s.prep.err 1> %s.prep.out' % (testsh, base, base)
+        if os.system(cmd):
+            os.system('cat %s.prep.out' % base);
+            os.system('cat %s.prep.err' % base);
+            print("prep command failed:", cmd)
+            exit(1)
     cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
     if os.system(cmd):
         os.system('cat %s.out' % base);

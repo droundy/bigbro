@@ -16,6 +16,24 @@
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
+/*
+
+  This file is modified from canonical.c from the GNU C library.  The
+  copyright header for that file is above.  The realpath function is
+  modified here to:
+
+    (a) Keep track of all symlinks that have been deferencenced.
+
+    (b) Enable us to use "realpath" to determine the path *to* a
+        symlink that is accessed with lstat or readlink.
+
+  Copyright (C) 2015 David Roundy
+
+  Changes under the same lesser GPL as the original, unlike the rest
+  of libbigbro, which is under the GPL, version 2 or later.
+
+  */
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,9 +61,19 @@ typedef struct {
    that cannot be resolved.  If the path can be resolved, RESOLVED
    holds the same value as the value returned.  */
 
-static inline char *nice_realpath(const char *name, char *resolved,
-                                  rw_status *h) {
-  char *rpath, *dest, *extra_buf = NULL, *buf = NULL;
+enum last_symlink_handling {
+  look_for_file_or_directory, look_for_symlink
+};
+
+static inline char *flexible_realpath(const char *name, char *resolved,
+                                      rw_status *h,
+                                      enum last_symlink_handling lasth) {
+  printf("\nflexible_realpath %s\n", name);
+  char *rpath; // rpath is where we hold the path as we have
+               // determined it so far
+  char *dest; // dest is the location for the next portion of the path
+              // (the end of rpath, as it were)
+  char *extra_buf = NULL, *buf = NULL;
   const char *start, *end, *rpath_limit;
   long int path_max;
   int num_links = 0;
@@ -151,7 +179,8 @@ static inline char *nice_realpath(const char *name, char *resolved,
       dest = mempcpy(dest, start, end - start);
       *dest = '\0';
 
-      if (lstat(rpath, &st) < 0) {
+      printf("lstat %s with end %s\n", rpath, end);
+      if ((!*end && lasth == look_for_symlink) || lstat(rpath, &st) < 0) {
         st.st_mode = 0; /* don't treat it as a symlink */
         /* printf("lstat %s failed\n", rpath); */
         /* goto error; */

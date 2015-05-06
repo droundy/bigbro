@@ -44,7 +44,7 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
 
 static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, ".");
-  char *abspath = nice_realpath(rawpath, 0, h);
+  char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory);
   if (!lookup_in_hash(&h->mkdir, abspath)) {
     insert_hashset(&h->readdir, abspath);
   }
@@ -52,10 +52,10 @@ static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   free(abspath);
 }
 
-static inline void read_file_at(pid_t pid, int dirfd, const char *path,
-                                rw_status *h) {
+static inline void read_something_at(pid_t pid, int dirfd, const char *path,
+                                     rw_status *h, enum last_symlink_handling lh) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = nice_realpath(rawpath, 0, h);
+  char *abspath = flexible_realpath(rawpath, 0, h, lh);
   /* printf("abspath: %s\n", abspath); */
   struct stat st;
   if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
@@ -65,12 +65,32 @@ static inline void read_file_at(pid_t pid, int dirfd, const char *path,
   free(abspath);
 }
 
-static inline void write_file_at(pid_t pid, int dirfd, const char *path,
-                                 rw_status *h) {
+static inline void write_something_at(pid_t pid, int dirfd, const char *path,
+                                      rw_status *h, enum last_symlink_handling lh) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = nice_realpath(rawpath, 0, h);
+  char *abspath = flexible_realpath(rawpath, 0, h, lh);
   insert_hashset(&h->written, abspath);
   delete_from_hashset(&h->read, abspath);
   free(rawpath);
   free(abspath);
+}
+
+static inline void read_file_at(pid_t pid, int dirfd, const char *path,
+                                rw_status *h) {
+  read_something_at(pid, dirfd, path, h, look_for_file_or_directory);
+}
+
+static inline void write_file_at(pid_t pid, int dirfd, const char *path,
+                                 rw_status *h) {
+  write_something_at(pid, dirfd, path, h, look_for_file_or_directory);
+}
+
+static inline void read_link_at(pid_t pid, int dirfd, const char *path,
+                                rw_status *h) {
+  read_something_at(pid, dirfd, path, h, look_for_symlink);
+}
+
+static inline void write_link_at(pid_t pid, int dirfd, const char *path,
+                                 rw_status *h) {
+  write_something_at(pid, dirfd, path, h, look_for_symlink);
 }

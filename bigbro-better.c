@@ -327,7 +327,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
                              dirfd, arg, retval);
       }
       char *rawpath = interpret_path_at(child, dirfd, arg);
-      char *abspath = nice_realpath(rawpath, 0, h);
+      char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
@@ -371,7 +371,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       if (arg) {
         debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-        read_file_at(child, dirfd, arg, h);
+        read_link_at(child, dirfd, arg, h);
       }
       free(arg);
     }
@@ -399,7 +399,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (arg) {
         debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
         char *rawpath = interpret_path_at(child, dirfd, arg);
-        char *abspath = nice_realpath(rawpath, 0, h);
+        char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory);
         insert_hashset(&h->mkdir, abspath);
         free(rawpath);
         free(abspath);
@@ -421,7 +421,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       if (arg && target) {
         debugprintf("%d: %s('%s', '%s')\n", child, name, arg, target);
-        write_file_at(child, dirfd, arg, h);
+        write_link_at(child, dirfd, target, h);
       }
       free(arg);
       free(target);
@@ -455,9 +455,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       if (to && from) {
         debugprintf("%d: %s('%s', '%s') -> %d\n", child, name, from, to, retval);
-        write_file_at(child, dirfd, to, h);
+        write_link_at(child, dirfd, to, h);
         char *rawpath = interpret_path_at(child, dirfd, from);
-        char *abspath = nice_realpath(rawpath, 0, h);
+        char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink);
         delete_from_hashset(&h->read, abspath);
         delete_from_hashset(&h->readdir, abspath);
         delete_from_hashset(&h->written, abspath);

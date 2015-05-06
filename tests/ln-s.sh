@@ -1,3 +1,3 @@
 set -ev
 
-ln -s tmp-silly silly
+ln -s silly tmp-silly
