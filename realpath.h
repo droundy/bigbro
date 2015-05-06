@@ -28,6 +28,10 @@
 
 #include "hashset.h"
 
+typedef struct {
+  hashset read, readdir, written, mkdir;
+} rw_status;
+
 /* Return the canonical absolute name of file NAME.  A canonical name
    does not contain any `.', `..' components nor any repeated path
    separators ('/') or symlinks.  All path components must exist.  If
@@ -40,7 +44,7 @@
    holds the same value as the value returned.  */
 
 static inline char *nice_realpath(const char *name, char *resolved,
-                                  hashset *readlinks) {
+                                  rw_status *h) {
   char *rpath, *dest, *extra_buf = NULL, *buf = NULL;
   const char *start, *end, *rpath_limit;
   long int path_max;
@@ -160,7 +164,7 @@ static inline char *nice_realpath(const char *name, char *resolved,
           goto error;
         }
 
-        insert_hashset(readlinks, rpath);
+        insert_hashset(&h->read, rpath);
         if (!buf) buf = malloc(path_max);
         size_t len;
         n = readlink(rpath, buf, path_max - 1);

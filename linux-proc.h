@@ -42,33 +42,35 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   return cwd;
 }
 
-static inline void read_dir_fd(pid_t pid, int dirfd,
-                               hashset *read_h, hashset *readdir_h) {
+static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, ".");
-  char *abspath = nice_realpath(rawpath, 0, read_h);
-  insert_hashset(readdir_h, abspath);
+  char *abspath = nice_realpath(rawpath, 0, h);
+  if (!lookup_in_hash(&h->mkdir, abspath)) {
+    insert_hashset(&h->readdir, abspath);
+  }
   free(rawpath);
   free(abspath);
 }
 
 static inline void read_file_at(pid_t pid, int dirfd, const char *path,
-                                hashset *read_h) {
+                                rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = nice_realpath(rawpath, 0, read_h);
+  char *abspath = nice_realpath(rawpath, 0, h);
   /* printf("abspath: %s\n", abspath); */
   struct stat st;
-  if (!stat(abspath, &st) && S_ISREG(st.st_mode)) {
-    insert_hashset(read_h, abspath);
+  if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
+    insert_hashset(&h->read, abspath);
   }
   free(rawpath);
   free(abspath);
 }
 
 static inline void write_file_at(pid_t pid, int dirfd, const char *path,
-                                 hashset *read_h, hashset *written_h) {
+                                 rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = nice_realpath(rawpath, 0, read_h);
-  insert_hashset(written_h, abspath);
+  char *abspath = nice_realpath(rawpath, 0, h);
+  insert_hashset(&h->written, abspath);
+  delete_from_hashset(&h->read, abspath);
   free(rawpath);
   free(abspath);
 }

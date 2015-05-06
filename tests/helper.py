@@ -1,5 +1,19 @@
 import re
 
+def doesnt_read(err, file):
+    fs = re.compile(r'r: /[^\n]+%s\n' % file, re.M).findall(err)
+    if len(fs) > 0:
+        print('  should not have read', file)
+        return False
+    return True
+
+def doesnt_ls(err, file):
+    fs = re.compile(r'l: /[^\n]+%s\n' % file, re.M).findall(err)
+    if len(fs) > 0:
+        print('  should not have readdir', file)
+        return False
+    return True
+
 def reads(err, file):
     fs = re.compile(r'r: /[^\n]+%s\n' % file, re.M).findall(err)
     if len(fs) == 0:
