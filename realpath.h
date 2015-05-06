@@ -68,7 +68,6 @@ enum last_symlink_handling {
 static inline char *flexible_realpath(const char *name, char *resolved,
                                       rw_status *h,
                                       enum last_symlink_handling lasth) {
-  printf("\nflexible_realpath %s\n", name);
   char *rpath; // rpath is where we hold the path as we have
                // determined it so far
   char *dest; // dest is the location for the next portion of the path
@@ -179,7 +178,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
       dest = mempcpy(dest, start, end - start);
       *dest = '\0';
 
-      printf("lstat %s with end %s\n", rpath, end);
       if ((!*end && lasth == look_for_symlink) || lstat(rpath, &st) < 0) {
         st.st_mode = 0; /* don't treat it as a symlink */
         /* printf("lstat %s failed\n", rpath); */
