@@ -2,7 +2,9 @@
 
 from __future__ import print_function
 
-import glob, os, importlib, sys
+import glob, os, importlib, sys, time
+
+benchmark = 'bench' in sys.argv
 
 platform = sys.platform
 if platform == 'linux2':
@@ -14,6 +16,25 @@ print('==================')
 assert not os.system('sh build-%s.sh' % platform)
 
 numfailures = 0
+
+def create_clean_tree(prepsh='this file does not exist'):
+    os.system('rm -rf tmp*')
+    os.mkdir('tmp')
+    os.mkdir('tmp/subdir1')
+    os.mkdir('tmp/subdir1/deepdir')
+    os.mkdir('tmp/subdir2')
+    os.system('ln -s ../subdir1 tmp/subdir2/symlink')
+    os.system('ln -s `pwd` tmp/root_symlink')
+    os.system('echo test > tmp/subdir2/test')
+    os.system('echo foo > tmp/foo')
+    os.system('ln -s ../foo tmp/subdir1/foo_symlink')
+    if os.path.exists(prepsh):
+        cmd = 'sh %s 2> %s.err 1> %s.out' % (prepsh, prepsh, prepsh)
+        if os.system(cmd):
+            os.system('cat %s.out' % prepsh);
+            os.system('cat %s.err' % prepsh);
+            print("prep command failed:", cmd)
+            exit(1)
 
 print('running C tests:')
 print('================')
@@ -28,27 +49,38 @@ for testc in glob.glob('tests/*.c'):
         if os.system('${CC-gcc} -Wall -O2 -o %s %s' % (test, testc)):
             print('%s fails to compile, skipping test' % testc)
             continue
-    os.system('rm -rf tmp*')
-    os.mkdir('tmp')
-    os.mkdir('tmp/subdir1')
-    os.mkdir('tmp/subdir1/deepdir')
-    os.mkdir('tmp/subdir2')
-    os.system('echo test > tmp/subdir2/test')
-    os.system('echo foo > tmp/foo')
+    create_clean_tree()
+    before = time.perf_counter()
     cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
         print("command failed:", cmd)
         exit(1)
+    measured_time = time.perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
     m = importlib.import_module('tests.'+base[6:])
     # print(err)
-    if m.passes(out, err):
-        print(test, "passes")
+    if benchmark:
+        create_clean_tree()
+        before = time.perf_counter()
+        cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
+        os.system(cmd)
+        reference_time = time.perf_counter() - before
+        if measured_time < 1e-3:
+            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+        else:
+            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
     else:
-        print(test, "FAILS!")
+        if measured_time < 1e-3:
+            time_took = '(%g us)' % (measured_time*1e6)
+        else:
+            time_took = '(%g ms)' % (measured_time*1e3)
+    if m.passes(out, err):
+        print(test, "passes", time_took)
+    else:
+        print(test, "FAILS!", time_took)
         numfailures += 1
 
 test = None # to avoid bugs below where we refer to test
@@ -57,38 +89,73 @@ print('running sh tests:')
 print('=================')
 for testsh in glob.glob('tests/*.sh'):
     base = testsh[:-3]
-    os.system('rm -rf tmp*')
-    os.mkdir('tmp')
-    os.mkdir('tmp/subdir1')
-    os.mkdir('tmp/subdir1/deepdir')
-    os.mkdir('tmp/subdir2')
-    os.system('ln -s ../subdir1 tmp/subdir2/symlink')
-    os.system('ln -s `pwd` tmp/root_symlink')
-    os.system('echo test > tmp/subdir2/test')
-    os.system('echo foo > tmp/foo')
-    os.system('ln -s ../foo tmp/subdir1/foo_symlink')
-    if os.path.exists(testsh+'.prep'):
-        cmd = 'sh %s.prep 2> %s.prep.err 1> %s.prep.out' % (testsh, base, base)
-        if os.system(cmd):
-            os.system('cat %s.prep.out' % base);
-            os.system('cat %s.prep.err' % base);
-            print("prep command failed:", cmd)
-            exit(1)
+    create_clean_tree(testsh+'.prep')
+    before = time.perf_counter()
     cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
         print("command failed:", cmd)
         exit(1)
+    measured_time = time.perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
+    if benchmark:
+        create_clean_tree(testsh+'.prep')
+        before = time.perf_counter()
+        cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+        os.system(cmd)
+        reference_time = time.perf_counter() - before
+        if measured_time < 1e-3:
+            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+        else:
+            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+    else:
+        if measured_time < 1e-3:
+            time_took = '(%g us)' % (measured_time*1e6)
+        else:
+            time_took = '(%g ms)' % (measured_time*1e3)
     m = importlib.import_module('tests.'+base[6:])
     # print(err)
     if m.passes(out, err):
-        print(testsh, "passes")
+        print(testsh, "passes", time_took)
     else:
-        print(testsh, "FAILS!")
+        print(testsh, "FAILS!", time_took)
         numfailures += 1
+
+if benchmark:
+    print()
+    print('running sh benchmarks:')
+    print('======================')
+    for testsh in glob.glob('bench/*.sh'):
+        base = testsh[:-3]
+        create_clean_tree(testsh+'.prep')
+        before = time.perf_counter()
+        cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+        if os.system(cmd):
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print("command failed:", cmd)
+            exit(1)
+        measured_time = time.perf_counter() - before
+        # The first time is just to warm up the file system cache...
+
+        create_clean_tree(testsh+'.prep')
+        before = time.perf_counter()
+        cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+        os.system(cmd)
+        reference_time = time.perf_counter() - before
+        before = time.perf_counter()
+        cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+        os.system(cmd)
+        measured_time = time.perf_counter() - before
+        if measured_time < 1e-3:
+            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+        elif measured_time < 1:
+            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        else:
+            time_took = '(%g vs %g s)' % (measured_time, reference_time)
+        print(testsh, time_took)
 
 if numfailures > 0:
     print("\nTests FAILED!!!")
