@@ -4,6 +4,11 @@ from __future__ import print_function
 
 import glob, os, importlib, sys, time
 
+if 'perf_counter' in dir(time):
+    perf_counter = time.perf_counter
+else:
+    perf_counter = time.time
+
 benchmark = 'bench' in sys.argv
 
 platform = sys.platform
@@ -50,24 +55,24 @@ for testc in glob.glob('tests/*.c'):
             print('%s fails to compile, skipping test' % testc)
             continue
     create_clean_tree()
-    before = time.perf_counter()
+    before = perf_counter()
     cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
         print("command failed:", cmd)
         exit(1)
-    measured_time = time.perf_counter() - before
+    measured_time = perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
     m = importlib.import_module('tests.'+base[6:])
     # print(err)
     if benchmark:
         create_clean_tree()
-        before = time.perf_counter()
+        before = perf_counter()
         cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
         os.system(cmd)
-        reference_time = time.perf_counter() - before
+        reference_time = perf_counter() - before
         if measured_time < 1e-3:
             time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
         elif measured_time < 1:
@@ -92,22 +97,22 @@ print('=================')
 for testsh in glob.glob('tests/*.sh'):
     base = testsh[:-3]
     create_clean_tree(testsh+'.prep')
-    before = time.perf_counter()
+    before = perf_counter()
     cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
         print("command failed:", cmd)
         exit(1)
-    measured_time = time.perf_counter() - before
+    measured_time = perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
     if benchmark:
         create_clean_tree(testsh+'.prep')
-        before = time.perf_counter()
+        before = perf_counter()
         cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         os.system(cmd)
-        reference_time = time.perf_counter() - before
+        reference_time = perf_counter() - before
         if measured_time < 1e-3:
             time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
         elif measured_time < 1:
@@ -134,25 +139,25 @@ if benchmark:
     for testsh in glob.glob('bench/*.sh'):
         base = testsh[:-3]
         create_clean_tree(testsh+'.prep')
-        before = time.perf_counter()
+        before = perf_counter()
         cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         if os.system(cmd):
             os.system('cat %s.out' % base);
             os.system('cat %s.err' % base);
             print("command failed:", cmd)
             exit(1)
-        measured_time = time.perf_counter() - before
+        measured_time = perf_counter() - before
         # The first time is just to warm up the file system cache...
 
         create_clean_tree(testsh+'.prep')
-        before = time.perf_counter()
+        before = perf_counter()
         cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         os.system(cmd)
-        reference_time = time.perf_counter() - before
-        before = time.perf_counter()
+        reference_time = perf_counter() - before
+        before = perf_counter()
         cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         os.system(cmd)
-        measured_time = time.perf_counter() - before
+        measured_time = perf_counter() - before
         if measured_time < 1e-3:
             time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
         elif measured_time < 1:
