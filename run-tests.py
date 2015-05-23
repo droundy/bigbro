@@ -70,8 +70,10 @@ for testc in glob.glob('tests/*.c'):
         reference_time = time.perf_counter() - before
         if measured_time < 1e-3:
             time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        else:
+        elif measured_time < 1:
             time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        else:
+            time_took = '(%g vs %g s)' % (measured_time, reference_time)
     else:
         if measured_time < 1e-3:
             time_took = '(%g us)' % (measured_time*1e6)
@@ -108,8 +110,10 @@ for testsh in glob.glob('tests/*.sh'):
         reference_time = time.perf_counter() - before
         if measured_time < 1e-3:
             time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        else:
+        elif measured_time < 1:
             time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        else:
+            time_took = '(%g vs %g s)' % (measured_time, reference_time)
     else:
         if measured_time < 1e-3:
             time_took = '(%g us)' % (measured_time*1e6)
