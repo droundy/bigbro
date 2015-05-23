@@ -412,20 +412,21 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     if (retval == 0) {
       int dirfd = -1;
       if (!strcmp(name, "symlink")) {
-        arg = read_a_string(child, get_syscall_arg(regs, 0));
-        target = read_a_string(child, get_syscall_arg(regs, 1));
+        target = read_a_string(child, get_syscall_arg(regs, 0));
+        arg = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
-        arg = read_a_string(child, get_syscall_arg(regs, 2));
         target = read_a_string(child, get_syscall_arg(regs, 0));
         dirfd = get_syscall_arg(regs, 1);
+        arg = read_a_string(child, get_syscall_arg(regs, 2));
       }
+      debugprintf("%d: %s(%p %p %d)\n", child, name, arg, target, dirfd);
       if (arg && target) {
         if (!strcmp(name, "symlink")) {
-          debugprintf("%d: %s('%s', '%s')\n", child, name, arg, target);
+          debugprintf("%d: %s('%s', '%s')\n", child, name, target, arg);
         } else {
-          debugprintf("%d: %s('%s', %d, '%s')\n", child, target, arg, dirfd, name);
+          debugprintf("%d: %s('%s', %d, '%s')\n", child, name, target, dirfd, arg);
         }
-        write_link_at(child, dirfd, target, h);
+        write_link_at(child, dirfd, arg, h);
       }
       free(arg);
       free(target);

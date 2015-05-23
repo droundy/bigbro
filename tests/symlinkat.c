@@ -5,5 +5,5 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-  return symlinkat("tmp/new-symlink", AT_FDCWD, "foobar");
+  return symlinkat("foobar", AT_FDCWD, "tmp/new-symlink") + symlink("foo", "tmp/other-link");
 }
