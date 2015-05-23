@@ -1,30 +1,28 @@
 #include "realpath.h"
 
 static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
+  if (!path) return 0;
   /* printf("path: %s\n", path); */
   const char *procself = "/proc/self/";
   const int procselflen = strlen(procself);
   if (strlen(path) > procselflen &&
       !memcmp(path, procself, procselflen)) {
-    char *out = malloc(strlen(path) + 200);
-    snprintf(out, 200, "/proc/%d/", pid);
-    strcat(out, path+procselflen);
+    char *out = malloc(PATH_MAX);
+    snprintf(out, PATH_MAX, "/proc/%d/%s", pid, path + procselflen);
     /* printf("rawpath: %s\n", out); */
     return out;
   }
   /* printf("path '%s' does not match '%s'\n", path, procself); */
-
-  const int pathmax = 4096;
-  if (!path) return 0;
   if (path[0] == '/') {
     /* printf("rawpath: %s\n", path); */
     return strdup(path);
   }
-  char *proc_fd = malloc(pathmax);
-  if (fd >= 0) snprintf(proc_fd, 4000, "/proc/%d/fd/%d", pid, fd);
-  else snprintf(proc_fd, pathmax, "/proc/%d/cwd", pid);
-  char *cwd = malloc(pathmax);
-  int linklen = readlink(proc_fd, cwd, pathmax);
+
+  char *proc_fd = malloc(PATH_MAX);
+  if (fd >= 0) snprintf(proc_fd, PATH_MAX, "/proc/%d/fd/%d", pid, fd);
+  else snprintf(proc_fd, PATH_MAX, "/proc/%d/cwd", pid);
+  char *cwd = malloc(PATH_MAX);
+  int linklen = readlink(proc_fd, cwd, PATH_MAX);
   if (linklen < 0) {
     fprintf(stderr, "unable to determine cwd from %s i.e. fd %d!!!\n",
             proc_fd, fd);
@@ -32,7 +30,7 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   }
   cwd[linklen] = 0;
   /* printf("cwd(%d): %s (from %s)\n", fd, cwd, proc_fd); */
-  if (strlen(cwd) + strlen(path) + 4 > pathmax) {
+  if (strlen(cwd) + strlen(path) + 4 > PATH_MAX) {
     fprintf(stderr, "too long a path: '%s/%s'\n", cwd, path);
     return 0;
   }
