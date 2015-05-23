@@ -38,7 +38,7 @@
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
 
-static const int debug_output = 1;
+static const int debug_output = 0;
 
 static inline void debugprintf(const char *format, ...) {
   va_list args;
