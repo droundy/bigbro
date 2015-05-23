@@ -224,7 +224,8 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         }
       } else if (!S_ISDIR(st.st_mode) && *end != '\0') {
         errno = (ENOTDIR);
-        printf("notdire failed\n");
+        fprintf(stderr, "error: %s is not a dir (realpaht of %s, w/ end %s)\n",
+                rpath, name, end);
         goto error;
       }
     }

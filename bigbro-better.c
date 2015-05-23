@@ -38,7 +38,7 @@
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
 
-static const int debug_output = 0;
+static const int debug_output = 1;
 
 static inline void debugprintf(const char *format, ...) {
   va_list args;
@@ -343,7 +343,28 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (retval >= 0) write_file_at(child, -1, arg, h);
       free(arg);
     }
-  } else if (!strcmp(name, "futimesat") || !strcmp(name, "utimensat")) {
+  } else if (!strcmp(name, "utimensat")) {
+    char *arg = read_a_string(child, get_syscall_arg(regs, 1));
+    if (arg) {
+      int dirfd = get_syscall_arg(regs,0);
+      int flags = get_syscall_arg(regs,3);
+      int retval = wait_for_return_value(child, h);
+      debugprintf("%d: %s(%d, '%s', ? , %d) -> %d\n", child, name,
+                  dirfd, arg, flags, retval);
+      if (retval >= 0) {
+        if (flags == AT_SYMLINK_NOFOLLOW) {
+          read_link_at(child, dirfd, arg, h);
+        } else {
+          read_file_at(child, dirfd, arg, h);
+        }
+      }
+      free(arg);
+    } else {
+      int retval = wait_for_return_value(child, h);
+      debugprintf("%d: %s(%d, NULL) -> %d\n", child, name,
+                  (int)get_syscall_arg(regs,0), retval);
+    }
+  } else if (!strcmp(name, "futimesat")) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
     if (arg) {
       int dirfd = get_syscall_arg(regs,0);

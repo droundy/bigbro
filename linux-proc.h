@@ -50,6 +50,10 @@ static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
     exit(1);
   }
   char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory);
+  if (!abspath) {
+    fprintf(stderr, "read_dir_fd abspath fails for pid %d and dirfd %d\n", pid, dirfd);
+    exit(1);
+  }
   if (!lookup_in_hash(&h->mkdir, abspath)) {
     insert_hashset(&h->readdir, abspath);
   }
@@ -66,6 +70,12 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
     exit(1);
   }
   char *abspath = flexible_realpath(rawpath, 0, h, lh);
+  if (!abspath) {
+    fprintf(stderr, "read_something_at abspath fails for pid %d and dirfd %d path %s\n",
+            pid, dirfd, path);
+    fprintf(stderr, "rawpath was %s\n", rawpath);
+    exit(1);
+  }
   /* printf("abspath: %s\n", abspath); */
   struct stat st;
   if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
@@ -84,6 +94,10 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
     exit(1);
   }
   char *abspath = flexible_realpath(rawpath, 0, h, lh);
+  if (!abspath) {
+    fprintf(stderr, "write_something_at abspath fails for pid %d and dirfd %d\n", pid, dirfd);
+    exit(1);
+  }
   insert_hashset(&h->written, abspath);
   delete_from_hashset(&h->read, abspath);
   free(rawpath);
