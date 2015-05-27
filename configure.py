@@ -56,14 +56,3 @@ print("""
 < syscalls/darwin.h
 > nolib-bigbro
 """ % (cc, cflags, platform))
-
-for testc in glob.glob('tests/*.c'):
-    base = testc[:-2]
-    if '-static' in testc:
-        print("""
-| %s %s -static -o %s.test %s
-    """ % (cc, cflags, base, testc))
-    else:
-        print("""
-| %s %s -o %s.test %s
-    """ % (cc, cflags, base, testc))
