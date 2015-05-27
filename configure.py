@@ -40,8 +40,9 @@ print("""
 # it will be added to, rather than replaced.
 
 | rm -f libbigbro.a && ${AR-ar} rc libbigbro.a bigbro-%s.o && ${RANLIB-ranlib} libbigbro.a
+< bigbro-%s.o
 > libbigbro.a
-""" % (cc, cflags, platform, platform))
+""" % (cc, cflags, platform, platform, platform))
 
 print("""
 | %s %s -o bigbro -L. fileaccesses.c -lbigbro
