@@ -37,6 +37,9 @@ To build bigbro, you just need run:
 
     sh build-linux.sh
 
-To build it and run the test suite, run:
+If you have [fac](http://physics.oregonstate.edu/~roundyd/fac)
+installed, you can alternatively build bigbro using fac.  In this
+case, you can also simultaneously build bigbro and run the test suite,
+by running:
 
     python3 run-tests.py

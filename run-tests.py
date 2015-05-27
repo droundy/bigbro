@@ -16,8 +16,12 @@ if platform == 'linux2':
     platform = 'linux'
 
 assert not os.system('rm -rf tests/*.test')
-print('building bigbro...')
-print('==================')
+print('creating build-%s.sh...' % platform)
+print('==========================')
+assert not os.system('fac --script build-%s.sh libbigbro.a' % platform)
+
+print('building bigbro by running build-%s.sh...' % platform)
+print('============================================')
 assert not os.system('sh build-%s.sh' % platform)
 
 numfailures = 0

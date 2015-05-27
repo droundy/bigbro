@@ -14,7 +14,7 @@ with open('testing-flags/test.c', 'w') as f:
 }
 """)
 
-cc = os.getenv('CC', 'gcc')
+cc = '${CC-gcc}'
 
 cflags = ''
 for flag in ['-Wall', '-Werror', '-O2', '-std=c99', '-g', '-mtune=native']:
@@ -36,7 +36,10 @@ print("""
 < syscalls/freebsd.h
 < syscalls/darwin.h
 
-| ar rc libbigbro.a bigbro-%s.o && ranlib libbigbro.a
+# We need to remove libbigbro.a before running ar, because otherwise
+# it will be added to, rather than replaced.
+
+| rm -f libbigbro.a && ${AR-ar} rc libbigbro.a bigbro-%s.o && ${RANLIB-ranlib} libbigbro.a
 > libbigbro.a
 """ % (cc, cflags, platform, platform))
 
