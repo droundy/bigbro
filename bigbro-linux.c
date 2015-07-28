@@ -327,7 +327,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
                              dirfd, arg, retval);
       }
       char *rawpath = interpret_path_at(child, dirfd, arg);
-      char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink);
+      char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
@@ -420,7 +420,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (arg) {
         debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
         char *rawpath = interpret_path_at(child, dirfd, arg);
-        char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory);
+        char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory, false);
         insert_hashset(&h->mkdir, abspath);
         free(rawpath);
         free(abspath);
@@ -463,7 +463,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     }
     if (arg && strlen(arg)) {
       debugprintf("%d: %s('%s')\n", child, name, arg);
-      read_file_at(child, dirfd, arg, h);
+      maybe_read_file_at(child, dirfd, arg, h);
     }
     free(arg);
   } else if (!strcmp(name, "rename") || !strcmp(name, "renameat")) {
@@ -483,7 +483,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         debugprintf("%d: %s('%s', '%s') -> %d\n", child, name, from, to, retval);
         write_link_at(child, dirfd, to, h);
         char *rawpath = interpret_path_at(child, dirfd, from);
-        char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink);
+        char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
         delete_from_hashset(&h->read, abspath);
         delete_from_hashset(&h->readdir, abspath);
         delete_from_hashset(&h->written, abspath);

@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #include "hashset.h"
 
@@ -67,7 +68,8 @@ enum last_symlink_handling {
 
 static inline char *flexible_realpath(const char *name, char *resolved,
                                       rw_status *h,
-                                      enum last_symlink_handling lasth) {
+                                      enum last_symlink_handling lasth,
+                                      bool failure_is_okay) {
   char *rpath; // rpath is where we hold the path as we have
                // determined it so far
   char *dest; // dest is the location for the next portion of the path
@@ -224,8 +226,9 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         }
       } else if (!S_ISDIR(st.st_mode) && *end != '\0') {
         errno = (ENOTDIR);
-        fprintf(stderr, "error: %s is not a dir (realpaht of %s, w/ end %s)\n",
-                rpath, name, end);
+        if (!failure_is_okay)
+          fprintf(stderr, "error: %s is not a dir (realpaht of %s, w/ end %s)\n",
+                  rpath, name, end);
         goto error;
       }
     }
