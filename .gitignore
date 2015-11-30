@@ -11,3 +11,5 @@ __pycache__
 *.out
 *.test
 *.pyc
+.vagrant
+tmp
