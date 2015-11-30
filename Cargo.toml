@@ -8,7 +8,8 @@ repository = "https://github.com/droundy/bigbro"
 documentation = "https://droundy.github.io/bigbro"
 
 [dependencies]
-nix = "0.4"
+# nix = "0.4"
+nix = { git = "https://github.com/carllerche/nix-rust" }
 libc = "*"
 
 [dev-dependencies]
