@@ -47,7 +47,7 @@ static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
     fprintf(stderr, "read_dir_fd fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory);
+  char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory, false);
   if (!abspath) {
     fprintf(stderr, "read_dir_fd abspath fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);
@@ -60,19 +60,29 @@ static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
 }
 
 static inline void read_something_at(pid_t pid, int dirfd, const char *path,
-                                     rw_status *h, enum last_symlink_handling lh) {
+                                     rw_status *h, enum last_symlink_handling lh,
+                                     bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
   if (!rawpath) {
-    fprintf(stderr, "read_something_at fails for pid %d and dirfd %d and path %s\n",
-            pid, dirfd, path);
-    exit(1);
+    if (failure_is_okay) {
+      return;
+    } else {
+      fprintf(stderr, "read_something_at fails for pid %d and dirfd %d and path %s\n",
+              pid, dirfd, path);
+      exit(1);
+    }
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, lh);
+  char *abspath = flexible_realpath(rawpath, 0, h, lh, failure_is_okay);
   if (!abspath) {
-    fprintf(stderr, "read_something_at abspath fails for pid %d and dirfd %d path %s\n",
-            pid, dirfd, path);
-    fprintf(stderr, "rawpath was %s\n", rawpath);
-    exit(1);
+    if (failure_is_okay) {
+      free(rawpath);
+      return;
+    } else {
+      fprintf(stderr, "read_something_at abspath fails for pid %d and dirfd %d path %s\n",
+              pid, dirfd, path);
+      fprintf(stderr, "rawpath was %s\n", rawpath);
+      exit(1);
+    }
   }
   /* printf("abspath: %s\n", abspath); */
   struct stat st;
@@ -84,14 +94,15 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
 }
 
 static inline void write_something_at(pid_t pid, int dirfd, const char *path,
-                                      rw_status *h, enum last_symlink_handling lh) {
+                                      rw_status *h, enum last_symlink_handling lh,
+                                      bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
   if (!rawpath) {
     fprintf(stderr, "write_something_at fails for pid %d and dirfd %d and path %s\n",
             pid, dirfd, path);
     exit(1);
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, lh);
+  char *abspath = flexible_realpath(rawpath, 0, h, lh, failure_is_okay);
   if (!abspath) {
     fprintf(stderr, "write_something_at abspath fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);
@@ -104,20 +115,25 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
 
 static inline void read_file_at(pid_t pid, int dirfd, const char *path,
                                 rw_status *h) {
-  read_something_at(pid, dirfd, path, h, look_for_file_or_directory);
+  read_something_at(pid, dirfd, path, h, look_for_file_or_directory, false);
+}
+
+static inline void maybe_read_file_at(pid_t pid, int dirfd, const char *path,
+                                rw_status *h) {
+  read_something_at(pid, dirfd, path, h, look_for_file_or_directory, true);
 }
 
 static inline void write_file_at(pid_t pid, int dirfd, const char *path,
                                  rw_status *h) {
-  write_something_at(pid, dirfd, path, h, look_for_file_or_directory);
+  write_something_at(pid, dirfd, path, h, look_for_file_or_directory, false);
 }
 
 static inline void read_link_at(pid_t pid, int dirfd, const char *path,
                                 rw_status *h) {
-  read_something_at(pid, dirfd, path, h, look_for_symlink);
+  read_something_at(pid, dirfd, path, h, look_for_symlink, false);
 }
 
 static inline void write_link_at(pid_t pid, int dirfd, const char *path,
                                  rw_status *h) {
-  write_something_at(pid, dirfd, path, h, look_for_symlink);
+  write_something_at(pid, dirfd, path, h, look_for_symlink, false);
 }
