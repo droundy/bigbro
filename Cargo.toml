@@ -1,0 +1,14 @@
+[package]
+name = "bigbro"
+version = "0.0.1"
+authors = ["David Roundy <roundyd@physics.oregonstate.edu>"]
+description = "track file IO of child processes"
+license = "BSD-2-Clause"
+repository = "https://github.com/droundy/bigbro"
+documentation = "https://droundy.github.io/bigbro"
+
+[dependencies]
+nix = "0.4"
+
+[dev-dependencies]
+quickcheck = "*"

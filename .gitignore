@@ -13,3 +13,6 @@ __pycache__
 *.pyc
 .vagrant
 tmp
+*.lock
+target
+.#.*
