@@ -7,6 +7,7 @@ use std::ffi::{CString};
 use std::collections::HashSet;
 use std::env;
 use std::os::unix;
+use std::path;
 
 fn mkstemp() -> io::Result<unix::io::RawFd> {
     let r = try!(nix::fcntl::open(&env::temp_dir(),
@@ -47,12 +48,15 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
             try!(nix::unistd::close(1));
             try!(nix::unistd::close(2));
             let stdouterrfd = try!(mkstemp());
-            nix::unistd::dup2(stdouterrfd, 1);
-            nix::unistd::dup2(stdouterrfd, 2);
-            nix::unistd::execvp(&CString::new("sh").unwrap(),
-                                &[CString::new("sh").unwrap(),
-                                  CString::new("-c").unwrap(),
-                                  CString::new(command_line).unwrap()]);
+            try!(nix::unistd::dup2(stdouterrfd, 1));
+            try!(nix::unistd::dup2(stdouterrfd, 2));
+            try!(nix::fcntl::open(path::Path::new(&"/dev/null"),
+                                  nix::fcntl::O_RDONLY,
+                                  nix::sys::stat::Mode::empty()));
+            try!(nix::unistd::execvp(&CString::new("sh").unwrap(),
+                                     &[CString::new("sh").unwrap(),
+                                       CString::new("-c").unwrap(),
+                                       CString::new(command_line).unwrap()]));
             unreachable!()
         },
     }
@@ -60,7 +64,6 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
 
 #[test]
 fn test_into_io_error() {
-    use nix::errno::Errno;
     use std;
     std::io::Error::from(nix::Error::InvalidPath);
 }
