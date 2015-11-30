@@ -6,6 +6,9 @@ addons:
     - libelf-dev
     - libdw-dev
 sudo: false
+os:
+  - linux
+  - osx
 rust:
   - nightly
   - beta
