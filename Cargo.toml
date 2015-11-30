@@ -9,6 +9,7 @@ documentation = "https://droundy.github.io/bigbro"
 
 [dependencies]
 nix = "0.4"
+libc = "*"
 
 [dev-dependencies]
 quickcheck = "*"
