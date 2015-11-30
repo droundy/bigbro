@@ -19,7 +19,7 @@ matrix:
     - os: osx
 before_script:
 - |
-  echo $HOME &&
+  echo $HOME && mkdir -p $HOME/.local/bin &&
   pip install 'travis-cargo<0.2' --user --install-option="--install-scripts=$HOME/.local/bin" &&
   export PATH=$HOME/.local/bin:$PATH && find $HOME -name travis_cargo.py
 script:
