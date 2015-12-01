@@ -22,7 +22,7 @@ before_script:
   echo $HOME && mkdir -p $HOME/.local/bin &&
   pip install 'travis-cargo<0.2' --user &&
   export PATH=$HOME/.local/bin:$PATH &&
-  cp -v `find $HOME -name travis-cargo` $HOME/.local/bin/
+  (cp -v `find $HOME -name travis-cargo` $HOME/.local/bin/ || true)
 script:
 - |
   travis-cargo build &&
