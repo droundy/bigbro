@@ -33,7 +33,7 @@ mod linux;
 pub use linux::shell;
 
 #[cfg(not(target_os = "linux"))]
-pub fn shell(command_line: &str) -> Result<Accesses, Box<Error>> {
+pub fn shell(command_line: &str) -> io::Result<Accesses> {
     let r = try!(try!(process::Command::new("sh").arg("-c")
                       .arg(command_line).spawn()).wait());
     Ok(Accesses {
