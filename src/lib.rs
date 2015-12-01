@@ -7,11 +7,6 @@ extern crate nix;
 use std::path;
 use std::collections::HashSet;
 
-#[cfg(not(target_os = "linux"))]
-use std::io;
-#[cfg(not(target_os = "linux"))]
-use std::process;
-
 pub struct ExitStatus {
     exit_code: Option<i32>,
 }
@@ -33,15 +28,9 @@ mod linux;
 pub use linux::shell;
 
 #[cfg(not(target_os = "linux"))]
-pub fn shell(command_line: &str) -> io::Result<Accesses> {
-    let r = try!(try!(process::Command::new("sh").arg("-c")
-                      .arg(command_line).spawn()).wait());
-    Ok(Accesses {
-        status: ExitStatus { exit_code: r.code() },
-        read_files: HashSet::new(),
-        wrote_files: HashSet::new(),
-    })
-}
+mod generic;
+#[cfg(not(target_os = "linux"))]
+pub use generic::shell;
 
 #[test]
 fn test_true() {

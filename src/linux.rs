@@ -22,7 +22,6 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
         nix::unistd::Fork::Parent(pid) => {
             use nix::sys::wait::WaitStatus::*;
             use super::ExitStatus;
-            println!("I am parent of {}", pid);
             match try!(nix::sys::wait::waitpid(pid, None)) {
                 Exited(_,ii) => {
                     Ok(Accesses {

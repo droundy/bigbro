@@ -16,7 +16,6 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
-    - os: osx
 before_script:
 - |
   echo $HOME && mkdir -p $HOME/.local/bin &&
