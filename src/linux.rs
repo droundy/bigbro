@@ -22,7 +22,13 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
         nix::unistd::Fork::Parent(pid) => {
             use nix::sys::wait::WaitStatus::*;
             use super::ExitStatus;
-            match try!(nix::sys::wait::waitpid(pid, None)) {
+            try!(nix::unistd::setpgid(pid,pid));
+            println!("my child is {}", pid);
+            let status =
+                try!(nix::sys::wait::waitpid(pid,
+                                             Some(nix::sys::wait::__WALL)));
+            println!("status is {:?}", &status);
+            match status {
                 Exited(_,ii) => {
                     Ok(Accesses {
                         status: ExitStatus { exit_code: Some(ii as i32) },
@@ -37,12 +43,19 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
                         wrote_files: HashSet::new(),
                     })
                 },
-                Stopped(_,_) => unreachable!(),
+                Stopped(_,signal) => {
+                    println!("My child {} stopped with signal {}",
+                             pid, signal);
+                    unreachable!()
+                },
                 Continued(_) => unreachable!(),
                 StillAlive => unreachable!(),
             }
         },
         nix::unistd::Fork::Child => {
+            use std::ptr;
+            try!(nix::unistd::setpgid(0,0));
+            println!("I am the child");
             try!(nix::unistd::close(0));
             try!(nix::unistd::close(1));
             try!(nix::unistd::close(2));
@@ -52,6 +65,13 @@ pub fn shell(command_line: &str) -> io::Result<Accesses> {
             try!(nix::fcntl::open(path::Path::new(&"/dev/null"),
                                   nix::fcntl::O_RDONLY,
                                   nix::sys::stat::Mode::empty()));
+            let p1 = ptr::null_mut();
+            let p2 = ptr::null_mut();
+            try!(nix::sys::ptrace::ptrace(nix::sys::ptrace::ptrace::PTRACE_TRACEME,
+                                          0, p1, p2));
+            // let myself = nix::unistd::getpid();
+            // try!(nix::sys::signal::kill(myself,
+            //                             nix::sys::signal::signal::SIGSTOP));
             try!(nix::unistd::execvp(&CString::new("sh").unwrap(),
                                      &[CString::new("sh").unwrap(),
                                        CString::new("-c").unwrap(),
