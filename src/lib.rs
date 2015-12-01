@@ -32,6 +32,9 @@ mod generic;
 #[cfg(not(target_os = "linux"))]
 pub use generic::shell;
 
+#[cfg(test)]
+mod generic;
+
 #[test]
 fn test_true() {
     let a = shell("true").unwrap();
@@ -48,6 +51,16 @@ fn test_mktempdir() {
 fn test_echo_to_file() {
     test_mktempdir();
     let a = shell("echo foo > tmp/foo").unwrap();
+    assert!(a.status.code() == Some(0));
+    // if cfg!(target_os = "linux") {
+    //     assert!(a.read_files.contains(&path::PathBuf::from("tmp/foo")));
+    // }
+}
+
+#[test]
+fn test_generic_echo_to_file() {
+    test_mktempdir();
+    let a = generic::shell("echo foo > tmp/foo").unwrap();
     assert!(a.status.code() == Some(0));
     // if cfg!(target_os = "linux") {
     //     assert!(a.read_files.contains(&path::PathBuf::from("tmp/foo")));
