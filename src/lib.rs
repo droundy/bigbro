@@ -43,13 +43,14 @@ fn test_true() {
 
 #[test]
 fn test_mktempdir() {
-    let a = shell("mkdir -p tmp").unwrap();
+    std::fs::create_dir_all("tmp").unwrap();
+    let a = shell("mkdir -p tmp/dir").unwrap();
     assert!(a.status.code() == Some(0));
 }
 
 #[test]
 fn test_echo_to_file() {
-    test_mktempdir();
+    std::fs::create_dir_all("tmp").unwrap();
     let a = shell("echo foo > tmp/foo").unwrap();
     assert!(a.status.code() == Some(0));
     // if cfg!(target_os = "linux") {
@@ -59,7 +60,7 @@ fn test_echo_to_file() {
 
 #[test]
 fn test_generic_echo_to_file() {
-    test_mktempdir();
+    std::fs::create_dir_all("tmp").unwrap();
     let a = generic::shell("echo foo > tmp/foo").unwrap();
     assert!(a.status.code() == Some(0));
     // if cfg!(target_os = "linux") {
