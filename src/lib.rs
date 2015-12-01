@@ -27,13 +27,10 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::shell;
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(any(not(target_os = "linux"), test))]
 mod generic;
 #[cfg(not(target_os = "linux"))]
 pub use generic::shell;
-
-#[cfg(test)]
-mod generic;
 
 #[test]
 fn test_true() {
