@@ -20,8 +20,9 @@ matrix:
 before_script:
 - |
   echo $HOME && mkdir -p $HOME/.local/bin &&
-  pip install 'travis-cargo<0.2' --user --install-option="--install-scripts=$HOME/.local/bin" &&
-  export PATH=$HOME/.local/bin:$PATH && find $HOME -name travis_cargo.py
+  pip install 'travis-cargo<0.2' --user &&
+  export PATH=$HOME/.local/bin:$PATH &&
+  cp -v `find $HOME -name travis-cargo` $HOME/.local/bin/
 script:
 - |
   travis-cargo build &&
