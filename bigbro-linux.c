@@ -396,6 +396,16 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       free(arg);
     }
+  } else if (!strcmp(name, "stat") || !strcmp(name, "stat64")) {
+    int retval = wait_for_return_value(child, h);
+    if (retval == 0) {
+      char *arg = read_a_string(child, get_syscall_arg(regs, 0));
+      if (arg) {
+        debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+        read_file_at(child, -1, arg, h);
+        free(arg);
+      }
+    }
   } else if (!strcmp(name, "mkdir") || !strcmp(name, "mkdirat")) {
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
