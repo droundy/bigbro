@@ -16,3 +16,7 @@ tmp
 *.lock
 target
 .#.*
+web
+*.info
+*.gcda
+*.gcno

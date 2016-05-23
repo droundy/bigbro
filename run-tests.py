@@ -16,14 +16,26 @@ if platform == 'linux2':
     platform = 'linux'
 
 assert not os.system('rm -rf tests/*.test')
+assert not os.system('rm -f *.gcno *.gcda')
+
+# we always run with test coverage if lcov is present!
+have_lcov = os.system('lcov -h') == 0
+
 print('creating build-%s.sh...' % platform)
 print('==========================')
 if not os.system('fac --help'):
-    assert not os.system('fac --script build-%s.sh libbigbro.a' % platform)
+    assert not os.system('fac --script build-%s.sh libbigbro.a bigbro' % platform)
 
 print('building bigbro by running build-%s.sh...' % platform)
 print('============================================')
+
+if have_lcov:
+    os.environ['CFLAGS'] = os.environ.get('CFLAGS', default='') + ' --coverage'
+
 assert not os.system('sh build-%s.sh' % platform)
+
+if have_lcov:
+    assert not os.system('lcov --config-file .lcovrc -c -i -d . -o base.info')
 
 numfailures = 0
 
@@ -173,4 +185,12 @@ if benchmark:
 
 if numfailures > 0:
     print("\nTests FAILED!!!")
+
+if have_lcov:
+    assert not os.system('lcov --config-file .lcovrc -c -d . -o test.info')
+    assert not os.system('lcov --config-file .lcovrc -a base.info -a test.info -o coverage.info')
+    assert not os.system('lcov --config-file .lcovrc --remove coverage.info "/usr/*" --output-file coverage.info')
+    assert not os.system('rm -rf web/coverage')
+    assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" coverage.info')
+
 exit(numfailures)

@@ -12,3 +12,5 @@ set -ev
 
 (rm -f libbigbro.a && ${AR-ar} rc libbigbro.a bigbro-linux.o && ${RANLIB-ranlib} libbigbro.a)
 
+(${CC-gcc} ${CFLAGS-} -Wall -Werror -O2 -std=c99 -g -mtune=native -o bigbro -L. fileaccesses.c -lbigbro)
+

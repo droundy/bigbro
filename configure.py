@@ -47,11 +47,3 @@ print("""
 | %s %s -o bigbro -L. fileaccesses.c -lbigbro
 < libbigbro.a
 """ % (cc, cflags))
-
-print("""
-| %s %s -o nolib-bigbro fileaccesses.c bigbro-%s.c
-< syscalls/linux.h
-< syscalls/freebsd.h
-< syscalls/darwin.h
-> nolib-bigbro
-""" % (cc, cflags, platform))
