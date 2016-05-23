@@ -19,7 +19,7 @@ assert not os.system('rm -rf tests/*.test')
 assert not os.system('rm -f *.gcno *.gcda')
 
 # we always run with test coverage if lcov is present!
-have_lcov = os.system('lcov -h') == 0
+have_lcov = not benchmark and os.system('lcov -h') == 0
 
 print('creating build-%s.sh...' % platform)
 print('==========================')
