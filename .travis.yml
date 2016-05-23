@@ -1,35 +1,8 @@
-language: rust
-addons:
-  apt:
-    packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
-sudo: false
-os:
-  - linux
-  - osx
-rust:
-  - nightly
-  - beta
-  - stable
-matrix:
-  allow_failures:
-    - rust: nightly
-before_script:
-- |
-  echo $HOME && mkdir -p $HOME/.local/bin &&
-  pip install 'travis-cargo<0.2' --user &&
-  export PATH=$HOME/.local/bin:$PATH &&
-  (cp -v `find $HOME -name travis-cargo` $HOME/.local/bin/ || true)
-script:
-- |
-  travis-cargo build &&
-  travis-cargo test &&
-  travis-cargo --only stable doc
-after_success:
-- travis-cargo --only stable doc-upload
-- travis-cargo coveralls --no-sudo --verify
-env:
-  global:
-  - secure: LTKfJ2EKvoszI5zqhurFVTNu8uxMPnNMGizscb4be7bskYFjhnJ77nHQb/SgSzo1NCYbDhla7p2YHaQ+qn/GjjbyS+xgCzcMz2riCnLDr83JTLKR6nZDyxMkKisa0K7XHfuFzvzbslpb4/CqVV/3l2DvL1O6GHO4VL91Ws9W0C5lWA2+xuQDzY71QsVf/uEYgNP4tO3eDkTk3Q5vJGdtn2kRjl1SU7F5jVEy6ktVlHSb/poR/IN2wHwK3v5zr5LhNSGMKG59pYfYA0geyB0yZkRw3qSk7ejWTA7CUWIgxuL/1O5pP+2VLgEUiGCnZp3DmSeMGAe+NfMddPHuH3VIa187qyDqfLz+GuDRsomEsvhq1PY7uRw1s87lEhhJIbQ407qN6iPnLYac3lkP/DpInWNweMBXQMslujxXRX+0L3UXWyjSt4xalVf9St8mmpYDFSCtd7WQ5GOa+XGq6Ja2mIMlhZsdOm6X/wCsYcYs0QFIcoTHVulQvVZBTIugnwp97BA1p4dc2e9hMF3Q4bun3t8SloZrkSlQ8nY1GW0pxjACsXV7EUSvBzFA1WgffwDNYR8s1PLiXu4ZipB/MOpBuotrfj58WpQmAW1c7hgqeW9j2BdkeyBSDrfNofAwBWdg1Qgp8v+1P5SeIhUqHfBvAFNkWSZccawEEqxVwLLv6gs=
+language: c
+compiler:
+  - gcc
+  - clang
+script: sh build-linux.sh && python3 run-tests.py
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y python3
