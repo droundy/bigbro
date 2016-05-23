@@ -1,6 +1,9 @@
 libbigbro
 =========
 
+[![Build Status](https://travis-ci.org/droundy/bigbro.svg?branch=master)](https://travis-ci.org/droundy/bigbro)
+[![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
+
 `libbigbro` is a library that provides a single function that enables you
 to run a command (i.e. `fork` and `exec` on a posix system) and track
 what files it reads or modifies.
@@ -43,12 +46,3 @@ case, you can also simultaneously build bigbro and run the test suite,
 by running:
 
     python3 run-tests.py
-
-Rust version
-------------
-
-[![Build Status](https://travis-ci.org/droundy/bigbro.svg?branch=master)](https://travis-ci.org/droundy/bigbro)
-[![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
-
-I am currently translating bigbro into rust.  I haven't yet gotten
-very far.
