@@ -16,15 +16,13 @@ with open('testing-flags/test.c', 'w') as f:
 
 cc = '${CC-gcc}'
 
-cflags = ''
+cflags = '${CFLAGS-}'
 for flag in ['-Wall', '-Werror', '-O2', '-std=c99', '-g', '-mtune=native']:
     if not os.system('cd testing-flags && %s %s %s -c test.c' %
                      (cc, cflags, flag)):
         cflags += ' ' + flag
     else:
         print('# %s cannot use flag: %s' % (cc, flag))
-if len(cflags) > 0:
-    cflags = cflags[1:]
 os.system('rm -rf testing-flags')
 
 print('# cc=', repr(cc)) # in future, we should set this dynamically
