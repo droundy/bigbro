@@ -44,4 +44,5 @@ print("""
 print("""
 | %s %s -o bigbro -L. fileaccesses.c -lbigbro
 < libbigbro.a
+> bigbro
 """ % (cc, cflags))
