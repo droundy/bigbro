@@ -201,14 +201,14 @@ static pid_t wait_for_syscall(rw_status *h, int firstborn) {
   }
 }
 
-static const char *get_registers(pid_t child, void **voidregs,
-                                 long (**get_syscall_arg)(void *regs, int which)) {
+static enum syscall get_registers(pid_t child, void **voidregs,
+                                  long (**get_syscall_arg)(void *regs, int which)) {
   struct user_regs_struct *regs = malloc(sizeof(struct user_regs_struct));
 
   if (ptrace(PTRACE_GETREGS, child, NULL, regs) == -1) {
     debugprintf("error getting registers for %d!\n", child);
     free(regs);
-    return 0;
+    return -1;
   }
 #ifdef __x86_64__
   if (regs->cs == 0x23) {
@@ -230,21 +230,21 @@ static const char *get_registers(pid_t child, void **voidregs,
     *voidregs = regs;
 #endif
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_32;
-    if ((uint32_t)regs->orig_eax >= sizeof(syscalls_32)/sizeof(syscalls_32[0])) {
+    enum syscall val = syscalls_32(regs->orig_eax);
+    if (val < 0) {
       free(regs);
-      return 0;
     }
-    return syscalls_32[regs->orig_eax];
+    return val;
 #ifdef __x86_64__
   } else {
     *voidregs = regs;
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_64;
-    if ((uint64_t)regs->orig_rax >= sizeof(syscalls_64)/sizeof(syscalls_64[0])) {
+    enum syscall val = syscalls_64(regs->orig_rax);
+    if (val < 0) {
       debugprintf("%d: weird system call number:  %ld\n", child, regs->orig_rax);
       free(regs);
-      return 0;
     }
-    return syscalls_64[regs->orig_rax];
+    return val;
   }
 #endif
 }
@@ -264,12 +264,13 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   void *regs = 0;
   long (*get_syscall_arg)(void *regs, int which) = 0;
 
-  const char *name = get_registers(child, &regs, &get_syscall_arg);
-  if (!name) {
+  enum syscall sc = get_registers(child, &regs, &get_syscall_arg);
+  if (sc < 0) {
     /* we can't read the registers right, but let's not give up! */
     debugprintf("%d: Unable to read registers?!\n", child);
     return 0;
   }
+  const char *name = syscall_names[sc];
 
   debugprintf("%d: %s(?)\n", child, name);
 
@@ -278,13 +279,13 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       chroot? mkdir? mkdirat? rmdir? rmdirat?
   */
 
-  if (!strcmp(name, "open") || !strcmp(name, "openat")) {
+  if (sc == sc_open || sc == sc_openat) {
     char *arg;
     long flags;
     int fd = wait_for_return_value(child, h);
     if (fd >= 0) {
       int dirfd = -1;
-      if (!strcmp(name, "open")) {
+      if (sc == sc_open) {
         arg = read_a_string(child, get_syscall_arg(regs, 0));
         flags = get_syscall_arg(regs, 1);
       } else {
@@ -311,12 +312,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       free(arg);
     }
-  } else if (!strcmp(name, "unlink") || !strcmp(name, "unlinkat")) {
+  } else if (sc == sc_unlink || sc == sc_unlinkat) {
     char *arg;
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       int dirfd = -1;
-      if (!strcmp(name, "unlink")) {
+      if (sc == sc_unlink) {
         arg = read_a_string(child, get_syscall_arg(regs, 0));
         if (arg) debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
       } else {
@@ -333,8 +334,8 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(rawpath);
       free(abspath);
     }
-  } else if (!strcmp(name, "creat") || !strcmp(name, "truncate") ||
-             !strcmp(name, "utime") || !strcmp(name, "utimes")) {
+  } else if (sc == sc_creat || sc == sc_truncate ||
+             sc == sc_utime || sc == sc_utimes) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 0));
     int retval = wait_for_return_value(child, h);
     if (arg) {
@@ -342,7 +343,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (retval >= 0) write_file_at(child, -1, arg, h);
       free(arg);
     }
-  } else if (!strcmp(name, "utimensat")) {
+  } else if (sc == sc_utimensat) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
     if (arg) {
       int dirfd = get_syscall_arg(regs,0);
@@ -363,7 +364,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       debugprintf("%d: %s(%d, NULL) -> %d\n", child, name,
                   (int)get_syscall_arg(regs,0), retval);
     }
-  } else if (!strcmp(name, "futimesat")) {
+  } else if (sc == sc_futimesat) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
     if (arg) {
       int dirfd = get_syscall_arg(regs,0);
@@ -377,13 +378,13 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       debugprintf("%d: %s(%d, NULL) -> %d\n", child, name,
                   (int)get_syscall_arg(regs,0), retval);
     }
-  } else if (!strcmp(name, "lstat") || !strcmp(name, "lstat64") ||
-             !strcmp(name, "readlink") || !strcmp(name, "readlinkat")) {
+  } else if (sc == sc_lstat || sc == sc_lstat64 ||
+             sc == sc_readlink || sc == sc_readlinkat) {
     char *arg;
     int retval = wait_for_return_value(child, h);
     if (retval >= 0) {
       int dirfd = -1;
-      if (strcmp(name, "readlinkat")) {
+      if (sc != sc_readlinkat) {
         arg = read_a_string(child, get_syscall_arg(regs, 0));
       } else {
         arg = read_a_string(child, get_syscall_arg(regs, 1));
@@ -395,7 +396,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       free(arg);
     }
-  } else if (!strcmp(name, "stat") || !strcmp(name, "stat64")) {
+  } else if (sc == sc_stat || sc == sc_stat64) {
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       char *arg = read_a_string(child, get_syscall_arg(regs, 0));
@@ -405,12 +406,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         free(arg);
       }
     }
-  } else if (!strcmp(name, "mkdir") || !strcmp(name, "mkdirat")) {
+  } else if (sc == sc_mkdir || sc == sc_mkdirat) {
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       char *arg;
       int dirfd = -1;
-      if (strcmp(name, "mkdirat")) {
+      if (sc != sc_mkdirat) {
         arg = read_a_string(child, get_syscall_arg(regs, 0));
       } else {
         dirfd = get_syscall_arg(regs, 0);
@@ -426,12 +427,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         free(arg);
       }
     }
-  } else if (!strcmp(name, "symlink") || !strcmp(name, "symlinkat")) {
+  } else if (sc == sc_symlink || sc == sc_symlinkat) {
     char *arg, *target;
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       int dirfd = -1;
-      if (!strcmp(name, "symlink")) {
+      if (sc == sc_symlink) {
         target = read_a_string(child, get_syscall_arg(regs, 0));
         arg = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
@@ -441,7 +442,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       debugprintf("%d: %s(%p %p %d)\n", child, name, arg, target, dirfd);
       if (arg && target) {
-        if (!strcmp(name, "symlink")) {
+        if (sc == sc_symlink) {
           debugprintf("%d: %s('%s', '%s')\n", child, name, target, arg);
         } else {
           debugprintf("%d: %s('%s', %d, '%s')\n", child, name, target, dirfd, arg);
@@ -451,10 +452,10 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(arg);
       free(target);
     }
-  } else if (!strcmp(name, "execve") || !strcmp(name, "execveat")) {
+  } else if (sc == sc_execve || sc == sc_execveat) {
     char *arg;
     int dirfd = -1;
-    if (!strcmp(name, "execve")) {
+    if (sc == sc_execve) {
       arg = read_a_string(child, get_syscall_arg(regs, 0));
     } else {
       arg = read_a_string(child, get_syscall_arg(regs, 1));
@@ -465,12 +466,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       maybe_read_file_at(child, dirfd, arg, h);
     }
     free(arg);
-  } else if (!strcmp(name, "rename") || !strcmp(name, "renameat")) {
+  } else if (sc == sc_rename || sc == sc_renameat) {
     char *from, *to;
     int retval = wait_for_return_value(child, h);
     int dirfd = -1;
     if (retval == 0) {
-      if (!strcmp(name, "rename")) {
+      if (sc == sc_rename) {
         from = read_a_string(child, get_syscall_arg(regs, 0));
         to = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
@@ -492,12 +493,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(from);
       free(to);
     }
-  } else if (!strcmp(name, "link") || !strcmp(name, "linkat")) {
+  } else if (sc == sc_link || sc == sc_linkat) {
     char *from, *to;
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       int dirfd = -1;
-      if (!strcmp(name, "link")) {
+      if (sc == sc_link) {
         from = read_a_string(child, get_syscall_arg(regs, 0));
         to = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
@@ -513,14 +514,14 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(from);
       free(to);
     }
-  } else if (!strcmp(name, "getdents") || !strcmp(name, "getdents64")) {
+  } else if (sc == sc_getdents || sc == sc_getdents64) {
     int fd = get_syscall_arg(regs, 0);
     int retval = wait_for_return_value(child, h);
     debugprintf("%d: %s(%d) -> %d\n", child, name, fd, retval);
     if (retval >= 0) {
       read_dir_fd(child, fd, h);
     }
-  } else if (!strcmp(name, "chdir")) {
+  } else if (sc == sc_chdir) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 0));
     /* not actually a file, but this gets symlinks in the chdir path */
     read_file_at(child, -1, arg, h);
