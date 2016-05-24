@@ -208,7 +208,7 @@ static enum syscall get_registers(pid_t child, void **voidregs,
   if (ptrace(PTRACE_GETREGS, child, NULL, regs) == -1) {
     debugprintf("error getting registers for %d!\n", child);
     free(regs);
-    return -1;
+    return sc_invalid_syscall;
   }
 #ifdef __x86_64__
   if (regs->cs == 0x23) {
@@ -266,7 +266,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   long (*get_syscall_arg)(void *regs, int which) = 0;
 
   enum syscall sc = get_registers(child, &regs, &get_syscall_arg);
-  if (sc == -1) {
+  if (sc == sc_invalid_syscall) {
     /* we can't read the registers right, but let's not give up! */
     debugprintf("%d: Unable to read registers?!\n", child);
     return 0;

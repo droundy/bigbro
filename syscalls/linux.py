@@ -5,7 +5,7 @@ import re, os
 re_syscall = re.compile(r'^([0-9]+)\s+\S+\s+(\S+)')
 
 sysnames = {}
-allsysnames = []
+allsysnames = ['invalid_syscall']
 
 for postfix in ['_32', '_64']:
     if os.uname()[4] == 'x86_64':
@@ -51,6 +51,6 @@ static inline enum syscall syscalls%s(int num) {
    switch (num) {""" % postfix)
     for i in sysnames[postfix].keys():
         print('    case %d: return sc_%s;' % (i, sysnames[postfix][i]))
-    print("""default: return -1;
+    print("""default: return sc_invalid_syscall;
     }
 };\n""")
