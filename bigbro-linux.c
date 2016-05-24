@@ -571,10 +571,10 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     }
 
     rw_status h;
-    init_hash_table(&h.read, 1024);
-    init_hash_table(&h.readdir, 1024);
-    init_hash_table(&h.written, 1024);
-    init_hash_table(&h.mkdir, 1024);
+    init_hashset(&h.read, 1024);
+    init_hashset(&h.readdir, 1024);
+    init_hashset(&h.written, 1024);
+    init_hashset(&h.mkdir, 1024);
 
     while (1) {
       pid_t child = wait_for_syscall(&h, firstborn);

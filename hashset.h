@@ -16,9 +16,6 @@ typedef struct hashset {
   struct hash_entry **table;
 } hashset;
 
-static void init_hash_table(hashset *h, int size);
-static void free_hash_table(hashset *h);
-
 static inline unsigned long hash_function(const char *strinput) {
   unsigned long hash = 5381;
   const unsigned char *str = (const unsigned char *)strinput;
@@ -113,7 +110,7 @@ static char **hashset_to_array(hashset *hs) {
 }
 
 static void free_hashset(hashset *h) {
-  free_hash_table(h);
+  free(h->table);
   struct hash_entry *todelete = 0;
   for (struct hash_entry *e = h->first; e; e = e->next) {
     free(todelete);
@@ -122,15 +119,11 @@ static void free_hashset(hashset *h) {
   free(todelete);
 }
 
-static void init_hash_table(hashset *h, int size) {
+static void init_hashset(hashset *h, int size) {
   h->size = size;
   h->num_entries = 0;
   h->first = 0;
   h->table = calloc(sizeof(struct hash_entry *), size);
-}
-
-static void free_hash_table(hashset *h) {
-  free(h->table); /* assume entries are already freed */
 }
 
 #endif
