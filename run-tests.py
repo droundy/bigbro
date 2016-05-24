@@ -58,54 +58,57 @@ def create_clean_tree(prepsh='this file does not exist'):
             print("prep command failed:", cmd)
             exit(1)
 
+options = ['', ' -m32', ' -m64', ' -mx32']
+
 print('running C tests:')
 print('================')
 for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
     test = base+'.test'
-    if '-static' in testc:
-        if os.system('${CC-gcc} -Wall -static -O2 -o %s %s' % (test, testc)):
-            print('%s fails to compile, skipping test' % testc)
-            continue
-    else:
-        if os.system('${CC-gcc} -Wall -O2 -o %s %s' % (test, testc)):
-            print('%s fails to compile, skipping test' % testc)
-            continue
-    create_clean_tree()
-    before = perf_counter()
-    cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
-    if os.system(cmd):
-        os.system('cat %s.out' % base);
-        os.system('cat %s.err' % base);
-        print("command failed:", cmd)
-        exit(1)
-    measured_time = perf_counter() - before
-    err = open(base+'.err','r').read()
-    out = open(base+'.out','r').read()
-    m = importlib.import_module('tests.'+base[6:])
-    # print(err)
-    if benchmark:
+    for flag in options:
+        if '-static' in testc:
+            if os.system('${CC-gcc} %s -Wall -static -O2 -o %s %s' % (flag, test, testc)):
+                print('%s %s fails to compile, skipping test' % (testc, flag))
+                continue
+        else:
+            if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
+                print('%s %s fails to compile, skipping test' % (testc, flag))
+                continue
         create_clean_tree()
         before = perf_counter()
-        cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
-        os.system(cmd)
-        reference_time = perf_counter() - before
-        if measured_time < 1e-3:
-            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        elif measured_time < 1:
-            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
+        if os.system(cmd):
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print("command failed:", cmd)
+            exit(1)
+        measured_time = perf_counter() - before
+        err = open(base+'.err','r').read()
+        out = open(base+'.out','r').read()
+        m = importlib.import_module('tests.'+base[6:])
+        # print(err)
+        if benchmark:
+            create_clean_tree()
+            before = perf_counter()
+            cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
+            os.system(cmd)
+            reference_time = perf_counter() - before
+            if measured_time < 1e-3:
+                time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+            elif measured_time < 1:
+                time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+            else:
+                time_took = '(%g vs %g s)' % (measured_time, reference_time)
         else:
-            time_took = '(%g vs %g s)' % (measured_time, reference_time)
-    else:
-        if measured_time < 1e-3:
-            time_took = '(%g us)' % (measured_time*1e6)
+            if measured_time < 1e-3:
+                time_took = '(%g us)' % (measured_time*1e6)
+            else:
+                time_took = '(%g ms)' % (measured_time*1e3)
+        if m.passes(out, err):
+            print(test, flag, "passes", time_took)
         else:
-            time_took = '(%g ms)' % (measured_time*1e3)
-    if m.passes(out, err):
-        print(test, "passes", time_took)
-    else:
-        print(test, "FAILS!", time_took)
-        numfailures += 1
+            print(test, flag, "FAILS!", time_took)
+            numfailures += 1
 
 test = None # to avoid bugs below where we refer to test
 print()
