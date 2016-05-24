@@ -37,7 +37,7 @@
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
 
-static const int debug_output = 0;
+static const int debug_output = 1;
 
 static inline void debugprintf(const char *format, ...) {
   va_list args;
@@ -232,6 +232,7 @@ static enum syscall get_registers(pid_t child, void **voidregs,
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_32;
     enum syscall val = syscalls_32(regs->orig_eax);
     if (val < 0) {
+      debugprintf("%d: weird 32-bit system call:  %ld\n", child, regs->orig_eax);
       free(regs);
     }
     return val;

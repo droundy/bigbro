@@ -58,7 +58,7 @@ def create_clean_tree(prepsh='this file does not exist'):
             print("prep command failed:", cmd)
             exit(1)
 
-options = ['', ' -m32', ' -m64', ' -mx32']
+options = ['', ' -m32', ' -m64'] # , ' -mx32']
 
 print('running C tests:')
 print('================')
