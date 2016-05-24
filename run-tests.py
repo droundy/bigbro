@@ -183,14 +183,16 @@ if benchmark:
             time_took = '(%g vs %g s)' % (measured_time, reference_time)
         print(testsh, time_took)
 
-if numfailures > 0:
-    print("\nTests FAILED!!!")
-
 if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -d . -o test.info')
     assert not os.system('lcov --config-file .lcovrc -a base.info -a test.info -o coverage.info')
     assert not os.system('lcov --config-file .lcovrc --remove coverage.info "/usr/*" --output-file coverage.info')
     assert not os.system('rm -rf web/coverage')
     assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" coverage.info')
+
+if numfailures > 0:
+    print("\nTests FAILED!!!")
+else:
+    print("\nAll tests passed!")
 
 exit(numfailures)
