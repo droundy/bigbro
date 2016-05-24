@@ -1,11 +1,43 @@
 #ifndef HASHSET_H
 #define HASHSET_H
 
-#include "iterablehash.h"
-
 #include <string.h>
+#include <stdlib.h>
+#include <assert.h>
 
-typedef struct hash_table hashset;
+struct hash_entry {
+  const char *key;
+  struct hash_entry *next;
+};
+
+typedef struct hashset {
+  int size, num_entries;
+  struct hash_entry *first;
+  struct hash_entry **table;
+} hashset;
+
+static void init_hash_table(hashset *h, int size);
+static void free_hash_table(hashset *h);
+
+static inline unsigned long hash_function(const char *strinput) {
+  unsigned long hash = 5381;
+  const unsigned char *str = (const unsigned char *)strinput;
+  int c;
+  while ((c = *str++)) hash = hash * 33 ^ c;
+  return hash;
+}
+
+/* Find the data stored under str in the hash */
+static struct hash_entry * lookup_in_hash(hashset *hash, const char *str) {
+  unsigned long h = hash_function(str) % hash->size;
+  struct hash_entry *e = hash->table[h];
+  while (e) {
+    if (strcmp(e->key, str) == 0) return e;
+    if (!e->next || hash_function(e->next->key) % hash->size != h) return 0;
+    e = e->next;
+  }
+  return 0;
+}
 
 static inline void insert_hashset(hashset *hash, const char *key) {
   if (lookup_in_hash(hash, key)) return;
@@ -13,13 +45,44 @@ static inline void insert_hashset(hashset *hash, const char *key) {
   e->key = ((char *)e) + sizeof(struct hash_entry);
   strcpy((char *)e->key, key);
   e->next = 0;
-  add_to_hash(hash, e);
+
+  hash->num_entries++;
+  unsigned long h = hash_function(e->key) % hash->size;
+  struct hash_entry *enext = hash->table[h];
+  if (enext) {
+    e->next = enext->next;
+    enext->next = e;
+  } else {
+    e->next = hash->first;
+    hash->first = e;
+    hash->table[h] = e;
+  }
 }
 
 static inline void delete_from_hashset(hashset *hash, const char *key) {
   struct hash_entry *e = lookup_in_hash(hash, key);
   if (e) {
-    remove_from_hash(hash, e);
+    struct hash_entry *x = hash->first;
+    if (x == e) {
+      hash->first = e->next;
+    } else {
+      while (x) {
+        if (x->next == e) {
+          x->next = e->next;
+        }
+        x = x->next;
+      }
+    }
+    unsigned long h = hash_function(e->key) % hash->size;
+    if (hash->table[h] == e) {
+      if (e->next && hash_function(e->next->key) % hash->size == h) {
+        hash->table[h] = e->next;
+      } else {
+        hash->table[h] = 0;
+      }
+    }
+    hash->num_entries -= 1;
+
     free(e);
   }
 }
@@ -57,6 +120,17 @@ static void free_hashset(hashset *h) {
     todelete = e;
   }
   free(todelete);
+}
+
+static void init_hash_table(hashset *h, int size) {
+  h->size = size;
+  h->num_entries = 0;
+  h->first = 0;
+  h->table = calloc(sizeof(struct hash_entry *), size);
+}
+
+static void free_hash_table(hashset *h) {
+  free(h->table); /* assume entries are already freed */
 }
 
 #endif

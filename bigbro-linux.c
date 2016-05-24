@@ -31,7 +31,6 @@
 
 #include "linux-proc.h"
 
-#include "iterablehash.c"
 #include "error.h"
 
 #include <sys/wait.h>
