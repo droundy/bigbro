@@ -231,7 +231,7 @@ static enum syscall get_registers(pid_t child, void **voidregs,
 #endif
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_32;
     enum syscall val = syscalls_32(regs->orig_eax);
-    if (val < 0) {
+    if (val == sc_invalid_syscall) {
       debugprintf("%d: weird 32-bit system call:  %ld\n", child, regs->orig_eax);
       free(regs);
     }
@@ -241,7 +241,7 @@ static enum syscall get_registers(pid_t child, void **voidregs,
     *voidregs = regs;
     *get_syscall_arg = (long (*)(void *regs, int which))get_syscall_arg_64;
     enum syscall val = syscalls_64(regs->orig_rax);
-    if (val < 0) {
+    if (val == sc_invalid_syscall) {
       debugprintf("%d: weird system call number:  %ld\n", child, regs->orig_rax);
       free(regs);
     }
