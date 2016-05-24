@@ -266,7 +266,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   long (*get_syscall_arg)(void *regs, int which) = 0;
 
   enum syscall sc = get_registers(child, &regs, &get_syscall_arg);
-  if (sc < 0) {
+  if (sc == -1) {
     /* we can't read the registers right, but let's not give up! */
     debugprintf("%d: Unable to read registers?!\n", child);
     return 0;
