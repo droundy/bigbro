@@ -31,8 +31,6 @@ print('# cflags=', repr(cflags))
 print("""
 | %s %s -c bigbro-%s.c
 < syscalls/linux.h
-< syscalls/freebsd.h
-< syscalls/darwin.h
 > bigbro-%s.o
 
 # We need to remove libbigbro.a before running ar, because otherwise
