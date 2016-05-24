@@ -16,8 +16,8 @@ with open('testing-flags/test.c', 'w') as f:
 
 cc = '${CC-gcc}'
 
-cflags = '${CFLAGS-}'
-for flag in ['-Wall', '-Werror', '-O2', '-std=c99', '-g', '-mtune=native']:
+cflags = '${CFLAGS--O2}'
+for flag in ['-Wall', '-Werror', '-std=c99', '-g', '-mtune=native']:
     if not os.system('cd testing-flags && %s %s %s -c test.c' %
                      (cc, cflags, flag)):
         cflags += ' ' + flag
