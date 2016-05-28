@@ -55,14 +55,14 @@ def count_reads(err, num):
     fs = re.compile(r'r: /[^\n]+\n', re.M).findall(err)
     fs = [f for f in fs if 'r: /proc/' not in f]
     if len(fs) != num:
-        print('  did not read', num, fs)
+        print('  did not read', num, fs, 'read', len(fs))
         return False
     return True
 
 def count_writes(err, num):
     fs = re.compile(r'w: /[^\n]+\n', re.M).findall(err)
     if len(fs) != num:
-        print('  did not write', num, fs)
+        print('  did not write', num, fs, 'wrote', len(fs))
         return False
     return True
 
