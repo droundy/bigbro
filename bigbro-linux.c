@@ -123,8 +123,10 @@ static long get_syscall_arg_32(const struct user_regs_struct *regs, int which) {
 static char *read_a_string(pid_t child, unsigned long addr) {
     if (addr == 0) return 0;
 
-    char *val = malloc(4096);
-    int allocated = 4096;
+    // There is a tradeoff here between allocating something too large
+    // and wasting memory vs the cost of reallocing repeatedly.
+    char *val = malloc(1024);
+    int allocated = 1024;
     int read = 0;
     unsigned long tmp;
     while (1) {
