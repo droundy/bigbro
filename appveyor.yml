@@ -10,7 +10,7 @@ platform:
 install:
   - cmd: SET PATH=C:\Program Files (x86)\MSBuild\14.0\bin\;%PATH%
   - cmd: SET PATH=C:\python35;%PATH%
-  - cmd: python3 build/windows.py
+  - cmd: python build/windows.py
 
 branches:
   only:
