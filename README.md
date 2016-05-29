@@ -38,7 +38,7 @@ Building
 
 To build bigbro, you just need run:
 
-    sh build-linux.sh
+    sh build/linux.sh
 
 If you have [fac](http://physics.oregonstate.edu/~roundyd/fac)
 installed, you can alternatively build bigbro using fac.  In this

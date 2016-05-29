@@ -21,10 +21,10 @@ assert not os.system('rm -f *.gcno *.gcda')
 # we always run with test coverage if lcov is present!
 have_lcov = not benchmark and os.system('lcov -h') == 0
 
-print('creating build-%s.sh...' % platform)
+print('creating build/%s.sh...' % platform)
 print('==========================')
 if not os.system('fac --help'):
-    assert not os.system('fac --script build-%s.sh libbigbro.a bigbro' % platform)
+    assert not os.system('fac --script build/%s.sh libbigbro.a bigbro' % platform)
 
 print('building bigbro by running build-%s.sh...' % platform)
 print('============================================')
