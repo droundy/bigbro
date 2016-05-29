@@ -6,12 +6,14 @@ from __future__ import division, print_function
 
 import subprocess, os
 
-if not subprocess.call(['x86_64-w64-mingw32-gcc', '--version']):
-    cc = 'x86_64-w64-mingw32-gcc'
-    print('using mingw-w64 compiler')
-else:
-    cc = 'cl'
-    print('using cl, which might be visual studio compiler')
+for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
+    try:
+        subprocess.call([compiler, '--version'])
+        cc = compiler
+        print('using',cc,'compiler')
+        break
+    except:
+        print('NOT using',compiler,'compiler')
 
 print("This is a test under windows")
 
