@@ -15,6 +15,15 @@ static inline void verbose_printf(const char *format, ...) {
   va_end(args);
 }
 
+static const int debug_output = 0;
+
+static inline void debugprintf(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  if (debug_output) vfprintf(stdout, format, args);
+  va_end(args);
+}
+
 static inline void error_at_line(int retval, int my_errno, const char *fname,
                                  int linenum, const char *format, ...) {
   va_list args;

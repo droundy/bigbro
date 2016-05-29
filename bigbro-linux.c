@@ -31,20 +31,11 @@
 
 #include "linux-proc.h"
 
-#include "error.h"
+#include "errors.h"
 
 #include <sys/wait.h>
 #include <stdarg.h>
 #include <fcntl.h> /* for flags to open(2) */
-
-static const int debug_output = 0;
-
-static inline void debugprintf(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  if (debug_output) vfprintf(stdout, format, args);
-  va_end(args);
-}
 
 #include <sys/stat.h>
 
