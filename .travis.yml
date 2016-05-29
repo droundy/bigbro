@@ -5,7 +5,7 @@ compiler:
   - clang
 
 script:
-  - sh build-linux.sh
+  - sh build/linux.sh
   - CFLAGS=--coverage python3 run-tests.py
 
 before_install:
