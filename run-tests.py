@@ -26,13 +26,13 @@ print('==========================')
 if not os.system('fac --help'):
     assert not os.system('fac --script build/%s.sh libbigbro.a bigbro' % platform)
 
-print('building bigbro by running build-%s.sh...' % platform)
+print('building bigbro by running build/%s.sh...' % platform)
 print('============================================')
 
 if have_lcov:
     os.environ['CFLAGS'] = os.environ.get('CFLAGS', default='') + ' --coverage'
 
-assert not os.system('sh build-%s.sh' % platform)
+assert not os.system('sh build/%s.sh' % platform)
 
 if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -i -d . -o base.info')
