@@ -1,17 +1,24 @@
 # appveyor file
 # http://www.appveyor.com/docs/appveyor-yml
 
-os: Visual Studio 2015
-
-platform:
-  - x86
-  - x64
+environment:
+  matrix:
+  - TARGET: x86_64-pc-windows-msvc
+    ARCH: amd64
+    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
+  - TARGET: x86_64-pc-windows-msvc
+    ARCH: amd64
+    VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+  - TARGET: i686-pc-windows-msvc
+    ARCH: x86
+    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
+  - TARGET: i686-pc-windows-msvc
+    ARCH: x86
+    VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
 
 build_script:
-  - cmd: SET PATH=C:\Program Files (x86)\MSBuild\14.0\bin\;%PATH%
+  - if defined VS call "%VS%" %ARCH%
   - cmd: SET PATH=C:\python35;%PATH%
-  - cmd: dir C:\Program Files
-  - cmd: dir C:\Program Files (x86)
   - cmd: bash -c "which cl.exe"
   - cmd: bash -c "which link.exe"
   - cmd: python build/windows.py
