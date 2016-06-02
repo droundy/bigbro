@@ -9,3 +9,4 @@ def passes(out, err):
      ])
 
 needs_symlinks = False
+skip_windows = True
