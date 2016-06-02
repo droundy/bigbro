@@ -8,3 +8,6 @@ def passes(out, err):
          th.count_writes(err, 2),
          th.count_readdir(err, 0),
      ])
+
+needs_symlinks = True
+skip_windows = True

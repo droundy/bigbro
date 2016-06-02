@@ -9,3 +9,5 @@ def passes(out, err):
          th.reads(err, '/tmp/subdir2/symlink'),
          th.reads(err, '/tmp/subdir1/foo_symlink'),
      ])
+
+needs_symlinks = True

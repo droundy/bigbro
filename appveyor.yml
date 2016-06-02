@@ -25,7 +25,7 @@ build_script:
 
 # to run your custom scripts instead of automatic tests
 test_script:
-  - echo This is my custom test script
+  - python3 run-windows-tests.py
 
 branches:
   only:

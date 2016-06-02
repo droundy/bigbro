@@ -7,3 +7,5 @@ def passes(out, err):
          th.reads(err, '/tmp/root_symlink'),
          th.writes(err, 'tmp/dirfoo/dirfoo/dirfoo/dir foo/dir  foo/dir   foo/dir    foo/dir     foo/dir      foo/dir       foo/dir        foo/dir         foo/dir          foo/dir           foo/dir            foo/dir             foo/dir              foo/dir               foo/dir                foo/dir                 foo/dir                  foo/dir                   foo/dir                    foo/dir                     foo/dir                      foo/dir                       foo/dir                        foo/dir                         foo/dir                          foo/dir                           foo/dir                            foo/dir                             foo/dir                              foo/dir                               foo/file                               .dat'),
      ])
+
+needs_symlinks = True

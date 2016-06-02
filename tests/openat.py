@@ -17,3 +17,6 @@ def passes(out, err):
         print('should not readdir:', readdir)
         return False
     return True
+
+needs_symlinks = False
+skip_windows = True

@@ -8,3 +8,5 @@ def passes(out, err):
          th.writes(err, '/tmp/foo'),
          th.writes(err, '/tmp/foobar'),
      ])
+
+needs_symlinks = True

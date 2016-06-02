@@ -6,3 +6,5 @@ def passes(out, err):
          th.count_writes(err, 0),
          th.reads(err, '/tmp/root_symlink'),
      ])
+
+needs_symlinks = True

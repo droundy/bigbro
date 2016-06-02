@@ -6,3 +6,5 @@ def passes(out, err):
          th.writes(err, '/tmp-silly'),
          th.count_writes(err, 1),
      ])
+
+needs_symlinks = True

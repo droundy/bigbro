@@ -5,3 +5,5 @@ def passes(out, err):
         [th.reads(err, '/tests/bigbro-wrong-args.sh'),
          th.reads(err, '/bigbro'),
      ])
+
+needs_symlinks = False

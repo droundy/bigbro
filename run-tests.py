@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import glob, os, importlib, sys, time
+import glob, os, importlib, sys, time, shutil
 
 if 'perf_counter' in dir(time):
     perf_counter = time.perf_counter
@@ -15,8 +15,8 @@ platform = sys.platform
 if platform == 'linux2':
     platform = 'linux'
 
-assert not os.system('rm -rf tests/*.test')
-assert not os.system('rm -f *.gcno *.gcda')
+for f in glob.glob('tests/*.test') + glob.glob('*.gcno') + glob.glob('*.gcda'):
+    os.remove(f)
 
 # we always run with test coverage if lcov is present!
 have_lcov = not benchmark and os.system('lcov -h') == 0
@@ -35,21 +35,34 @@ if have_lcov:
 assert not os.system('sh build/%s.sh' % platform)
 
 if have_lcov:
-    assert not os.system('lcov --config-file .lcovrc -c -i -d . -o base.info')
+    assert not os.system('lcov --config-file .lcovrc -c -i -d . -o tests/base.info')
 
 numfailures = 0
 
+have_symlinks = True
+
 def create_clean_tree(prepsh='this file does not exist'):
-    os.system('rm -rf tmp*')
+    for tmp in glob.glob('tmp*'):
+        if os.path.isdir(tmp):
+            shutil.rmtree(tmp)
+        else:
+            os.remove(tmp)
     os.mkdir('tmp')
     os.mkdir('tmp/subdir1')
     os.mkdir('tmp/subdir1/deepdir')
     os.mkdir('tmp/subdir2')
-    os.system('ln -s ../subdir1 tmp/subdir2/symlink')
-    os.system('ln -s `pwd` tmp/root_symlink')
-    os.system('echo test > tmp/subdir2/test')
-    os.system('echo foo > tmp/foo')
-    os.system('ln -s ../foo tmp/subdir1/foo_symlink')
+    with open('tmp/subdir2/test', 'w') as f:
+        f.write('test\n')
+    with open('tmp/foo', 'w') as f:
+        f.write('foo\n')
+    global have_symlinks
+    if have_symlinks:
+        try:
+            os.symlink('../subdir1', 'tmp/subdir2/symlink')
+            os.symlink(os.getcwd(), 'tmp/root_symlink')
+            os.symlink('../foo', 'tmp/subdir1/foo_symlink')
+        except:
+            have_symlinks = False
     if os.path.exists(prepsh):
         cmd = 'sh %s 2> %s.err 1> %s.out' % (prepsh, prepsh, prepsh)
         if os.system(cmd):
@@ -74,6 +87,15 @@ for testc in glob.glob('tests/*.c'):
             if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
+        m = importlib.import_module('tests.'+base[6:])
+        try:
+            if m.needs_symlinks and not have_symlinks:
+                if flag == '':
+                    print('skipping', test, 'since we have no symlinks')
+                continue
+        except:
+            print(test, 'needs to specify needs_symlinks')
+            exit(1)
         create_clean_tree()
         before = perf_counter()
         cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
@@ -85,7 +107,6 @@ for testc in glob.glob('tests/*.c'):
         measured_time = perf_counter() - before
         err = open(base+'.err','r').read()
         out = open(base+'.out','r').read()
-        m = importlib.import_module('tests.'+base[6:])
         # print(err)
         if benchmark:
             create_clean_tree()
@@ -116,6 +137,15 @@ print('running sh tests:')
 print('=================')
 for testsh in glob.glob('tests/*.sh'):
     base = testsh[:-3]
+    m = importlib.import_module('tests.'+base[6:])
+    try:
+        if m.needs_symlinks and not have_symlinks:
+            if flag == '':
+                print('skipping', test, 'since we have no symlinks')
+            continue
+    except:
+        print(test, 'needs to specify needs_symlinks')
+        exit(1)
     create_clean_tree(testsh+'.prep')
     before = perf_counter()
     cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
@@ -144,7 +174,6 @@ for testsh in glob.glob('tests/*.sh'):
             time_took = '(%g us)' % (measured_time*1e6)
         else:
             time_took = '(%g ms)' % (measured_time*1e3)
-    m = importlib.import_module('tests.'+base[6:])
     # print(err)
     if m.passes(out, err):
         print(testsh, "passes", time_took)
@@ -187,11 +216,11 @@ if benchmark:
         print(testsh, time_took)
 
 if have_lcov:
-    assert not os.system('lcov --config-file .lcovrc -c -d . -o test.info')
-    assert not os.system('lcov --config-file .lcovrc -a base.info -a test.info -o coverage.info')
-    assert not os.system('lcov --config-file .lcovrc --remove coverage.info "/usr/*" --output-file coverage.info')
+    assert not os.system('lcov --config-file .lcovrc -c -d . -o tests/test.info')
+    assert not os.system('lcov --config-file .lcovrc -a tests/base.info -a tests/test.info -o tests/coverage.info')
+    assert not os.system('lcov --config-file .lcovrc --remove tests/coverage.info "/usr/*" --output-file tests/coverage.info')
     assert not os.system('rm -rf web/coverage')
-    assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" coverage.info')
+    assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" tests/coverage.info')
 
 if numfailures > 0:
     print("\nTests FAILED!!!")

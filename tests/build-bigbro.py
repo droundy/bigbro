@@ -7,3 +7,5 @@ def passes(out, err):
          th.writes(err, '/tmp/libbigbro.a'),
          th.writes(err, '/tmp/syscalls/linux.h'),
      ])
+
+needs_symlinks = False

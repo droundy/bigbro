@@ -8,3 +8,5 @@ def passes(out, err):
          th.writes(err, '/tmp/subdir1/bigbro/README.md'),
          th.writes(err, '/tmp/subdir1/bigbro/bigbro-linux.c'),
      ])
+
+needs_symlinks = False
