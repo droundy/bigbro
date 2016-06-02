@@ -532,7 +532,6 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   return 0;
 }
 
-
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char **envp,
            char *cmdline,
@@ -566,10 +565,8 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     args[1] = "-c";
     args[2] = cmdline;
     args[3] = 0;
-    if (envp == 0) {
-      envp = (char **)malloc(sizeof(char *));
-      *envp = 0;
-    }
+    // when envp == 0, we are supposed to inherit our environment.
+    if (envp == 0) envp = environ;
     return execve(args[0], args, envp);
   } else {
     *child_ptr = firstborn;

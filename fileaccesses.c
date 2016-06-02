@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
   char *cmdline = (char *)calloc(1,cmdlength);
   strcpy(cmdline, argv[1]);
   for (int i=2; argv[i]; i++) {
+    strcat(cmdline, " ");
     strcat(cmdline, argv[i]);
   }
   pid_t child_pid;
