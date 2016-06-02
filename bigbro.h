@@ -53,7 +53,7 @@
   */
 
 #ifdef _MSC_VER
-typedef int pid_t
+typedef int pid_t;
 #endif
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
