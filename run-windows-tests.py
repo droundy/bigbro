@@ -21,7 +21,7 @@ for f in glob.glob('tests/*.test') + glob.glob('*.gcno') + glob.glob('*.gcda'):
 print('building bigbro by running build/windows.py...')
 print('============================================')
 
-assert not os.system('python3 build/windows.py')
+assert not os.system('python build/windows.py')
 
 numfailures = 0
 
@@ -50,7 +50,7 @@ def create_clean_tree(preppy='this file does not exist'):
         except:
             have_symlinks = False
     if os.path.exists(preppy):
-        cmd = 'python3 %s 2> %s.err 1> %s.out' % (preppy, preppy, preppy)
+        cmd = 'python %s 2> %s.err 1> %s.out' % (preppy, preppy, preppy)
         if os.system(cmd):
             os.system('cat %s.out' % preppy);
             os.system('cat %s.err' % preppy);
