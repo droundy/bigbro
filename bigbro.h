@@ -52,6 +52,10 @@
 
   */
 
+#ifdef _MSC_VER
+typedef int pid_t
+#endif
+
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *commandline, char ***read_from_directories,
