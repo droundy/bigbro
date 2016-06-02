@@ -44,6 +44,7 @@ cfiles = ['bigbro-windows.c', 'fileaccesses.c']
 for c in cfiles:
     assert(not compile(c))
 
-cmd = [linker, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
+# use cc for doing the linking, since I understand its options
+cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
