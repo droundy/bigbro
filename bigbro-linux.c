@@ -534,7 +534,8 @@ static int save_syscall_access(pid_t child, rw_status *h) {
 
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
-           int stdouterrfd, char **args,
+           int stdoutfd, int stderrfd, char **envp,
+           char *cmdline,
            char ***read_from_directories_out,
            char ***read_from_files_out,
            char ***written_to_files_out) {
@@ -545,18 +546,31 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   setpgid(firstborn, firstborn); // causes grandchildren to be killed along with firstborn
 
   if (firstborn == 0) {
-    if (stdouterrfd > 0) {
+    if (stdoutfd > 0 || stderrfd > 0) {
       close(0); // close stdin so programs won't wait on input
-      close(1);
-      close(2);
-      dup2(stdouterrfd, 1);
-      dup2(stdouterrfd, 2);
       open("/dev/null", O_RDONLY);
+      if (stdoutfd > 0) {
+        close(1);
+        dup2(stdoutfd, 1);
+      }
+      if (stderrfd > 0) {
+        close(2);
+        dup2(stderrfd, 2);
+      }
     }
     if (workingdir && chdir(workingdir) != 0) return -1;
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
-    return execvp(args[0], args);
+    char **args = (char **)malloc(4*sizeof(char *));
+    args[0] = "/bin/sh";
+    args[1] = "-c";
+    args[2] = cmdline;
+    args[3] = 0;
+    if (envp == 0) {
+      envp = (char **)malloc(sizeof(char *));
+      *envp = 0;
+    }
+    return execve(args[0], args, envp);
   } else {
     *child_ptr = firstborn;
     waitpid(firstborn, 0, __WALL);

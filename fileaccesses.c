@@ -24,7 +24,7 @@
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s prog args\n", argv[0]);
+    fprintf(stderr, "Usage: %s cmdline\n", argv[0]);
     exit(1);
   }
 
@@ -32,13 +32,19 @@ int main(int argc, char **argv) {
   char **read_from_files = 0;
   char **read_from_directories = 0;
 
-  char **args = (char **)malloc(argc*sizeof(char*));
-  memcpy(args, argv+1, (argc-1) * sizeof(char*));
-  args[argc-1] = NULL;
+  int cmdlength = 10; // a little leeway
+  for (int i=1; argv[i]; i++) {
+    cmdlength += strlen(argv[i]) + 1;
+  }
+  char *cmdline = (char *)calloc(1,cmdlength);
+  strcpy(cmdline, argv[1]);
+  for (int i=2; argv[i]; i++) {
+    strcat(cmdline, argv[i]);
+  }
   pid_t child_pid;
-  bigbro(".", &child_pid, 0, args, &read_from_directories,
+  bigbro(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
          &read_from_files, &written_to_files);
-  free(args);
+  free(cmdline);
 
   if (read_from_directories)
     for (int i=0; read_from_directories[i]; i++) {

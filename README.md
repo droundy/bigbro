@@ -2,6 +2,7 @@ libbigbro
 =========
 
 [![Build Status](https://travis-ci.org/droundy/bigbro.svg?branch=master)](https://travis-ci.org/droundy/bigbro)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/w0uttk4ayga2f45w?svg=true)](https://ci.appveyor.com/project/droundy/bigbro)
 [![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
 
 `libbigbro` is a library that provides a single function that enables you

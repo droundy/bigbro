@@ -15,11 +15,26 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     except:
         print('NOT using',compiler,'compiler')
 
+for linker in ['x86_64-w64-mingw32-gcc', 'link', 'ld']:
+    try:
+        subprocess.call([linker, '--version'])
+        print('using',linker,'linker')
+        break
+    except:
+        print('NOT using',linker,'linker')
+
 print("This is a test under windows")
 
 def compile(cfile):
-    cmd = [cc, '-c', '-O2', '-g', '-o', cfile[:-2]+'.obj', cfile]
+    cmd = [cc, '-c', '-std=c99', '-O2', '-g', '-o', cfile[:-2]+'.obj', cfile]
     print(' '.join(cmd))
     return subprocess.call(cmd)
 
-assert(not compile('win32/proc.c'))
+cfiles = ['bigbro-windows.c', 'fileaccesses.c']
+
+for c in cfiles:
+    assert(not compile(c))
+
+cmd = [linker, '-o', 'bigbro.exe'] + [c[:-1]+'obj' for c in cfiles]
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))

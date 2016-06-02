@@ -3,18 +3,18 @@
 
 environment:
   matrix:
-  - TARGET: x86_64-pc-windows-msvc
-    ARCH: amd64
-    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
-  - TARGET: x86_64-pc-windows-msvc
-    ARCH: amd64
-    VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
-  - TARGET: i686-pc-windows-msvc
-    ARCH: x86
-    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
   - TARGET: i686-pc-windows-msvc
     ARCH: x86
     VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+  - TARGET: x86_64-pc-windows-msvc
+    ARCH: amd64
+    VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+#  - TARGET: x86_64-pc-windows-msvc
+#    ARCH: amd64
+#    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
+#  - TARGET: i686-pc-windows-msvc
+#    ARCH: x86
+#    VS: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat
 
 build_script:
   - if defined VS call "%VS%" %ARCH%

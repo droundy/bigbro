@@ -1,6 +1,7 @@
 *~
 syscalls/*.h
 *.o
+*.obj
 *.tum
 bigbro
 nolib-bigbro
@@ -20,3 +21,4 @@ web
 *.info
 *.gcda
 *.gcno
+*.exe
