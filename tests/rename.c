@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main() {
+int main(void) {
   rename("tmp/foo", "tmp/barbaz");
   return 0;
 }
