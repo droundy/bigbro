@@ -57,14 +57,22 @@ def create_clean_tree(preppy='this file does not exist'):
             print("prep command failed:", cmd)
             exit(1)
 
-for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
-    try:
-        subprocess.call([compiler, '--version'])
+def compile_cl(exe, ccode):
+    return 'cl -Wall -O2 -Fe%s %s' % (exe, ccode)
+def compile_mingw(exe, ccode):
+    return 'x86_64-w64-mingw32-gcc -Wall -O2 -o %s %s' % (exe, ccode)
+
+for compiler in [compile_cl, compile_mingw]:
+    if os.system(compiler('tests/null-test.exe', 'tests/null.c')):
+        print('NOT using',compiler('code.exe', 'code.c'))
+    else:
         cc = compiler
-        print('using',cc,'compiler')
+        print('using',compiler('code.exe', 'code.c'))
+        if compiler is compile_cl:
+            runcode = lambda test,base: 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
+        else:
+            runcode = lambda test,base: 'wine64 bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
         break
-    except:
-        print('NOT using',compiler,'compiler')
 
 print('running C tests:')
 print('================')
@@ -75,7 +83,7 @@ for testc in glob.glob('tests/*.c'):
         print('skipping test', base, 'not supported by windows')
         continue
     test = base+'-test.exe'
-    cmd = '%s -Wall -O2 -o %s %s' % (compiler, test, testc)
+    cmd = compiler(test, testc)
     print(cmd)
     if os.system(cmd):
         print('%s fails to compile, skipping test' % (testc))
@@ -90,10 +98,8 @@ for testc in glob.glob('tests/*.c'):
         exit(1)
     create_clean_tree()
     before = perf_counter()
-    if compiler == 'cl':
-        cmd = 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
-    else:
-        cmd = 'wine64 bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
+    cmd = runcode(test, base)
+    print(cmd)
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
