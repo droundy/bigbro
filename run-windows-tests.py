@@ -128,6 +128,8 @@ for testc in glob.glob('tests/*.c'):
             numfailures += 1
     else:
         print(test, 'is not checked on windows', time_took)
+        print('stdout:\n', out)
+        print('stderr:\n', err)
 
 test = None # to avoid bugs below where we refer to test
 
