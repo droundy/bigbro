@@ -31,7 +31,7 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     except:
         print('NOT using',compiler,'compiler')
 
-for compiler in [r'C:\\Program Files\ (x86)\Microsoft\ Visual\ Studio\ 14.0\VC\BIN\x86\cl.exe',
+for compiler in [r'C:\Program Files\ (x86)\Microsoft\ Visual\ Studio\ 14.0\VC\BIN\x86\cl.exe',
                  'i686-w64-mingw32-gcc', 'cc']:
     try:
         subprocess.call([compiler, '--version'])
