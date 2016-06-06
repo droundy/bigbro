@@ -31,7 +31,8 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     except:
         print('NOT using',compiler,'compiler')
 
-for compiler in ['cl', 'i686-w64-mingw32-gcc', 'cc']:
+for compiler in [r'C:\\Program Files (x86)\Microsoft Visual Studio 14.0\VC\BIN\x86\cl.exe',
+                 'i686-w64-mingw32-gcc', 'cc']:
     try:
         subprocess.call([compiler, '--version'])
         cc32 = compiler
@@ -47,8 +48,6 @@ for linker in ['x86_64-w64-mingw32-gcc', 'link', 'ld']:
         break
     except:
         print('NOT using',linker,'linker')
-
-print("This is a test under windows")
 
 if compiler == 'cl':
     cflags = []
@@ -73,6 +72,7 @@ print(' '.join(cmd))
 assert(not subprocess.call(cmd))
 
 binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
+print('I have now created win32/helper.h')
 
 for c in cfiles + compile_only_files:
     assert(not compile(c))
