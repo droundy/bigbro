@@ -20,7 +20,7 @@
 
 from __future__ import division, print_function
 
-import subprocess, os
+import subprocess, os, binary2header
 
 for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     try:
@@ -30,6 +30,15 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
         break
     except:
         print('NOT using',compiler,'compiler')
+
+for compiler in ['cl', 'i686-w64-mingw32-gcc', 'cc']:
+    try:
+        subprocess.call([compiler, '--version'])
+        cc32 = compiler
+        print('using',cc,'32-bit compiler')
+        break
+    except:
+        print('NOT using',compiler,'32-bit compiler')
 
 for linker in ['x86_64-w64-mingw32-gcc', 'link', 'ld']:
     try:
@@ -47,7 +56,7 @@ if compiler == 'cl':
     exeout = lambda fname: '-Fe'+fname
 else:
     cflags = ['-std=c99', '-g']
-    objout = lambda fname: '-o='+fname
+    objout = lambda fname: '-o'+fname
     exeout = objout
 
 def compile(cfile):
@@ -56,8 +65,16 @@ def compile(cfile):
     return subprocess.call(cmd)
 
 cfiles = ['bigbro-windows.c', 'fileaccesses.c']
+compile_only_files = ['win32/patch.c', 'win32/inject.c', 'win32/helper.c']
 
-for c in cfiles:
+# first link the helper executable
+cmd = [cc32, '-Os', exeout('win32/helper.exe'), 'win32/helper.c']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
+
+binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
+
+for c in cfiles + compile_only_files:
     assert(not compile(c))
 
 # use cc for doing the linking, since I understand its options

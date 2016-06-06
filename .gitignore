@@ -22,3 +22,4 @@ web
 *.gcda
 *.gcno
 *.exe
+win32/helper.h
