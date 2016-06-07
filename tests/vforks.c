@@ -18,13 +18,18 @@ int main(int argc, char **argv) {
   }
   if (num > 1000) {
     printf("We are finally all done!\n");
-    fopen("tmp.vforks", "w");
+    if (!fopen("tmp.vforks", "w")) exit(1);
     exit(0);
   }
   pid_t child = vfork();
   if (child) {
     printf("Child %d was %d\n", num, child);
-    waitpid(child, 0, 0);
+    int status;
+    waitpid(child, &status, 0);
+    if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+      printf("Child did not exit right.\n");
+      exit(1);
+    }
     exit(0);
   } else {
     char *numname = malloc(1000);
