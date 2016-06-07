@@ -41,14 +41,6 @@ for compiler in [r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\BIN\cl
     except:
         print('NOT using',compiler,'32-bit compiler')
 
-for linker in ['x86_64-w64-mingw32-gcc', 'link', 'ld']:
-    try:
-        subprocess.call([linker, '--version'])
-        print('using',linker,'linker')
-        break
-    except:
-        print('NOT using',linker,'linker')
-
 if cc == 'cl':
     cflags = []
     objout = lambda fname: '-Fo'+fname
@@ -66,18 +58,22 @@ def compile(cfile):
 cfiles = ['bigbro-windows.c', 'fileaccesses.c']
 compile_only_files = ['win32/patch.c', 'win32/inject.c', 'win32/helper.c']
 
-# first link the helper executable
-cmd = [cc32, '-Os', exeout('win32/helper.exe'), 'win32/helper.c']
+# first build the helper executable
+cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
+cmd = [cc32, '-Os', exeout('win32/helper.exe'), 'win32/helper.obj']
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
 
+# now convert this executable into a header file
 binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
 print('I have now created win32/helper.h')
 
 for c in cfiles + compile_only_files:
     assert(not compile(c))
 
-# use cc for doing the linking, since I understand its options
+# use cc for doing the linking
 cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
