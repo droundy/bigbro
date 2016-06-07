@@ -17,24 +17,24 @@ int main(int argc, char **argv) {
     sscanf(argv[1], "%d", &num);
   }
   if (num == 7) {
-    chdir("tmp");
+    if (chdir("tmp")) exit(1);
     argv[0] = "../tests/forks.test";
   }
   if (num == 37) {
-    chdir("subdir2");
+    if (chdir("subdir2")) exit(1);
     argv[0] = "../../tests/forks.test";
   }
   if (num == 73) {
-    chdir("..");
+    if (chdir("..")) exit(1);
     argv[0] = "../tests/forks.test";
   }
   if (num == 137) {
-    chdir("subdir1");
+    if (chdir("subdir1")) exit(1);
     argv[0] = "../../tests/forks.test";
   }
   if (num > 1000) {
     printf("We are finally all done!\n");
-    fopen("deepdir/forks", "w");
+    if (!fopen("deepdir/forks", "w")) exit(1);
     exit(0);
   }
   pid_t child = fork();
