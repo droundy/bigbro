@@ -7,15 +7,15 @@ compiler:
 script:
   - sh build/linux.sh
   - CFLAGS=--coverage python3 run-tests.py
-  - python3 build/windows.py
-  - python3 run-windows-tests.py
+  # - python3 build/windows.py
+  # - python3 run-windows-tests.py
 
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y python3 libc6-dev-i386
   # the following enable cross-compilation for windows
-  - sudo apt-get install -y gcc-mingw-w64-x86-64, mingw-w64-x86-64-dev wine
-  - sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
+  # - sudo apt-get install -y gcc-mingw-w64-x86-64, mingw-w64-x86-64-dev wine
+  # - sudo apt-get install -y gcc-mingw-w64-i686 mingw-w64-i686-dev
   # install coverage stuff
   # follows http://gronlier.fr/blog/2015/01/adding-code-coverage-to-your-c-project/
   - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
