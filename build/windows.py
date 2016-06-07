@@ -36,7 +36,7 @@ for compiler in [r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\BIN\cl
     try:
         subprocess.call([compiler, '--version'])
         cc32 = compiler
-        print('using',cc,'32-bit compiler')
+        print('using',cc32,'32-bit compiler')
         break
     except:
         print('NOT using',compiler,'32-bit compiler')
@@ -49,7 +49,7 @@ for linker in ['x86_64-w64-mingw32-gcc', 'link', 'ld']:
     except:
         print('NOT using',linker,'linker')
 
-if compiler == 'cl':
+if cc == 'cl':
     cflags = []
     objout = lambda fname: '-Fo'+fname
     exeout = lambda fname: '-Fe'+fname
