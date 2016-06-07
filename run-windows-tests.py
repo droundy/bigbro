@@ -118,11 +118,7 @@ for testc in glob.glob('tests/*.c'):
     before = perf_counter()
     cmd = runcode(test, base)
     print(cmd)
-    if os.system(cmd):
-        os.system('cat %s.out' % base);
-        os.system('cat %s.err' % base);
-        print("command failed:", cmd)
-        exit(1)
+    exitcode = os.system(cmd)
     measured_time = perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
@@ -145,6 +141,11 @@ for testc in glob.glob('tests/*.c'):
         else:
             time_took = '(%g ms)' % (measured_time*1e3)
     if 'passes_windows' in dir(m):
+        if exitcode != 0:
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print(test, "COMMAND FAILS WITH EXIT CODE", exitcode)
+            numfailures += 1
         if m.passes_windows(out, err):
             print(test, "passes", time_took)
         else:
@@ -152,6 +153,7 @@ for testc in glob.glob('tests/*.c'):
             numfailures += 1
     else:
         print(test, 'is not checked on windows', time_took)
+        print('exit code:', exitcode)
         print('stdout:\n', out)
         print('stderr:\n', err)
 
