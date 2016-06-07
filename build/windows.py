@@ -20,7 +20,7 @@
 
 from __future__ import division, print_function
 
-import subprocess, os, binary2header
+import sys, subprocess, os, binary2header
 
 for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     try:
@@ -31,7 +31,7 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
     except:
         print('NOT using',compiler,'compiler')
 
-for compiler in [r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\BIN\cl.exe',
+for compiler in [r'cl',
                  'i686-w64-mingw32-gcc', 'cc']:
     try:
         subprocess.call([compiler, '--version'])
@@ -58,22 +58,25 @@ def compile(cfile):
 cfiles = ['bigbro-windows.c', 'fileaccesses.c']
 compile_only_files = ['win32/patch.c', 'win32/inject.c', 'win32/helper.c']
 
-# first build the helper executable
-cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
-print(' '.join(cmd))
-assert(not subprocess.call(cmd))
-cmd = [cc32, exeout('win32/helper.exe'), 'win32/helper.obj']
-print(' '.join(cmd))
-assert(not subprocess.call(cmd))
+if 'x86' in sys.argv or 'amd64' not in sys.argv:
+    # first build the helper executable
+    cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
+    print(' '.join(cmd))
+    assert(not subprocess.call(cmd))
+    cmd = [cc32, exeout('win32/helper.exe'), 'win32/helper.obj']
+    print(' '.join(cmd))
+    assert(not subprocess.call(cmd))
 
-# now convert this executable into a header file
-binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
-print('I have now created win32/helper.h')
+    # now convert this executable into a header file
+    binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
+    print('I have now created win32/helper.h')
 
-for c in cfiles + compile_only_files:
-    assert(not compile(c))
+if 'amd64' in sys.argv or 'x86' not in sys.argv:
 
-# use cc for doing the linking
-cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
-print(' '.join(cmd))
-assert(not subprocess.call(cmd))
+    for c in cfiles + compile_only_files:
+        assert(not compile(c))
+
+    # use cc for doing the linking
+    cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
+    print(' '.join(cmd))
+    assert(not subprocess.call(cmd))
