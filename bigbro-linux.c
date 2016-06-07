@@ -144,7 +144,10 @@ static pid_t wait_for_syscall(rw_status *h, int firstborn) {
   while (1) {
     long signal_to_send_back = 0;
     child = waitpid(-firstborn, &status, __WALL);
-    if (child == -1) error(1, errno, "trouble waiting");
+    if (child == -1) {
+      fprintf(stderr, "had trouble waiting: %s", strerror(errno));
+      exit(1);
+    }
     if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
       return child;
     } else if (WIFEXITED(status)) {
