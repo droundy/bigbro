@@ -62,7 +62,7 @@ compile_only_files = ['win32/patch.c', 'win32/inject.c', 'win32/helper.c']
 cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
-cmd = [cc32, '-Os', exeout('win32/helper.exe'), 'win32/helper.obj']
+cmd = [cc32, exeout('win32/helper.exe'), 'win32/helper.obj']
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
 
