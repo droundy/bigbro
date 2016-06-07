@@ -117,11 +117,7 @@ for testc in glob.glob('tests/*.c'):
         create_clean_tree()
         before = perf_counter()
         cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
-        if os.system(cmd):
-            os.system('cat %s.out' % base);
-            os.system('cat %s.err' % base);
-            print("command failed:", cmd)
-            exit(1)
+        exitcode = os.system(cmd)
         measured_time = perf_counter() - before
         err = open(base+'.err','r').read()
         out = open(base+'.out','r').read()
@@ -143,7 +139,12 @@ for testc in glob.glob('tests/*.c'):
                 time_took = '(%g us)' % (measured_time*1e6)
             else:
                 time_took = '(%g ms)' % (measured_time*1e3)
-        if m.passes(out, err):
+        if exitcode != 0:
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print(test, flag, "COMMAND FAILS WITH EXIT CODE", exitcode)
+            numfailures += 1
+        elif m.passes(out, err):
             print(test, flag, "passes", time_took)
         else:
             print(test, flag, "FAILS!", time_took)

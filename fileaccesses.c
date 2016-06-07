@@ -43,8 +43,8 @@ int main(int argc, char **argv) {
     strcat(cmdline, argv[i]);
   }
   pid_t child_pid;
-  bigbro(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
-         &read_from_files, &written_to_files);
+  int retval = bigbro(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
+                      &read_from_files, &written_to_files);
   free(cmdline);
 
   if (read_from_directories)
@@ -62,5 +62,5 @@ int main(int argc, char **argv) {
   free(read_from_directories);
   free(read_from_files);
   free(written_to_files);
-  return 0;
+  return retval;
 }
