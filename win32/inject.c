@@ -26,6 +26,10 @@
 
 WINBASEAPI DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 void injectProcess(HANDLE proc) {
 	HANDLE tid;
 	BOOL is32;
