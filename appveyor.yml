@@ -20,7 +20,6 @@ build_script:
   - if defined VS call "%VS%" %ARCH%
   - dir "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\"
   - dir "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin"
-  - dir "C:\Program Files (amd64)\Microsoft Visual Studio 14.0\VC\bin"
   - cmd: SET PATH=C:\python35;%PATH%
   - cmd: bash -c "which cl.exe"
   - cmd: bash -c "which link.exe"
