@@ -26,4 +26,4 @@ before_install:
   - gem install coveralls-lcov
 
 after_success:
-  - coveralls-lcov coverage.info # uploads to coveralls?
+  - coveralls-lcov tests/coverage.info # uploads to coveralls?
