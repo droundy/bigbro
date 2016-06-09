@@ -54,9 +54,15 @@ def compile(cfile):
     cmd = [cc, '-c', '-O2'] + cflags + [objout(cfile[:-2]+'.obj'), cfile]
     print(' '.join(cmd))
     return subprocess.call(cmd)
+def compile32(cfile):
+    cmd = [cc32, '-c', '-O2'] + cflags + [objout(cfile[:-2]+'32.obj'), cfile]
+    print(' '.join(cmd))
+    return subprocess.call(cmd)
 
-cfiles = ['bigbro-windows.c', 'fileaccesses.c']
-compile_only_files = ['win32/patch.c', 'win32/inject.c', 'win32/helper.c']
+cfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c']
+compile_only_files = ['win32/patch.c', 'win32/helper.c']
+
+dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c']
 
 if 'x86' in sys.argv or 'amd64' not in sys.argv:
     # first build the helper executable
@@ -71,10 +77,20 @@ if 'x86' in sys.argv or 'amd64' not in sys.argv:
     binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
     print('I have now created win32/helper.h')
 
+    for c in dll_cfiles:
+        assert(not compile32(c))
+    cmd = [cc32, '-shared', '-o', 'bigbro32.dll'] + [c[:-2]+'32.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
+    print(' '.join(cmd))
+    assert(not subprocess.call(cmd))
+
 if 'amd64' in sys.argv or 'x86' not in sys.argv:
 
-    for c in cfiles + compile_only_files:
+    for c in cfiles + compile_only_files + dll_cfiles:
         assert(not compile(c))
+
+    cmd = [cc, '-shared', '-o', 'bigbro64.dll'] + [c[:-2]+'.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
+    print(' '.join(cmd))
+    assert(not subprocess.call(cmd))
 
     # use cc for doing the linking
     cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]

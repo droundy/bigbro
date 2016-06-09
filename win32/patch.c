@@ -42,40 +42,40 @@ static IMAGE_THUNK_DATA *lookup2(char *base,
                                  IMAGE_THUNK_DATA *td,
                                  IMAGE_THUNK_DATA *otd,
                                  const char *nm) {
-	while (otd->u1.AddressOfData) {
-		IMAGE_IMPORT_BY_NAME *name =
-			(IMAGE_IMPORT_BY_NAME *)(otd->u1.AddressOfData + base);
-		if (otd->u1.Ordinal & IMAGE_ORDINAL_FLAG)
-			debugprintf("   ordinal1\n");
-		else {
-			debugprintf("  name: %s %p\n", name->Name, td->u1.Function);
-			if (0 == strcmp((char*)name->Name, nm))
-				return td;
-		}
-		otd++;
-		td++;
-	}
-	return 0;
+  while (otd->u1.AddressOfData) {
+    IMAGE_IMPORT_BY_NAME *name =
+      (IMAGE_IMPORT_BY_NAME *)(otd->u1.AddressOfData + base);
+    if (otd->u1.Ordinal & IMAGE_ORDINAL_FLAG)
+      debugprintf("   ordinal1\n");
+    else {
+      debugprintf("  name: %s %p\n", name->Name, td->u1.Function);
+      if (0 == strcmp((char*)name->Name, nm))
+        return td;
+    }
+    otd++;
+    td++;
+  }
+  return 0;
 }
 
 static IMAGE_THUNK_DATA *lookup(IMAGE_DOS_HEADER *dh, const char *nm) {
-	char *base = (char *)dh;
-	IMAGE_IMPORT_DESCRIPTOR *id = imports(dh);
-	if (!id) return 0;
-	while (id->Name) {
-		if (id->FirstThunk && id->OriginalFirstThunk) {
-			IMAGE_THUNK_DATA *d =
-				lookup2(base,
-					(IMAGE_THUNK_DATA*)(id->FirstThunk + base),
-					(IMAGE_THUNK_DATA*)(id->OriginalFirstThunk + base),
-					nm);
-			debugprintf(" import %s\n", id->Name + base);
-			if (d)
-				return d;
-		}
-		id++;
-	}
-	return 0;
+  char *base = (char *)dh;
+  IMAGE_IMPORT_DESCRIPTOR *id = imports(dh);
+  if (!id) return 0;
+  while (id->Name) {
+    if (id->FirstThunk && id->OriginalFirstThunk) {
+      IMAGE_THUNK_DATA *d =
+        lookup2(base,
+                (IMAGE_THUNK_DATA*)(id->FirstThunk + base),
+                (IMAGE_THUNK_DATA*)(id->OriginalFirstThunk + base),
+                nm);
+      debugprintf(" import %s\n", id->Name + base);
+      if (d)
+        return d;
+    }
+    id++;
+  }
+  return 0;
 }
 
 static void modpatch(IMAGE_DOS_HEADER *dh,

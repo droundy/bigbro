@@ -23,6 +23,8 @@
 #include "bigbro.h"
 #include "hashset.h"
 
+#include "win32/inject.h"
+
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *cmdline, char ***read_from_directories,
@@ -34,7 +36,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   if (!CreateProcess(0, cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
     return -1;
   }
-  /* injectProcess(pi.hProcess); */
+  injectProcess(pi.hProcess);
   if (ResumeThread(pi.hThread) != -1) {
     return -1;
   }

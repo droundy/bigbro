@@ -21,8 +21,10 @@
 #include <assert.h>
 
 #include <shellapi.h>
-#include "errors.h"
+#include "../errors.h"
 #include "helper.h"
+
+#include "inject.h"
 
 WINBASEAPI DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
 
@@ -53,6 +55,7 @@ void injectProcess(HANDLE proc) {
 				       MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)));
 	if (strcmp(ext, ".dll"))
 		memcpy(ext, is32 ? "32.dll" : "64.dll", 6);
+        debugprintf("dll name is %s\n", dll);
 	if (is32) {
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -65,6 +68,7 @@ void injectProcess(HANDLE proc) {
 		memcpy(helper, dll, strlen(dll)+1);
 		p = strrchr(helper, '\\');
 		memcpy(p+1, helpername, strlen(helpername)+1);
+                debugprintf("helper is %s\n", helper);
 		assert(CreateProcessA(0, helper, 0, 0, 0, 0, 0, 0, &si, &pi));
 		assert(WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE));
 		assert(GetExitCodeProcess(pi.hProcess, &rc));
@@ -74,11 +78,13 @@ void injectProcess(HANDLE proc) {
 		addr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 	assert(addr);
 	assert(WriteProcessMemory(proc, arg, dll, strlen(dll) + 1, NULL));
-	assert(0 != (tid = CreateRemoteThread(proc, 0, 0,
-                                              (LPTHREAD_START_ROUTINE)addr, arg, 0, 0)));
+        debugprintf("am creating remote thread...\n");
+        tid = CreateRemoteThread(proc, 0, 0, (LPTHREAD_START_ROUTINE)addr, arg, 0, 0);
+	assert(0 != tid);
 	assert(-1 != ResumeThread(tid));
 	assert(WAIT_OBJECT_0 == WaitForSingleObject(tid, INFINITE));
 	assert(CloseHandle(tid));
+        debugprintf("have finished waiting for the remote thread...\n");
 }
 
 void injectThread(HANDLE th) {
