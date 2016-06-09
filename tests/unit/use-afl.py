@@ -28,4 +28,17 @@ for c in glob.glob('tests/unit/*.c'):
     print(' '.join(cmd))
     assert not subprocess.call(cmd)
     cmd = [fuzz, '-i', inputs, '-o', outputs, test]
-    assert not subprocess.call(cmd)
+    print(' '.join(cmd))
+    try:
+        subprocess.call(cmd)
+    except:
+        subprocess.call(['reset'])
+        print('done with', cmd)
+    cmd = [fuzz[:-4]+'cmin', '-i', outputs+'/queue', '-o', outputs+'/minimal', test]
+    print(' '.join(cmd))
+    try:
+        subprocess.call(cmd)
+    except:
+        print('done with', ' '.join(cmd))
+
+
