@@ -27,6 +27,10 @@
 #include "hooks.h"
 #include "../errors.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define HOOK(n) static NTSTATUS(NTAPI *o##n)()
 HOOK(NtCreateFile);
 HOOK(NtOpenFile);
