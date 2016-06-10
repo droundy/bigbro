@@ -15,5 +15,5 @@
    NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-void injectProcess(HANDLE);
-void injectThread(HANDLE);
+void injectProcess(HANDLE proc, HANDLE write_pipe);
+void injectThread(HANDLE thread, HANDLE write_pipe);

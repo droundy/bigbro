@@ -17,10 +17,6 @@
 
 #include <windows.h>
 #include <winternl.h>
-#ifdef _MSC_VER
-#include <ntifs.h>
-#include <ntddk.h>
-#endif
 #include <limits.h>
 
 #undef ASSERT
@@ -225,8 +221,9 @@ static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NE
 static NTSTATUS NTAPI hNtResumeThread(HANDLE th, PULONG sc) {
   debugprintf("am in hNtResumeThread!\n");
   NTSTATUS r;
-  if (!patchInstalled())
-    injectThread(th);
+  if (!patchInstalled()) {
+    injectThread(th, 0); // FIXME
+  }
   r = oNtResumeThread(th, sc);
   return r;
 }

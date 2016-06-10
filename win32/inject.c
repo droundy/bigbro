@@ -32,7 +32,7 @@ WINBASEAPI DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
 #define PATH_MAX 4096
 #endif
 
-void injectProcess(HANDLE proc) {
+void injectProcess(HANDLE proc, HANDLE write_pipe) {
 	HANDLE tid;
 	BOOL is32;
 	FARPROC addr;
@@ -87,10 +87,10 @@ void injectProcess(HANDLE proc) {
         debugprintf("have finished waiting for the remote thread...\n");
 }
 
-void injectThread(HANDLE th) {
+void injectThread(HANDLE th, HANDLE write_pipe) {
 	HANDLE h;
 	assert(0 != (h = OpenProcess(PROCESS_ALL_ACCESS, TRUE,
-				  GetProcessIdOfThread(th))));
-	injectProcess(h);
+                                     GetProcessIdOfThread(th))));
+	injectProcess(h, write_pipe);
 	assert(CloseHandle(h));
 }

@@ -29,14 +29,27 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
+  HANDLE pipe_Rd, pipe_Wr;
+  {
+    SECURITY_ATTRIBUTES saAttr;
+    // Set the bInheritHandle flag so pipe handles are inherited.
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+    if (!CreatePipe(&pipe_Rd, &pipe_Wr, &saAttr, 0) ) {
+      return -1;
+    }
+  }
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
+  // want to pass pipe_Wr value in the environment...
   if (!CreateProcess(0, cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
     return -1;
   }
-  injectProcess(pi.hProcess);
+  injectProcess(pi.hProcess, pipe_Wr); // FIXME
+  CloseHandle(pipe_Wr);
   if (ResumeThread(pi.hThread) != -1) {
     return -1;
   }
