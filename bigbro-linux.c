@@ -465,31 +465,37 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     free(arg);
   } else if (sc == sc_rename || sc == sc_renameat) {
     char *from, *to;
-    int retval = wait_for_return_value(child, h);
     int dirfd = -1;
+    // We read the "from" path first, before the file has been moved,
+    // so it will still exist.
+    if (sc == sc_rename) {
+      from = read_a_string(child, get_syscall_arg(regs, 0));
+    } else {
+      from = read_a_string(child, get_syscall_arg(regs, 1));
+      dirfd = get_syscall_arg(regs, 0);
+    }
+    char *rawpath = interpret_path_at(child, dirfd, from);
+    char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
+    int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       if (sc == sc_rename) {
-        from = read_a_string(child, get_syscall_arg(regs, 0));
         to = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
-        from = read_a_string(child, get_syscall_arg(regs, 1));
         to = read_a_string(child, get_syscall_arg(regs, 2));
         dirfd = get_syscall_arg(regs, 0);
       }
       if (to && from) {
         debugprintf("%d: %s('%s', '%s') -> %d\n", child, name, from, to, retval);
         write_link_at(child, dirfd, to, h);
-        char *rawpath = interpret_path_at(child, dirfd, from);
-        char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
         delete_from_hashset(&h->read, abspath);
         delete_from_hashset(&h->readdir, abspath);
         delete_from_hashset(&h->written, abspath);
         free(rawpath);
         free(abspath);
       }
-      free(from);
       free(to);
     }
+    free(from);
   } else if (sc == sc_link || sc == sc_linkat) {
     char *from, *to;
     int retval = wait_for_return_value(child, h);

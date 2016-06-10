@@ -23,6 +23,7 @@ for c in glob.glob('tests/unit/*.c'):
     test = c[:-1]+'test'
     inputs = c[:-1]+'inputs'
     outputs = c[:-1]+'outputs'
+    minimal = c[:-1]+'minimal'
     cmd = [cc, '-I.', '--std=c99', '-g', '-O2',
            '-o', test, c]
     print(' '.join(cmd))
@@ -34,7 +35,7 @@ for c in glob.glob('tests/unit/*.c'):
     except:
         subprocess.call(['reset'])
         print('done with', cmd)
-    cmd = [fuzz[:-4]+'cmin', '-i', outputs+'/queue', '-o', outputs+'/minimal', test]
+    cmd = [fuzz[:-4]+'cmin', '-i', outputs+'/queue', '-o', minimal, test]
     print(' '.join(cmd))
     try:
         subprocess.call(cmd)

@@ -58,6 +58,9 @@ int main() {
   for (char **p = two; *p; p++) {
     assert(lookup_in_hash(&set_union, *p));
   }
+  free_hashset(&set_one);
+  free_hashset(&set_two);
+  free_hashset(&set_union);
 
   return 0;
 }

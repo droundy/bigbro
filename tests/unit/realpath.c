@@ -17,7 +17,7 @@ int main() {
   printf("am in realpath test\n");
   rw_status st;
   char *buf = (char *)malloc(bufsize);
-  char *resolved = (char *)malloc(bufsize);
+  /* char *resolved = (char *)malloc(bufsize); */
   int setsize = 50;
   init_hashset(&st.read, setsize);
   init_hashset(&st.readdir, setsize);
@@ -89,6 +89,7 @@ int main() {
     /*   assert(!strcmp(rp, symrp)); */
     /* } */
   }
+  free_hashset(&st.read);
 
   return 0;
 }

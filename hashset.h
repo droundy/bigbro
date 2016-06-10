@@ -84,7 +84,7 @@ static inline void delete_from_hashset(hashset *hash, const char *key) {
   }
 }
 
-static char **hashset_to_array(hashset *hs) {
+static inline char **hashset_to_array(hashset *hs) {
   int numentries = 0;
   long total_size = 0;
   for (struct hash_entry *e = (struct hash_entry *)hs->first;

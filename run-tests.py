@@ -89,6 +89,24 @@ def create_clean_tree(prepsh='this file does not exist'):
             print("prep command failed:", cmd)
             exit(1)
 
+print('running AFL tests:')
+print('==================')
+for testc in glob.glob('tests/unit/*.c'):
+    base = testc[:-2]
+    test = base+'.test'
+    if os.system('${CC-gcc} -I. --std=c99 -Wall -O2 -o %s %s' % (test, testc)):
+        print('%s fails to compile, skipping unit test' % (testc))
+        continue
+    for inp in glob.glob('%s.minimal/*' % base):
+        cmd = '%s < %s > /dev/null' % (test, inp)
+        exitcode = os.system(cmd)
+        if exitcode != 0:
+            print(test[len('tests/unit/'):], '<', inp[len(base+'.minimal/'):],
+                  "FAILS WITH EXIT CODE", exitcode)
+            numfailures += 1
+        else:
+            print(test[len('tests/unit/'):], '<', inp[len(base+'.minimal/'):], "passes")
+
 options = ['', ' -m32', ' -m64'] # , ' -mx32']
 
 print('running C tests:')
