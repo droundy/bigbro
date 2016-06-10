@@ -21,6 +21,8 @@
 #include "../errors.h"
 #include "hooks.h"
 
+HANDLE pipe_Wr = 0;
+
 static void * resolve(const char * name) {
   void * ret;
   static HANDLE dll = 0;
@@ -37,7 +39,20 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved) {
   switch (Reason) {
   case DLL_PROCESS_ATTACH:
     debugprintf("I am attaching my dll\n");
-    /* emitInit(); */
+    char *pipe_Wr_string = malloc(50);
+    DWORD ret = GetEnvironmentVariable("bigbro_pipe", pipe_Wr_string, 50);
+    if (ret == 0) {
+      printf("There is no bigbro_pipe environment variable!\n");
+      return FALSE;
+    } else if (ret >= 50) {
+      printf("There is a long bigbro_pipe environment variable that seems like an attack!\n");
+      return FALSE;
+    } else {
+      if (sscanf(pipe_Wr_string, "%p", &pipe_Wr) != 1) {
+        printf("bigbro_pipe environment variable '%s' is not an integer!\n", pipe_Wr_string);
+        return FALSE;
+      }
+    }
     patchInit();
     hooksInit(resolve);
     break;

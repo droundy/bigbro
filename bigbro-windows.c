@@ -25,6 +25,16 @@
 
 #include "win32/inject.h"
 
+// copy the string and return a pointer to the byte in dest *after*
+// the null character we write.
+static inline char *copy_string(char *dest, const char *input) {
+  for (int i=0; input[i]; i++) {
+    *dest++ = input[i];
+  }
+  *dest++ = 0;
+  return dest;
+}
+
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *cmdline, char ***read_from_directories,
@@ -40,6 +50,37 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
       return -1;
     }
   }
+  char *pipe_Wr_string = malloc(50);
+  char *new_windows_env = 0;
+  snprintf(pipe_Wr_string, 50, "%p", pipe_Wr);
+  if (envp) {
+    // create an environment with the desired environment variables,
+    // plus one more to carry the value of pipe_Wr.  This is trickier
+    // than on posix, since windows wants a null-separated array of
+    // char, rather than a null-terminated array of char *.  For
+    // uniformity, bigbro wants the latter.
+    int size = 1; // 1 for the final null
+    for (char **e = envp; *e; e++) {
+      size += strlen(*e) + 1;
+    }
+    size += strlen("bigbro_pipe=") + strlen(pipe_Wr_string) + 1;
+    char *new_windows_env = (char *)calloc(size, 1);
+    // here we join together all these strings into one big happy
+    // family.
+    char *location = new_windows_env;
+    for (char **e = envp; *e; e++) location = copy_string(location, *e);
+    location = copy_string(location, "bigbro_pipe=");
+    location--; // overwrite the null
+    location = copy_string(location, pipe_Wr_string);
+  } else {
+    // FIXME BUG HERE! the following introduces a race condition: if
+    // we call bigbro twice simultaneously, it is possible that one of
+    // the two processes will end up sending its info to the wrong
+    // pipe.  However, right now I am just trying to get something
+    // working, and this is easier.
+    SetEnvironmentVariable("bigbro_pipe", pipe_Wr_string);
+  }
+
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
   memset(&si, 0, sizeof(si));
