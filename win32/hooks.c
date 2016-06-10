@@ -17,6 +17,10 @@
 
 #include <windows.h>
 #include <winternl.h>
+#ifdef _MSC_VER
+#include <ntifs.h>
+#include <ntddk.h>
+#endif
 #include <limits.h>
 
 #undef ASSERT
