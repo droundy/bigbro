@@ -17,6 +17,7 @@ int main() {
   printf("am in realpath test\n");
   rw_status st;
   char *buf = (char *)malloc(bufsize);
+  char *parent = (char *)malloc(bufsize);
   /* char *resolved = (char *)malloc(bufsize); */
   int setsize = 50;
   init_hashset(&st.read, setsize);
@@ -31,8 +32,16 @@ int main() {
 	buf[len-1] = 0;
       }
     }
+    strcpy(parent, buf);
+    for (int i=len-1; i>0; i--) {
+      if (parent[i] == '/') {
+        parent[i] = 0;
+        break;
+      }
+    }
     bool is_symlink = false;
     bool exists = false;
+    bool parent_exists = false;
     struct stat thestat;
     if (!lstat(buf, &thestat)) {
       if (S_ISLNK(thestat.st_mode)) is_symlink = true;
@@ -40,11 +49,17 @@ int main() {
     if (!stat(buf, &thestat)) {
       exists = true;
     }
+    if (!stat(parent, &thestat)) {
+      parent_exists = true;
+    }
     if (is_symlink) printf("this is a symlink\n");
     else printf("NOT a symlink\n");
 
     if (exists) printf("this thing exists\n");
     else printf("thing does NOT exist\n");
+
+    if (parent_exists) printf("this parent exists\n");
+    else printf("parent does NOT exist\n");
 
     char *actual_rp = realpath(buf, 0);
     char *rp = flexible_realpath(buf, 0, &st, look_for_file_or_directory, true);
@@ -54,9 +69,12 @@ int main() {
     if (*buf != '/') {
       printf("relative paths count as failure...\n");
       assert(!rp);
+    } else if (!parent_exists) {
+      printf("got %s from %s\n", rp, buf);
+      assert(!rp); // flexible_realpath returns null if there is no parent
     } else if (!exists) {
       printf("got %s from %s\n", rp, buf);
-      assert(!rp); // flexible_realpath returns null if there is no such path
+      assert(rp);
     } else {
       printf("exists so %s from %s\n", rp, buf);
       assert(rp);

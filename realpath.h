@@ -96,17 +96,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
     return NULL;
   }
 
-  {
-    /* Always return NULL if the file or directory (or symlink)
-       doesn't exist. */
-    struct stat st;
-    if (look_for_symlink) {
-      if (lstat(name, &st)) return NULL;
-    } else {
-      if (stat(name, &st)) return NULL;
-    }
-  }
-
   path_max = PATH_MAX;
 
   if (resolved == NULL) {
