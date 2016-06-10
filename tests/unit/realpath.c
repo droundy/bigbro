@@ -33,7 +33,7 @@ int main() {
       }
     }
     strcpy(parent, buf);
-    for (int i=len-1; i>0; i--) {
+    for (int i=len-1; i>=0; i--) {
       if (parent[i] == '/') {
         parent[i] = 0;
         break;
@@ -42,6 +42,7 @@ int main() {
     bool is_symlink = false;
     bool exists = false;
     bool parent_exists = false;
+    bool parent_isdir = false;
     struct stat thestat;
     if (!lstat(buf, &thestat)) {
       if (S_ISLNK(thestat.st_mode)) is_symlink = true;
@@ -50,7 +51,11 @@ int main() {
       exists = true;
     }
     if (!stat(parent, &thestat)) {
+      parent_isdir = S_ISDIR(thestat.st_mode);
       parent_exists = true;
+    } else if (*parent == 0) {
+      parent_exists = true;
+      parent_isdir = true;
     }
     if (is_symlink) printf("this is a symlink\n");
     else printf("NOT a symlink\n");
@@ -61,6 +66,9 @@ int main() {
     if (parent_exists) printf("this parent exists\n");
     else printf("parent does NOT exist\n");
 
+    if (parent_isdir) printf("this parent is a directory\n");
+    else printf("parent '%s' is NOT a directory\n", parent);
+
     char *actual_rp = realpath(buf, 0);
     char *rp = flexible_realpath(buf, 0, &st, look_for_file_or_directory, true);
     printf("input %s\n", buf);
@@ -69,7 +77,7 @@ int main() {
     if (*buf != '/') {
       printf("relative paths count as failure...\n");
       assert(!rp);
-    } else if (!parent_exists) {
+    } else if (!parent_isdir) {
       printf("got %s from %s\n", rp, buf);
       assert(!rp); // flexible_realpath returns null if there is no parent
     } else if (!exists) {

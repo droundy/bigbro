@@ -35,6 +35,7 @@ for c in glob.glob('tests/unit/*.c'):
     except:
         subprocess.call(['reset'])
         print('done with', cmd)
+    num_old_minimal = len(glob.glob(minimal+'/*'))
     for f in glob.glob(minimal+'/*'):
         os.unlink(f)
     cmd = [fuzz[:-4]+'cmin', '-i', outputs+'/queue', '-o', minimal, test]
@@ -43,9 +44,15 @@ for c in glob.glob('tests/unit/*.c'):
         subprocess.call(cmd)
     except:
         print('done with', ' '.join(cmd))
-    count = 0
-    for f in glob.glob(minimal+'/*'):
-        os.rename(f, minimal+'/%d' % count)
-        count += 1
+    num_new_minimal = len(glob.glob(minimal+'/*'))
+    if num_new_minimal > num_old_minimal:
+        count = 0
+        for f in glob.glob(minimal+'/*'):
+            os.rename(f, minimal+'/%d' % count)
+            count += 1
+    else:
+        for f in glob.glob(minimal+'/*'):
+            os.unlink(f)
+        os.system('git checkout '+minimal)
 
 
