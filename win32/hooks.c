@@ -35,34 +35,34 @@
 HOOK(NtCreateFile);
 HOOK(NtOpenFile);
 HOOK(NtDeleteFile);
-HOOK(NtSetInformationFile);
-HOOK(NtQueryFullAttributesFile);
-HOOK(NtQueryInformationFile);
+/* HOOK(NtSetInformationFile); */
+/* HOOK(NtQueryFullAttributesFile); */
+/* HOOK(NtQueryInformationFile); */
 HOOK(NtResumeThread);
 #undef HOOK
 
 #if defined _MSC_VER
-typedef struct _FILE_STANDARD_INFORMATION {
-	LARGE_INTEGER AllocationSize;
-	LARGE_INTEGER EndOfFile;
-	ULONG         NumberOfLinks;
-	BOOLEAN       DeletePending;
-	BOOLEAN       Directory;
-} FILE_STANDARD_INFORMATION, *PFILE_STANDARD_INFORMATION;
+/* typedef struct _FILE_STANDARD_INFORMATION { */
+/* 	LARGE_INTEGER AllocationSize; */
+/* 	LARGE_INTEGER EndOfFile; */
+/* 	ULONG         NumberOfLinks; */
+/* 	BOOLEAN       DeletePending; */
+/* 	BOOLEAN       Directory; */
+/* } FILE_STANDARD_INFORMATION, *PFILE_STANDARD_INFORMATION; */
 
-NTSTATUS NTAPI NtQueryInformationFile(
-	_In_  HANDLE                 FileHandle,
-	_Out_ PIO_STATUS_BLOCK       IoStatusBlock,
-	_Out_ PVOID                  FileInformation,
-	_In_  ULONG                  Length,
-	_In_  FILE_INFORMATION_CLASS FileInformationClass
-	);
+/* NTSTATUS NTAPI NtQueryInformationFile( */
+/* 	_In_  HANDLE                 FileHandle, */
+/* 	_Out_ PIO_STATUS_BLOCK       IoStatusBlock, */
+/* 	_Out_ PVOID                  FileInformation, */
+/* 	_In_  ULONG                  Length, */
+/* 	_In_  FILE_INFORMATION_CLASS FileInformationClass */
+/* 	); */
 
-enum { FileBasicInformation = 4,
-       FileRenameInformation = 10,
-       FileDispositionInformation = 13,
-       FileAllocationInformation = 19,
-};
+/* enum { FileBasicInformation = 4, */
+/*        FileRenameInformation = 10, */
+/*        FileDispositionInformation = 13, */
+/*        FileAllocationInformation = 19, */
+/* }; */
 
 #endif
 
@@ -85,16 +85,16 @@ static const int fop(ULONG co, ACCESS_MASK am) {
 
 static void femit(HANDLE h, int op) {
   if (op) {
-    IO_STATUS_BLOCK sb;
-    FILE_STANDARD_INFORMATION si;
-    oNtQueryInformationFile(h, &sb, &si, sizeof(si),
-                            5 // FileStandardInformation
-                            );
-    if (!si.Directory) {
-      char buf[PATH_MAX];
-      char * p = "fixme"; // handlePath(buf, h);
-      /* emitOp(op, p, 0); */
-    }
+    /* IO_STATUS_BLOCK sb; */
+    /* FILE_STANDARD_INFORMATION si; */
+    /* oNtQueryInformationFile(h, &sb, &si, sizeof(si), */
+    /*                         5 // FileStandardInformation */
+    /*                         ); */
+    /* if (!si.Directory) { */
+    /*   char buf[PATH_MAX]; */
+    /*   char * p = "fixme"; // handlePath(buf, h); */
+    /*   /\* emitOp(op, p, 0); *\/ */
+    /* } */
   }
 }
 
@@ -144,79 +144,79 @@ static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) {
   return r;
 }
 
-static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
-                                            PIO_STATUS_BLOCK sb,
-                                            PVOID fi,
-                                            ULONG ln,
-                                            FILE_INFORMATION_CLASS ic) {
-  debugprintf("am in hNtSetInformationFile!\n");
-  NTSTATUS r;
-  char buf[PATH_MAX];
-  char buf2[PATH_MAX];
-#ifdef _MSC_VER
-  PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi;
-#else
-  PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
-#endif
-  char * opath = "fixme";  // handlePath(buf, fh);
-  r = oNtSetInformationFile(fh, sb, fi, ln, ic);
-  if (NT_SUCCESS(r)) {
-    switch (ic) {
-    case FileBasicInformation:
-      /* emitOp('t', opath, 0); */
-      break;
-    case FileRenameInformation:
-      /* emitOp(opath? 'm' : 'M', */
-      /*        utf8PathFromWide(buf2, ri->FileName, */
-      /* 			ri->FileNameLength / sizeof(ri->FileName[0])), */
-      /*        opath); */
-      break;
-    case FileDispositionInformation:
-      /* emitOp('d', opath, 0); */
-      break;
-    case FileAllocationInformation:
-      /* emitOp('w', opath, 0); */
-      break;
-    default:
-      break;
-    }
-  }
-  return r;
-}
+/* static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh, */
+/*                                             PIO_STATUS_BLOCK sb, */
+/*                                             PVOID fi, */
+/*                                             ULONG ln, */
+/*                                             FILE_INFORMATION_CLASS ic) { */
+/*   debugprintf("am in hNtSetInformationFile!\n"); */
+/*   NTSTATUS r; */
+/*   char buf[PATH_MAX]; */
+/*   char buf2[PATH_MAX]; */
+/* #ifdef _MSC_VER */
+/*   PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi; */
+/* #else */
+/*   PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi; */
+/* #endif */
+/*   char * opath = "fixme";  // handlePath(buf, fh); */
+/*   r = oNtSetInformationFile(fh, sb, fi, ln, ic); */
+/*   if (NT_SUCCESS(r)) { */
+/*     switch (ic) { */
+/*     case FileBasicInformation: */
+/*       /\* emitOp('t', opath, 0); *\/ */
+/*       break; */
+/*     case FileRenameInformation: */
+/*       /\* emitOp(opath? 'm' : 'M', *\/ */
+/*       /\*        utf8PathFromWide(buf2, ri->FileName, *\/ */
+/*       /\* 			ri->FileNameLength / sizeof(ri->FileName[0])), *\/ */
+/*       /\*        opath); *\/ */
+/*       break; */
+/*     case FileDispositionInformation: */
+/*       /\* emitOp('d', opath, 0); *\/ */
+/*       break; */
+/*     case FileAllocationInformation: */
+/*       /\* emitOp('w', opath, 0); *\/ */
+/*       break; */
+/*     default: */
+/*       break; */
+/*     } */
+/*   } */
+/*   return r; */
+/* } */
 
-static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
-                                              PIO_STATUS_BLOCK sb,
-                                              PVOID fi,
-                                              ULONG ln,
-                                              FILE_INFORMATION_CLASS ic) {
-  debugprintf("am in hNtQueryInformationFile!\n");
-  NTSTATUS r;
-  char buf[PATH_MAX];
-  r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
-  if (NT_SUCCESS(r)) {
-    switch (ic) {
-    case FileAllInformation: 
-    case FileNetworkOpenInformation:
-      /* emitOp('q', handlePath(buf, fh), 0); */
-      break;
-    default:
-      break;
-    }
-  }
-  return r;
-}
+/* static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh, */
+/*                                               PIO_STATUS_BLOCK sb, */
+/*                                               PVOID fi, */
+/*                                               ULONG ln, */
+/*                                               FILE_INFORMATION_CLASS ic) { */
+/*   debugprintf("am in hNtQueryInformationFile!\n"); */
+/*   NTSTATUS r; */
+/*   char buf[PATH_MAX]; */
+/*   r = oNtQueryInformationFile(fh, sb, fi, ln, ic); */
+/*   if (NT_SUCCESS(r)) { */
+/*     switch (ic) { */
+/*     case FileAllInformation:  */
+/*     case FileNetworkOpenInformation: */
+/*       /\* emitOp('q', handlePath(buf, fh), 0); *\/ */
+/*       break; */
+/*     default: */
+/*       break; */
+/*     } */
+/*   } */
+/*   return r; */
+/* } */
 
 
-static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) {
-  debugprintf("am in hNtQueryFullAttributesFile!\n");
-  NTSTATUS r;
-  r = oNtQueryFullAttributesFile(oa, oi);
-  if (NT_SUCCESS(r)) {
-    /* char buf[PATH_MAX]; */
-    /* emitOp('q', utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2), 0); */
-  }
-  return r;
-}
+/* static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) { */
+/*   debugprintf("am in hNtQueryFullAttributesFile!\n"); */
+/*   NTSTATUS r; */
+/*   r = oNtQueryFullAttributesFile(oa, oi); */
+/*   if (NT_SUCCESS(r)) { */
+/*     /\* char buf[PATH_MAX]; *\/ */
+/*     /\* emitOp('q', utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2), 0); *\/ */
+/*   } */
+/*   return r; */
+/* } */
 
 static NTSTATUS NTAPI hNtResumeThread(HANDLE th, PULONG sc) {
   debugprintf("am in hNtResumeThread!\n");
@@ -238,9 +238,9 @@ void hooksInit(void *(*resolve)(const char *)) {
 	HOOK(NtCreateFile);
 	HOOK(NtOpenFile);
 	HOOK(NtDeleteFile);
-	HOOK(NtSetInformationFile);
-	HOOK(NtQueryFullAttributesFile);
-	HOOK(NtQueryInformationFile);
+	/* HOOK(NtSetInformationFile); */
+	/* HOOK(NtQueryFullAttributesFile); */
+	/* HOOK(NtQueryInformationFile); */
 	HOOK(NtResumeThread);
 #undef HOOK
 }
