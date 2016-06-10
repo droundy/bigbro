@@ -35,11 +35,17 @@ for c in glob.glob('tests/unit/*.c'):
     except:
         subprocess.call(['reset'])
         print('done with', cmd)
+    for f in glob.glob(minimal+'/*'):
+        os.unlink(f)
     cmd = [fuzz[:-4]+'cmin', '-i', outputs+'/queue', '-o', minimal, test]
     print(' '.join(cmd))
     try:
         subprocess.call(cmd)
     except:
         print('done with', ' '.join(cmd))
+    count = 0
+    for f in glob.glob(minimal+'/*'):
+        os.rename(f, minimal+'/%d' % count)
+        count += 1
 
 
