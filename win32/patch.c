@@ -46,9 +46,9 @@ static IMAGE_THUNK_DATA *lookup2(char *base,
     IMAGE_IMPORT_BY_NAME *name =
       (IMAGE_IMPORT_BY_NAME *)(otd->u1.AddressOfData + base);
     if (otd->u1.Ordinal & IMAGE_ORDINAL_FLAG)
-      debugprintf("   ordinal1\n");
+      verbosedebugprintf("   ordinal1\n");
     else {
-      debugprintf("  name: %s %p\n", name->Name, td->u1.Function);
+      verbosedebugprintf("  name: %s %p\n", name->Name, td->u1.Function);
       if (0 == strcmp((char*)name->Name, nm))
         return td;
     }
@@ -69,7 +69,7 @@ static IMAGE_THUNK_DATA *lookup(IMAGE_DOS_HEADER *dh, const char *nm) {
                 (IMAGE_THUNK_DATA*)(id->FirstThunk + base),
                 (IMAGE_THUNK_DATA*)(id->OriginalFirstThunk + base),
                 nm);
-      debugprintf(" import %s\n", id->Name + base);
+      verbosedebugprintf(" import %s\n", id->Name + base);
       if (d)
         return d;
     }
@@ -106,7 +106,7 @@ void patchInstall(void *orig, void *hook, void **preal, const char *nm) {
 		HMODULE m = mod[i];
 		char mname[4096];
 		assert(GetModuleFileNameA(m, mname, sizeof(mname)));
-		debugprintf("module %s\n", mname);
+		verbosedebugprintf("module %s\n", mname);
 		if (m != (HMODULE)&__ImageBase)
 			modpatch((IMAGE_DOS_HEADER *)m, orig, hook, preal, nm);
 	}

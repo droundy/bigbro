@@ -125,6 +125,7 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
                                   ULONG sa,
                                   ULONG oo) {
   NTSTATUS r;
+  debugprintf("am in hNtOpenFile!\n");
   r = oNtOpenFile(ph, am, oa, sb, sa, oo);
   if (NT_SUCCESS(r)) {
     femit(*ph, fop(oo, am));
@@ -134,6 +135,7 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
 
 static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) {
   NTSTATUS r;
+  debugprintf("am in hNtDeleteFile!\n");
   char buf[PATH_MAX];
   r = oNtDeleteFile(oa);
   if (NT_SUCCESS(r)) {
@@ -147,38 +149,39 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
                                             PVOID fi,
                                             ULONG ln,
                                             FILE_INFORMATION_CLASS ic) {
-	NTSTATUS r;
-	char buf[PATH_MAX];
-	char buf2[PATH_MAX];
+  debugprintf("am in hNtSetInformationFile!\n");
+  NTSTATUS r;
+  char buf[PATH_MAX];
+  char buf2[PATH_MAX];
 #ifdef _MSC_VER
-	PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi;
+  PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi;
 #else
-	PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
+  PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
 #endif
-	char * opath = "fixme";  // handlePath(buf, fh);
-	r = oNtSetInformationFile(fh, sb, fi, ln, ic);
-	if (NT_SUCCESS(r)) {
-		switch (ic) {
-		case FileBasicInformation:
-			/* emitOp('t', opath, 0); */
-			break;
-		case FileRenameInformation:
-			/* emitOp(opath? 'm' : 'M', */
-			/*        utf8PathFromWide(buf2, ri->FileName, */
-			/* 			ri->FileNameLength / sizeof(ri->FileName[0])), */
-			/*        opath); */
-			break;
-		case FileDispositionInformation:
-			/* emitOp('d', opath, 0); */
-			break;
-		case FileAllocationInformation:
-			/* emitOp('w', opath, 0); */
-			break;
-		default:
-			break;
-		}
-	}
-	return r;
+  char * opath = "fixme";  // handlePath(buf, fh);
+  r = oNtSetInformationFile(fh, sb, fi, ln, ic);
+  if (NT_SUCCESS(r)) {
+    switch (ic) {
+    case FileBasicInformation:
+      /* emitOp('t', opath, 0); */
+      break;
+    case FileRenameInformation:
+      /* emitOp(opath? 'm' : 'M', */
+      /*        utf8PathFromWide(buf2, ri->FileName, */
+      /* 			ri->FileNameLength / sizeof(ri->FileName[0])), */
+      /*        opath); */
+      break;
+    case FileDispositionInformation:
+      /* emitOp('d', opath, 0); */
+      break;
+    case FileAllocationInformation:
+      /* emitOp('w', opath, 0); */
+      break;
+    default:
+      break;
+    }
+  }
+  return r;
 }
 
 static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
@@ -186,24 +189,26 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
                                               PVOID fi,
                                               ULONG ln,
                                               FILE_INFORMATION_CLASS ic) {
-	NTSTATUS r;
-	char buf[PATH_MAX];
-	r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
-	if (NT_SUCCESS(r)) {
-		switch (ic) {
-		case FileAllInformation: 
-		case FileNetworkOpenInformation:
-			/* emitOp('q', handlePath(buf, fh), 0); */
-			break;
-		default:
-			break;
-		}
-	}
-	return r;
+  debugprintf("am in hNtQueryInformationFile!\n");
+  NTSTATUS r;
+  char buf[PATH_MAX];
+  r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
+  if (NT_SUCCESS(r)) {
+    switch (ic) {
+    case FileAllInformation: 
+    case FileNetworkOpenInformation:
+      /* emitOp('q', handlePath(buf, fh), 0); */
+      break;
+    default:
+      break;
+    }
+  }
+  return r;
 }
 
 
 static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) {
+  debugprintf("am in hNtQueryFullAttributesFile!\n");
   NTSTATUS r;
   r = oNtQueryFullAttributesFile(oa, oi);
   if (NT_SUCCESS(r)) {
@@ -214,11 +219,12 @@ static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NE
 }
 
 static NTSTATUS NTAPI hNtResumeThread(HANDLE th, PULONG sc) {
-	NTSTATUS r;
-	if (!patchInstalled())
-		injectThread(th);
-	r = oNtResumeThread(th, sc);
-	return r;
+  debugprintf("am in hNtResumeThread!\n");
+  NTSTATUS r;
+  if (!patchInstalled())
+    injectThread(th);
+  r = oNtResumeThread(th, sc);
+  return r;
 }
 
 
