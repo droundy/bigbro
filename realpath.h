@@ -142,8 +142,9 @@ static inline char *flexible_realpath(const char *name, char *resolved,
       /* nothing */;
     } else if (end - start == 2 && start[0] == '.' && start[1] == '.') {
       /* Back up to previous component, ignore if at root already.  */
-      if (dest > rpath + 1)
+      if (dest > rpath + 1) {
         while ((--dest)[-1] != '/');
+      }
     } else {
       size_t new_size;
 
