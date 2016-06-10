@@ -68,9 +68,7 @@ HOOK(NtResumeThread);
 
 static const int fop(ULONG co, ACCESS_MASK am) {
 	int op;
-	if (0)
-		;
-	else if (co & FILE_DIRECTORY_FILE)
+	if (co & FILE_DIRECTORY_FILE)
 		op = 0;
 	else if (co & FILE_DELETE_ON_CLOSE)
 		op = 'd';
