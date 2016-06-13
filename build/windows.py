@@ -22,7 +22,8 @@ from __future__ import division, print_function
 
 import sys, subprocess, os, binary2header
 
-for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
+for compiler in ['cl', 'x86_64-w64-mingw32-gcc',
+                 r'C:\msys64\usr\bin\gcc', 'cc']:
     try:
         subprocess.call([compiler, '--version'])
         cc = compiler
@@ -32,7 +33,8 @@ for compiler in ['cl', 'x86_64-w64-mingw32-gcc', 'cc']:
         print('NOT using',compiler,'compiler')
 
 for compiler in [r'cl',
-                 'i686-w64-mingw32-gcc', 'cc']:
+                 'i686-w64-mingw32-gcc',
+                 r'C:\MinGW\bin\gcc', 'cc']:
     try:
         subprocess.call([compiler, '--version'])
         cc32 = compiler

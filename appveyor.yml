@@ -6,10 +6,14 @@ environment:
   - TARGET: x86_64-pc-windows-msvc
     ARCH: amd64
     VS: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+  - TARGET: x86_64-pc-windows-mingw
+    ARCH: amd64
+    MINGW: C:\MinGW
 
 build_script:
   - cmd: SET PATH=C:\python35;%PATH%
   - if defined VS call "%VS%" amd64_x86
+  - if defined MINGW SET PATH=%PATH%;%MINGW%\bin
   - cmd: bash -c "which cl.exe"
   - cmd: python build/windows.py x86
   - if defined VS call "%VS%" amd64
