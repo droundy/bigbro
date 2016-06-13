@@ -14,10 +14,8 @@ build_script:
   - cmd: SET PATH=C:\python35;%PATH%
   - if defined VS call "%VS%" amd64_x86
   - if defined MINGW SET PATH=%PATH%;%MINGW%\bin
-  - cmd: bash -c "which cl.exe"
   - cmd: python build/windows.py x86
   - if defined VS call "%VS%" amd64
-  - cmd: bash -c "which cl.exe"
   - cmd: python build/windows.py amd64
 
 # to run your custom scripts instead of automatic tests
