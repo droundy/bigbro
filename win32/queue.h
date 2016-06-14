@@ -15,5 +15,27 @@
    NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-void injectProcess(HANDLE proc);
-void injectThread(HANDLE thread);
+#include <stdint.h>
+
+struct queue_internals {
+  uint32_t written_to_here;
+  uint32_t size;
+  char data[];
+};
+
+struct queue {
+  HANDLE mf;
+  struct queue_internals *buf;
+};
+int queueInit(struct queue *q, const char *key);
+int queueTerm(struct queue *q);
+
+int globalQueueInit(const char *name);
+int globalQueueTerm();
+
+static const char WRITE_OP = 'w';
+static const char READ_OP = 'r';
+static const char RENAME_OP = 'v';
+static const char READDIR_OP = 'd';
+
+void queueOp(char op, const char *filename);

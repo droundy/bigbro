@@ -61,10 +61,9 @@ def compile32(cfile):
     print(' '.join(cmd))
     return subprocess.call(cmd)
 
-cfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c']
-compile_only_files = ['win32/patch.c', 'win32/helper.c']
+cfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c', 'win32/queue.c']
 
-dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c']
+dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c', 'win32/queue.c']
 
 if 'x86' in sys.argv or 'amd64' not in sys.argv:
     # first build the helper executable
@@ -87,7 +86,7 @@ if 'x86' in sys.argv or 'amd64' not in sys.argv:
 
 if 'amd64' in sys.argv or 'x86' not in sys.argv:
 
-    for c in cfiles + compile_only_files + dll_cfiles:
+    for c in cfiles + dll_cfiles:
         assert(not compile(c))
 
     cmd = [cc, '-shared', '-o', 'bigbro64.dll'] + [c[:-2]+'.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']

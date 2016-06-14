@@ -24,6 +24,7 @@
 #include "hashset.h"
 
 #include "win32/inject.h"
+#include "win32/queue.h"
 
 // copy the string and return a pointer to the byte in dest *after*
 // the null character we write.
@@ -39,58 +40,50 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
-  HANDLE pipe_Rd, pipe_Wr;
-  {
-    SECURITY_ATTRIBUTES saAttr;
-    // Set the bInheritHandle flag so pipe handles are inherited.
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
-    if (!CreatePipe(&pipe_Rd, &pipe_Wr, &saAttr, 0) ) {
-      return -1;
-    }
+  struct queue q;
+  const char *shm_name = "stupid";
+  if (queueInit(&q, shm_name)) {
+    printf("Error allocating shared memory.\n");
+    return 1;
   }
-  char *pipe_Wr_string = malloc(50);
   char *new_windows_env = 0;
-  snprintf(pipe_Wr_string, 50, "%p", pipe_Wr);
   if (envp) {
     // create an environment with the desired environment variables,
-    // plus one more to carry the value of pipe_Wr.  This is trickier
-    // than on posix, since windows wants a null-separated array of
-    // char, rather than a null-terminated array of char *.  For
-    // uniformity, bigbro wants the latter.
+    // plus one more to carry the name of our shared-memory segment.
+    // This is trickier than on posix, since windows wants a
+    // null-separated array of char, rather than a null-terminated
+    // array of char *.  For uniformity, bigbro wants the latter.
     int size = 1; // 1 for the final null
     for (char **e = envp; *e; e++) {
       size += strlen(*e) + 1;
     }
-    size += strlen("bigbro_pipe=") + strlen(pipe_Wr_string) + 1;
+    size += strlen("bigbro_shm=") + strlen(shm_name) + 1;
     char *new_windows_env = (char *)calloc(size, 1);
     // here we join together all these strings into one big happy
     // family.
     char *location = new_windows_env;
     for (char **e = envp; *e; e++) location = copy_string(location, *e);
-    location = copy_string(location, "bigbro_pipe=");
+    location = copy_string(location, "bigbro_shm=");
     location--; // overwrite the null
-    location = copy_string(location, pipe_Wr_string);
+    location = copy_string(location, shm_name);
   } else {
     // FIXME BUG HERE! the following introduces a race condition: if
     // we call bigbro twice simultaneously, it is possible that one of
     // the two processes will end up sending its info to the wrong
-    // pipe.  However, right now I am just trying to get something
+    // shm.  However, right now I am just trying to get something
     // working, and this is easier.
-    SetEnvironmentVariable("bigbro_pipe", pipe_Wr_string);
+    SetEnvironmentVariable("bigbro_shm", shm_name);
   }
 
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
-  // want to pass pipe_Wr value in the environment...
+  // want to pass shm_name value in the environment...
   if (!CreateProcess(0, cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
     return -1;
   }
-  injectProcess(pi.hProcess, pipe_Wr); // FIXME
-  CloseHandle(pipe_Wr);
+  injectProcess(pi.hProcess);
   if (ResumeThread(pi.hThread) != -1) {
     return -1;
   }

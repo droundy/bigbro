@@ -20,6 +20,7 @@
 #include "patch.h"
 #include "../errors.h"
 #include "hooks.h"
+#include "queue.h"
 
 HANDLE pipe_Wr = 0;
 
@@ -39,17 +40,17 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved) {
   switch (Reason) {
   case DLL_PROCESS_ATTACH:
     debugprintf("I am attaching my dll\n");
-    char *pipe_Wr_string = malloc(50);
-    DWORD ret = GetEnvironmentVariable("bigbro_pipe", pipe_Wr_string, 50);
+    char *shm_name = malloc(50);
+    DWORD ret = GetEnvironmentVariable("bigbro_shm", shm_name, 50);
     if (ret == 0) {
-      printf("There is no bigbro_pipe environment variable!\n");
+      printf("There is no bigbro_sm environment variable!\n");
       return FALSE;
     } else if (ret >= 50) {
       printf("There is a long bigbro_pipe environment variable that seems like an attack!\n");
       return FALSE;
     } else {
-      if (sscanf(pipe_Wr_string, "%p", &pipe_Wr) != 1) {
-        printf("bigbro_pipe environment variable '%s' is not an integer!\n", pipe_Wr_string);
+      if (globalQueueInit(shm_name)) {
+        printf("error with shm opening '%s'!\n", shm_name);
         return FALSE;
       }
     }

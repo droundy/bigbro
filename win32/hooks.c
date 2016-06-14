@@ -220,7 +220,7 @@ static NTSTATUS NTAPI hNtResumeThread(HANDLE th, PULONG sc) {
   debugprintf("am in hNtResumeThread!\n");
   NTSTATUS r;
   if (!patchInstalled()) {
-    injectThread(th, 0); // FIXME
+    injectThread(th);
   }
   r = oNtResumeThread(th, sc);
   return r;
