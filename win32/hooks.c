@@ -64,8 +64,10 @@ static char *utf8PathFromWide(char *buf, const PWSTR s, int sl) {
   buf[l] = 0;
   if (!buf[0]) return 0;
   /* if (buf[0] == '\\' && !strchr(buf, ':')) return 0; */
-  /* if (strncmp(buf, "\\\\?\\", 4) == 0 || strncmp(buf, "\\??\\", 4) == 0) */
-  /*   return buf + 4; */
+  printf("buf is %s\n", buf);
+  printf("strncmp gives %d\n", strncmp(buf, "\\??\\", 4));
+  if (strncmp(buf, "\\\\?\\", 4) == 0 || strncmp(buf, "\\??\\", 4) == 0)
+    return buf + 4;
   return buf;
 }
 
@@ -112,19 +114,16 @@ HOOK(NtResumeThread);
 
 #endif
 
-static const int fop(ULONG co, ACCESS_MASK am) {
-	int op;
-	if (co & FILE_DIRECTORY_FILE)
-		op = 0;
-	else if (co & FILE_DELETE_ON_CLOSE)
-		op = 'd';
-	else if (am & GENERIC_WRITE)
-		op = 'w';
-	else if (am & GENERIC_READ)
-		op = 'r';
-	else
-		op = 0;
-	return op;
+static const char fop(ULONG co, ACCESS_MASK am) {
+  if (co & FILE_DIRECTORY_FILE)
+    return 0;
+  else if (co & FILE_DELETE_ON_CLOSE)
+    return 0;
+  else if (am & GENERIC_WRITE)
+    return WRITE_OP;
+  else if (am & GENERIC_READ)
+    return READ_OP;
+  return 0;
 }
 
 static void femit(HANDLE h, int op) {
@@ -158,18 +157,18 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
   if (NT_SUCCESS(r)) {
     debugprintf("am in hNtCreateFile!\n");
     char buf[4096];
-    utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2);
-    printf("\nI am in hNtCreateFile %s!\n", buf);
+    char *inp = utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2);
+    printf("\nI am in hNtCreateFile %s!\n", inp);
     // char *p = GetFileNameFromHandle(ph);
     char *p = handlePath(buf, ph);
-    printf("I am in hNtCreateFile with path %p!\n", p);
+    if (!p) {
+      printf("handlePath gives a null path pointer!\n");
+      p = inp;
+    }
     printf("I am in hNtCreateFile with string %s!\n", p);
     if (p) {
-      queueOp(WRITE_OP, p);
-      femit(*ph, fop(co, am));
-      free(p);
-    } else {
-      printf("skipping null path pointer!\n");
+      char op = fop(co, am);
+      if (op) queueOp(op, p);
     }
   }
   return r;

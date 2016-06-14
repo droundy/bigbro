@@ -69,7 +69,7 @@ void queueOp(char op, const char *filename) {
   uint32_t write_start = __sync_fetch_and_add(&q.buf->written_to_here, sz) % bufsize;
   q.buf->data[write_start] = op;
   for (uint32_t i=0; i < sz-1; i++) {
-    q.buf->data[(i+1) % bufsize] = filename[i];
+    q.buf->data[(write_start+i+1) % bufsize] = filename[i];
   }
   printf("DEBUG: %s\n", &q.buf->data[write_start]);
 }
