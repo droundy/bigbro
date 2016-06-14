@@ -1,1 +1,0 @@
-char *GetFileNameFromHandle(HANDLE hFile);

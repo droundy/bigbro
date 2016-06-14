@@ -31,7 +31,6 @@
 #include "inject.h"
 #include "hooks.h"
 #include "queue.h"
-#include "path.h"
 #include "../errors.h"
 
 #ifndef PATH_MAX
@@ -63,9 +62,7 @@ static char *utf8PathFromWide(char *buf, const PWSTR s, int sl) {
   if (l == 0) return 0;
   buf[l] = 0;
   if (!buf[0]) return 0;
-  /* if (buf[0] == '\\' && !strchr(buf, ':')) return 0; */
-  printf("buf is %s\n", buf);
-  printf("strncmp gives %d\n", strncmp(buf, "\\??\\", 4));
+  if (buf[0] == '\\' && !strchr(buf, ':')) return 0;
   if (strncmp(buf, "\\\\?\\", 4) == 0 || strncmp(buf, "\\??\\", 4) == 0)
     return buf + 4;
   return buf;
@@ -173,15 +170,11 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
   NTSTATUS r;
   r = oNtCreateFile(ph, am, oa, sb, as, fa, sa, cd, co, bu, le);
   if (NT_SUCCESS(r)) {
-    debugprintf("am in hNtCreateFile!\n");
     char buf[4096];
-    char *inp = utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2);
-    printf("\nI am in hNtCreateFile %s!\n", inp);
-    // char *p = GetFileNameFromHandle(ph);
     char *p = handlePath(buf, *ph);
     if (!p) {
       printf("handlePath gives a null path pointer!\n");
-      p = inp;
+      return r;
     }
     printf("I am in hNtCreateFile with string %s!\n", p);
     if (p) {

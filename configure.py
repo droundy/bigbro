@@ -81,7 +81,7 @@ print("""
 
 wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c', 'win32/queue.c']
 dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
-              'win32/queue.c', 'win32/path.c']
+              'win32/queue.c']
 
 if is_in_path('i686-w64-mingw32-gcc'):
     print('\n# We have a 32-bit mingw compiler, so let us cross-compile for windows!\n')
