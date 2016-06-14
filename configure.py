@@ -18,7 +18,22 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301 USA
 
-import string, os, glob, sys
+import string, os, glob, sys, importlib
+
+def is_in_path(program):
+    """ Does the program exist in the PATH? """
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        return is_exe(program)
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return True
+    return False
 
 platform = sys.platform
 if platform == 'linux2':
@@ -41,7 +56,6 @@ for flag in ['-Wall', '-Werror', '-std=c99', '-g', '-mtune=native']:
         cflags += ' ' + flag
     else:
         print('# %s cannot use flag: %s' % (cc, flag))
-os.system('rm -rf testing-flags')
 
 print('# cc=', repr(cc)) # in future, we should set this dynamically
 print('# cflags=', repr(cflags))
@@ -64,3 +78,90 @@ print("""
 < libbigbro.a
 > bigbro
 """ % (cc, cflags))
+
+wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c', 'win32/queue.c']
+dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
+              'win32/queue.c', 'win32/path.c']
+
+if is_in_path('i686-w64-mingw32-gcc'):
+    print('\n# We have a 32-bit mingw compiler, so let us cross-compile for windows!\n')
+
+    cflags = ''
+    for flag in ['-Wall', '-Werror', '-std=c99', '-g', '-O2']:
+        if not os.system('cd testing-flags && i686-w64-mingw32-gcc %s %s -c test.c' %
+                         (cflags, flag)):
+            cflags += ' ' + flag
+    else:
+        print('# i686-w64-mingw32-gcc cannot use flag: %s' % flag)
+
+    print('''
+# first build the helper executable
+| i686-w64-mingw32-gcc %s -c -o win32/helper32.obj win32/helper.c
+
+| i686-w64-mingw32-gcc -o win32/helper.exe win32/helper32.obj
+< win32/helper32.obj
+
+# now convert this executable into a header file
+| python3 build/binary2header.py win32/helper.exe win32/helper.h helper
+< win32/helper.exe
+''' % (cflags))
+
+    for c in dll_cfiles:
+          print("""
+| i686-w64-mingw32-gcc %s -c -o %s32.obj %s
+""" % (cflags, c[:-2], c))
+
+    print('''
+| i686-w64-mingw32-gcc -shared -o bigbro32.dll %s -lntdll -lpsapi'''
+          % ' '.join([c[:-2]+'32.obj' for c in dll_cfiles]))
+    for c in dll_cfiles:
+        print("< %s32.obj" % c[:-2])
+
+if is_in_path('x86_64-w64-mingw32-gcc'):
+    print('\n# We have a 64-bit mingw compiler, so let us cross-compile for windows!\n')
+
+    cflags = ''
+    for flag in ['-Wall', '-Werror', '-std=c99', '-g', '-O2']:
+        if not os.system('cd testing-flags && x86_64-w64-mingw32-gcc %s %s -c test.c' %
+                         (cflags, flag)):
+            cflags += ' ' + flag
+    else:
+        print('# x86_64-w64-mingw32-gcc cannot use flag: %s' % flag)
+
+    for c in set(dll_cfiles+wincfiles):
+          print("""
+| x86_64-w64-mingw32-gcc %s -c -o %s.obj %s
+> %s.obj
+""" % (cflags, c[:-2], c, c[:-2]))
+
+    print('''
+| x86_64-w64-mingw32-gcc -shared -o bigbro64.dll %s -lntdll -lpsapi'''
+          % ' '.join([c[:-2]+'.obj' for c in dll_cfiles]))
+    for c in dll_cfiles:
+        print("< %s.obj" % c[:-2])
+
+    print('''
+# convert the dlls into into header files
+| python3 build/binary2header.py bigbro32.dll win32/bigbro32.h bigbro32dll
+< bigbro32.dll
+| python3 build/binary2header.py bigbro64.dll win32/bigbro64.h bigbro64dll
+< bigbro64.dll
+''')
+
+    print("""
+| x86_64-w64-mingw32-gcc %s -o bigbro.exe %s"""
+          % (cflags, ' '.join([c[:-1]+'obj' for c in wincfiles])))
+    for c in wincfiles:
+        print("< %s.obj" % c[:-2])
+
+    for c in glob.glob('tests/*.c'):
+        base = c[:-2]
+        m = importlib.import_module('tests.'+base[6:])
+        if 'skip_windows' in dir(m):
+            print('# skipping test', base, 'not supported by windows')
+        else:
+            print("""
+| x86_64-w64-mingw32-gcc %s -o %s-test.exe %s"""
+                  % (cflags, c[:-2], c))
+
+os.system('rm -rf testing-flags')

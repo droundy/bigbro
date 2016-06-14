@@ -15,9 +15,14 @@
    NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+// We need to assert that we are running on Vista or later in order to
+// get the GetFinalPathNameByHandleW declaration.
+#define _WIN32_WINNT 0x0600
+
 #include <windows.h>
 #include <winternl.h>
 #include <limits.h>
+#include <wchar.h>
 
 #undef ASSERT
 /* #include "handle.h" */
@@ -25,11 +30,52 @@
 #include "patch.h"
 #include "inject.h"
 #include "hooks.h"
+#include "queue.h"
+#include "path.h"
 #include "../errors.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
+
+// Convert a wide Unicode string to an UTF8 string
+void utf8_encode(char *buf, int buflen, const wchar_t *input, int inputlen) {
+  if (inputlen == 0) {
+    *buf = 0;
+    return;
+  }
+  WideCharToMultiByte(CP_UTF8, 0, input, inputlen, buf, buflen, NULL, NULL);
+}
+
+// Convert an UTF8 string to a wide Unicode String
+void utf8_decode(wchar_t *buf, int buflen, const char *input, int inputlen) {
+  if (inputlen == 0) {
+    *buf = 0;
+    return;
+  }
+  MultiByteToWideChar(CP_UTF8, 0, input, inputlen, buf, buflen);
+}
+
+static char *utf8PathFromWide(char *buf, const PWSTR s, int sl) {
+  if (sl <= 0) return 0;
+  int l;
+  l = WideCharToMultiByte(CP_UTF8, 0, s, sl, buf, PATH_MAX, 0, 0);
+  if (l == 0) return 0;
+  buf[l] = 0;
+  if (!buf[0]) return 0;
+  /* if (buf[0] == '\\' && !strchr(buf, ':')) return 0; */
+  /* if (strncmp(buf, "\\\\?\\", 4) == 0 || strncmp(buf, "\\??\\", 4) == 0) */
+  /*   return buf + 4; */
+  return buf;
+}
+
+static inline char *handlePath(char *dst, HANDLE h) {
+  WCHAR wbuf[PATH_MAX];
+  int len = GetFinalPathNameByHandleW(h, wbuf, PATH_MAX, FILE_NAME_NORMALIZED);
+  printf("len of final path is %d from handle %p\n", len, h);
+  if (len <= 0 || len >= PATH_MAX) return 0;
+  return utf8PathFromWide(dst, wbuf, len);
+}
 
 #define HOOK(n) static NTSTATUS(NTAPI *o##n)()
 HOOK(NtCreateFile);
@@ -111,7 +157,20 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
   r = oNtCreateFile(ph, am, oa, sb, as, fa, sa, cd, co, bu, le);
   if (NT_SUCCESS(r)) {
     debugprintf("am in hNtCreateFile!\n");
-    femit(*ph, fop(co, am));
+    char buf[4096];
+    utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2);
+    printf("\nI am in hNtCreateFile %s!\n", buf);
+    // char *p = GetFileNameFromHandle(ph);
+    char *p = handlePath(buf, ph);
+    printf("I am in hNtCreateFile with path %p!\n", p);
+    printf("I am in hNtCreateFile with string %s!\n", p);
+    if (p) {
+      queueOp(WRITE_OP, p);
+      femit(*ph, fop(co, am));
+      free(p);
+    } else {
+      printf("skipping null path pointer!\n");
+    }
   }
   return r;
 }
@@ -134,7 +193,6 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
 static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) {
   NTSTATUS r;
   debugprintf("am in hNtDeleteFile!\n");
-  char buf[PATH_MAX];
   r = oNtDeleteFile(oa);
   if (NT_SUCCESS(r)) {
     /* emitOp('d', utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2), 0); */

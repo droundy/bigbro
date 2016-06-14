@@ -18,13 +18,13 @@
 #include <assert.h>
 #include <windows.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "queue.h"
 
 int queueInit(struct queue *q, const char *key) {
   static size_t sz = 1024;
   int i;
-  int err = 0;
   char *qname = malloc(4096);
   for (i = 0; key[i]; i++) {
     qname[i] = key[i] == '\\' || key[i] == ':'? '/' : key[i];
@@ -63,11 +63,13 @@ int globalQueueTerm() {
 
 void queueOp(char op, const char *filename) {
   if (!q.buf) return;
+  if (!filename) return;
   uint32_t sz = 2 + strlen(filename);
   uint32_t bufsize = q.buf->size;
   uint32_t write_start = __sync_fetch_and_add(&q.buf->written_to_here, sz) % bufsize;
   q.buf->data[write_start] = op;
-  for (uint32_t i; i < sz-1; i++) {
-    q.buf->data[i % bufsize] = filename[i];
+  for (uint32_t i=0; i < sz-1; i++) {
+    q.buf->data[(i+1) % bufsize] = filename[i];
   }
+  printf("DEBUG: %s\n", &q.buf->data[write_start]);
 }

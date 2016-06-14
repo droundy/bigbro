@@ -46,7 +46,6 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     printf("Error allocating shared memory.\n");
     return 1;
   }
-  char *new_windows_env = 0;
   if (envp) {
     // create an environment with the desired environment variables,
     // plus one more to carry the name of our shared-memory segment.
@@ -104,5 +103,8 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   *read_from_files = hashset_to_array(&read);
   *read_from_directories = hashset_to_array(&readdir);
   *written_to_files = hashset_to_array(&written);
+  free_hashset(&read);
+  free_hashset(&readdir);
+  free_hashset(&written);
   return dword_return_code;
 }

@@ -43,6 +43,8 @@ print('creating build/%s.sh...' % platform)
 print('==========================')
 if not os.system('fac --help'):
     assert not os.system('fac --script build/%s.sh libbigbro.a bigbro' % platform)
+if not os.system('fac --help'):
+    os.system('fac --script build/cross-windows.sh bigbro.exe bigbro32.dll bigbro64.dll')
 
 print('building bigbro by running build/%s.sh...' % platform)
 print('============================================')

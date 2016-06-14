@@ -23,4 +23,6 @@ web
 *.gcno
 *.exe
 win32/helper.h
+win32/bigbro32.h
+win32/bigbro64.h
 *.dll
