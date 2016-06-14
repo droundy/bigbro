@@ -75,7 +75,25 @@ static inline char *handlePath(char *dst, HANDLE h) {
   WCHAR wbuf[PATH_MAX];
   int len = GetFinalPathNameByHandleW(h, wbuf, PATH_MAX, FILE_NAME_NORMALIZED);
   printf("len of final path is %d from handle %p\n", len, h);
-  if (len <= 0 || len >= PATH_MAX) return 0;
+  if (len <= 0 || len >= PATH_MAX) {
+    switch (GetLastError()) {
+    case ERROR_PATH_NOT_FOUND:
+      printf("error in GetFinalPathNameByHandleW: path not found\n");
+      break;
+    case ERROR_NOT_ENOUGH_MEMORY:
+      printf("error in GetFinalPathNameByHandleW: not enough memory\n");
+      break;
+    case ERROR_INVALID_HANDLE:
+      printf("error in GetFinalPathNameByHandleW: the handle is invalid\n");
+      break;
+    case ERROR_INVALID_PARAMETER:
+      printf("error in GetFinalPathNameByHandleW: bad parameter\n");
+      break;
+    default:
+      printf("error in GetFinalPathNameByHandleW: i don't understand error\n");
+    }
+    return 0;
+  }
   return utf8PathFromWide(dst, wbuf, len);
 }
 
@@ -160,7 +178,7 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
     char *inp = utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2);
     printf("\nI am in hNtCreateFile %s!\n", inp);
     // char *p = GetFileNameFromHandle(ph);
-    char *p = handlePath(buf, ph);
+    char *p = handlePath(buf, *ph);
     if (!p) {
       printf("handlePath gives a null path pointer!\n");
       p = inp;
