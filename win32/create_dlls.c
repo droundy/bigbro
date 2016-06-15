@@ -6,69 +6,60 @@
 #include <stdlib.h>
 
 #include "helper.h"
+#include "bigbro32.h"
+#include "bigbro64.h"
 #include "create_dlls.h"
 
-static const wchar_t *helper_wstr = TEXT("helper.exe");
-static const wchar_t *dll32_wstr = TEXT("bigbro32.dll");
-static const wchar_t *dll64_wstr = TEXT("bigbro64.dll");
-
-wchar_t helper_filename[4096];
-wchar_t dll32_filename[4096];
-wchar_t dll64_filename[4096];
-
-static int pathcat(wchar_t *out, const wchar_t *path, const wchar_t *name) {
-  for (int i=0; name[i]; i++) {
-    *out++ = name[i];
-    if (i > 2000) return 1;
+static int write_file(const wchar_t *fname, const unsigned char *content, size_t size) {
+  wprintf(TEXT("Creating file %s\n"), fname);
+  SECURITY_DESCRIPTOR sd;
+  InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+  HANDLE h = CreateFile(fname, GENERIC_WRITE | GENERIC_EXECUTE,
+                        0,                    // do not share
+                        NULL,                 // default security
+                        CREATE_ALWAYS,        // overwrite existing
+                        FILE_ATTRIBUTE_NORMAL,// normal file
+                        NULL);                // no template
+  if (h == INVALID_HANDLE_VALUE) {
+    wprintf(TEXT("unable to create %s\n"), fname);
+    return 1;
   }
-  *out++ = '\\';
-  for (int i=0; name[i]; i++) {
-    *out++ = name[i];
+
+  DWORD dwBytesWritten = 0;
+  BOOL success = WriteFile(h, content, size, &dwBytesWritten, NULL);
+  CloseHandle(h);
+  if (!success) {
+    wprintf(TEXT("Trouble writing to file %s\n"), fname);
   }
-  *out = 0;
-  return 0;
+  return !success;
 }
 
 static int have_dlls = 0;
 
 int create_dlls() {
   if (have_dlls) return 0;
-  wchar_t szTempFileName[MAX_PATH];
-  wchar_t path[MAX_PATH];
+  if (init_dll_paths()) return 1;
 
-  //  Gets the temp path env string (no guarantee it's a valid path).
-  DWORD pathlen = GetTempPathW(MAX_PATH,          // length of the buffer
-                                path); // buffer for path
-  if (pathlen > MAX_PATH || (pathlen == 0)) return 1;
-  path[pathlen] = 0;
+  if (write_file(helper_filename, helper, sizeof(helper))) return 1;
+  if (write_file(dll32_filename, bigbro32dll, sizeof(bigbro32dll))) return 1;
+  if (write_file(dll64_filename, bigbro64dll, sizeof(bigbro64dll))) return 1;
 
-  //  Generates a temporary file name.
-  UINT uRetVal = GetTempFileNameW(path, // directory for tmp files
-                                  TEXT("DEMO"),     // temp file name prefix
-                                  0,                // create unique name
-                                  szTempFileName);  // buffer for name
-  if (uRetVal == 0) return 1;
+  /* HMODULE hh = LoadLibraryW(dll64_filename); */
+  /* if (hh == 0) { */
+  /*   printf("UNABLE TO LOAD LIBRARY WE JUST WROTE!\n"); */
+  /*   DWORD err = GetLastError(); */
+  /*   switch (err) { */
+  /*   case 126: */
+  /*     wprintf(L"The specified module '%s' could not be found!\n", dll64_filename); */
+  /*     break; */
+  /*   case 1114: */
+  /*     wprintf(L"The '%s' initialization routine failed!\n", dll64_filename); */
+  /*     break; */
+  /*   default: */
+  /*     printf("error is %ld\n", err); */
+  /*   } */
+  /* } */
 
-  if (pathcat(helper_filename, path, helper_wstr)) return 1;
-  if (pathcat(dll32_filename, path, dll32_wstr)) return 1;
-  if (pathcat(dll64_filename, path, dll64_wstr)) return 1;
-
-  HANDLE h = CreateFile(helper_filename, // file name
-                        GENERIC_WRITE,        // open for write
-                        0,                    // do not share
-                        NULL,                 // default security
-                        CREATE_ALWAYS,        // overwrite existing
-                        FILE_ATTRIBUTE_NORMAL,// normal file
-                        NULL);                // no template
-  if (h == INVALID_HANDLE_VALUE) return 1;
-
-  DWORD dwBytesWritten = 0;
-  BOOL success = WriteFile(h,
-                           helper,
-                           sizeof(helper),
-                           &dwBytesWritten,
-                           NULL);
-  if (!success) return 1;
   have_dlls = 1;
   return 0;
 }

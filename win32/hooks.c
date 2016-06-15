@@ -71,7 +71,6 @@ static char *utf8PathFromWide(char *buf, const PWSTR s, int sl) {
 static inline char *handlePath(char *dst, HANDLE h) {
   WCHAR wbuf[PATH_MAX];
   int len = GetFinalPathNameByHandleW(h, wbuf, PATH_MAX, FILE_NAME_NORMALIZED);
-  printf("len of final path is %d from handle %p\n", len, h);
   if (len <= 0 || len >= PATH_MAX) {
     switch (GetLastError()) {
     case ERROR_PATH_NOT_FOUND:

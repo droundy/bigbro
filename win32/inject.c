@@ -15,6 +15,8 @@
    NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+#define UNICODE
+
 #include <stdint.h>
 #include <windows.h>
 #include <limits.h>
@@ -25,6 +27,7 @@
 #include "helper.h"
 
 #include "inject.h"
+#include "create_dlls.h"
 
 WINBASEAPI DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
 
@@ -33,64 +36,48 @@ WINBASEAPI DWORD WINAPI GetProcessIdOfThread(HANDLE Thread);
 #endif
 
 void injectProcess(HANDLE proc) {
-	HANDLE tid;
-	BOOL is32;
-	FARPROC addr;
-	LPVOID arg;
-	char dll[PATH_MAX];
-	char *ext = 0;
-	DWORD rc;
-	extern IMAGE_DOS_HEADER __ImageBase;
-	assert(proc);
-	memset(dll, 0, sizeof(dll));
-	assert(GetModuleFileNameA((HMODULE)&__ImageBase, dll, sizeof(dll)));
-	if (!ext)
-		ext = strstr(dll, ".exe");
-	if (!ext)
-		ext = strstr(dll, ".dll");
-	if (!ext)
-		ext = dll + strlen(dll);
-	assert(IsWow64Process(proc, &is32));
-	assert(0 != (arg = VirtualAllocEx(proc, 0, strlen(dll) + 1,
-				       MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)));
-	if (strcmp(ext, ".dll"))
-		memcpy(ext, is32 ? "32.dll" : "64.dll", 6);
-        debugprintf("dll name is %s\n", dll);
-	if (is32) {
-		STARTUPINFO si;
-		PROCESS_INFORMATION pi;
-		const char * helpername = "fsatracehelper.exe";
-		char helper[PATH_MAX];
-		char * p;
-		memset(&si, 0, sizeof(si));
-		memset(&pi, 0, sizeof(pi));
-		si.cb = sizeof(si);
-		memcpy(helper, dll, strlen(dll)+1);
-		p = strrchr(helper, '\\');
-		memcpy(p+1, helpername, strlen(helpername)+1);
-                debugprintf("helper is %s\n", helper);
-		assert(CreateProcessA(0, helper, 0, 0, 0, 0, 0, 0, &si, &pi));
-		assert(WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE));
-		assert(GetExitCodeProcess(pi.hProcess, &rc));
-		addr = (FARPROC)(uintptr_t)rc;
-	}
-	else
-		addr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-	assert(addr);
-	assert(WriteProcessMemory(proc, arg, dll, strlen(dll) + 1, NULL));
-        debugprintf("am creating remote thread...\n");
-        tid = CreateRemoteThread(proc, 0, 0, (LPTHREAD_START_ROUTINE)addr, arg, 0, 0);
-	assert(0 != tid);
-	assert(-1 != ResumeThread(tid));
-	assert(WAIT_OBJECT_0 == WaitForSingleObject(tid, INFINITE));
-	assert(CloseHandle(tid));
-        debugprintf("have finished waiting for the remote thread...\n");
+  init_dll_paths();
+  HANDLE tid;
+  BOOL is32;
+  FARPROC addr;
+  LPVOID arg;
+  wchar_t *dll;
+  DWORD rc;
+  assert(proc);
+  assert(IsWow64Process(proc, &is32));
+  if (is32) {
+    dll = dll32_filename;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    assert(CreateProcessW(0, helper_filename, 0, 0, 0, 0, 0, 0, &si, &pi));
+    assert(WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE));
+    assert(GetExitCodeProcess(pi.hProcess, &rc));
+    addr = (FARPROC)(uintptr_t)rc;
+  } else {
+    dll = dll64_filename;
+    addr = GetProcAddress(GetModuleHandleW(TEXT("kernel32.dll")), "LoadLibraryW");
+  }
+  assert(addr);
+  arg = VirtualAllocEx(proc, 0, 2*(wcslen(dll) + 1),
+                       MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  assert(arg);
+  wchar_t stupidbuffer[5000];
+  for (int i=0; i<4000; i++) stupidbuffer[i] = 0;
+  memcpy(stupidbuffer, dll, 2*(wcslen(dll) + 1));
+  assert(WriteProcessMemory(proc, arg, dll, 2*(wcslen(dll) + 1), NULL));
+  debugprintf("am creating remote thread...\n");
+  tid = CreateRemoteThread(proc, 0, 0, (LPTHREAD_START_ROUTINE)addr, arg, 0, 0);
+  assert(tid);
+  assert(-1 != ResumeThread(tid));
+  assert(WAIT_OBJECT_0 == WaitForSingleObject(tid, INFINITE));
+  assert(CloseHandle(tid));
+  debugprintf("have finished waiting for the remote thread...\n");
 }
 
 void injectThread(HANDLE th) {
-	HANDLE h;
-	assert(0 != (h = OpenProcess(PROCESS_ALL_ACCESS, TRUE,
-                                     GetProcessIdOfThread(th))));
-	injectProcess(h);
-	assert(CloseHandle(h));
+  HANDLE h;
+  assert(0 != (h = OpenProcess(PROCESS_ALL_ACCESS, TRUE,
+                               GetProcessIdOfThread(th))));
+  injectProcess(h);
+  assert(CloseHandle(h));
 }

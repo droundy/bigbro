@@ -80,9 +80,9 @@ print("""
 """ % (cc, cflags))
 
 wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c',
-             'win32/queue.c', 'win32/create_dlls.c']
+             'win32/queue.c', 'win32/create_dlls.c', 'win32/dll_paths.c']
 dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
-              'win32/queue.c']
+              'win32/queue.c', 'win32/dll_paths.c']
 
 if is_in_path('i686-w64-mingw32-gcc'):
     print('\n# We have a 32-bit mingw compiler, so let us cross-compile for windows!\n')
@@ -134,6 +134,10 @@ if is_in_path('x86_64-w64-mingw32-gcc'):
 | x86_64-w64-mingw32-gcc %s -c -o %s.obj %s
 > %s.obj
 """ % (cflags, c[:-2], c, c[:-2]))
+          if c == 'win32/create_dlls.c':
+              print('< win32/bigbro32.h')
+              print('< win32/bigbro64.h')
+              print('< win32/helper.h')
 
     print('''
 | x86_64-w64-mingw32-gcc -shared -o bigbro64.dll %s -lntdll -lpsapi'''
