@@ -25,6 +25,7 @@
 
 #include "win32/inject.h"
 #include "win32/queue.h"
+#include "win32/create_dlls.h"
 
 // copy the string and return a pointer to the byte in dest *after*
 // the null character we write.
@@ -40,6 +41,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
+  create_dlls();
   struct queue q;
   const char *shm_name = "stupid";
   if (queueInit(&q, shm_name)) {

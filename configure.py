@@ -79,7 +79,8 @@ print("""
 > bigbro
 """ % (cc, cflags))
 
-wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c', 'win32/queue.c']
+wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c',
+             'win32/queue.c', 'win32/create_dlls.c']
 dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
               'win32/queue.c']
 
