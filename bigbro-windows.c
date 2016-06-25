@@ -119,6 +119,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
       }
       break;
     case RENAME_OP:
+      i += strlen(q.buf->data+i)+1;
+      const char *newname = q.buf->data+i;
+      printf("FIXME: not handling rename %s -> %s\n", name, newname);
       break;
     case READDIR_OP:
       insert_hashset(&readdir, name);

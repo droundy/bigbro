@@ -167,7 +167,7 @@ for testc in glob.glob('tests/*.c'):
 test = None # to avoid bugs below where we refer to test
 
 if numfailures > 0:
-    print("\nTests FAILED!!!")
+    print("\nTests FAILED (%d/%d)!!!" % (numfailures, numfailures+numpasses))
 else:
     print("\nAll %d tests passed!" % numpasses)
 
