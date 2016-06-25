@@ -97,9 +97,9 @@ static inline char *handlePath(char *dst, HANDLE h) {
 HOOK(NtCreateFile);
 HOOK(NtOpenFile);
 HOOK(NtDeleteFile);
-/* HOOK(NtSetInformationFile); */
-/* HOOK(NtQueryFullAttributesFile); */
-/* HOOK(NtQueryInformationFile); */
+HOOK(NtSetInformationFile);
+HOOK(NtQueryFullAttributesFile);
+HOOK(NtQueryInformationFile);
 HOOK(NtResumeThread);
 #undef HOOK
 
@@ -129,19 +129,25 @@ HOOK(NtResumeThread);
 #endif
 
 static const char fop(ULONG co, ACCESS_MASK am) {
-  if (co & FILE_DIRECTORY_FILE)
+  if (co & FILE_DIRECTORY_FILE) {
+    printf("FILE_DIRECTORY_FILE\n");
     return 0;
-  else if (co & FILE_DELETE_ON_CLOSE)
+  } else if (co & FILE_DELETE_ON_CLOSE) {
+    printf("FILE_DELETE_ON_CLOSE\n");
     return 0;
-  else if (am & GENERIC_WRITE)
+  } else if (am & GENERIC_WRITE) {
+    printf("GENERIC_WRITE\n");
     return WRITE_OP;
-  else if (am & GENERIC_READ)
+  } else if (am & GENERIC_READ) {
+    printf("GENERIC_READ\n");
     return READ_OP;
+  }
+  printf("GENERIC_WRITE\n");
   return 0;
 }
 
-static void femit(HANDLE h, int op) {
-  if (op) {
+/* static void femit(HANDLE h, int op) { */
+/*   if (op) { */
     /* IO_STATUS_BLOCK sb; */
     /* FILE_STANDARD_INFORMATION si; */
     /* oNtQueryInformationFile(h, &sb, &si, sizeof(si), */
@@ -152,8 +158,8 @@ static void femit(HANDLE h, int op) {
     /*   char * p = "fixme"; // handlePath(buf, h); */
     /*   /\* emitOp(op, p, 0); *\/ */
     /* } */
-  }
-}
+/*   } */
+/* } */
 
 static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
                                     ACCESS_MASK am,
@@ -191,10 +197,22 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
                                   ULONG sa,
                                   ULONG oo) {
   NTSTATUS r;
-  debugprintf("am in hNtOpenFile!\n");
+  printf("am in hNtOpenFile!\n");
   r = oNtOpenFile(ph, am, oa, sb, sa, oo);
   if (NT_SUCCESS(r)) {
-    femit(*ph, fop(oo, am));
+    char buf[4096];
+    char *p = handlePath(buf, *ph);
+    if (!p) {
+      printf("handlePath gives a null path pointer!\n");
+      return r;
+    }
+    printf("I am in hNtOpenFile with string %s!\n", p);
+    if (p) {
+      char op = fop(oo, am);
+      if (op) queueOp(op, p);
+    }
+  } else {
+    printf("no success in hNtOpenFile\n");
   }
   return r;
 }
@@ -209,79 +227,79 @@ static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) {
   return r;
 }
 
-/* static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh, */
-/*                                             PIO_STATUS_BLOCK sb, */
-/*                                             PVOID fi, */
-/*                                             ULONG ln, */
-/*                                             FILE_INFORMATION_CLASS ic) { */
-/*   debugprintf("am in hNtSetInformationFile!\n"); */
-/*   NTSTATUS r; */
-/*   char buf[PATH_MAX]; */
-/*   char buf2[PATH_MAX]; */
-/* #ifdef _MSC_VER */
-/*   PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi; */
-/* #else */
-/*   PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi; */
-/* #endif */
-/*   char * opath = "fixme";  // handlePath(buf, fh); */
-/*   r = oNtSetInformationFile(fh, sb, fi, ln, ic); */
-/*   if (NT_SUCCESS(r)) { */
-/*     switch (ic) { */
-/*     case FileBasicInformation: */
-/*       /\* emitOp('t', opath, 0); *\/ */
-/*       break; */
-/*     case FileRenameInformation: */
-/*       /\* emitOp(opath? 'm' : 'M', *\/ */
-/*       /\*        utf8PathFromWide(buf2, ri->FileName, *\/ */
-/*       /\* 			ri->FileNameLength / sizeof(ri->FileName[0])), *\/ */
-/*       /\*        opath); *\/ */
-/*       break; */
-/*     case FileDispositionInformation: */
-/*       /\* emitOp('d', opath, 0); *\/ */
-/*       break; */
-/*     case FileAllocationInformation: */
-/*       /\* emitOp('w', opath, 0); *\/ */
-/*       break; */
-/*     default: */
-/*       break; */
-/*     } */
-/*   } */
-/*   return r; */
-/* } */
+static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
+                                            PIO_STATUS_BLOCK sb,
+                                            PVOID fi,
+                                            ULONG ln,
+                                            FILE_INFORMATION_CLASS ic) {
+  printf("am in hNtSetInformationFile!\n");
+  NTSTATUS r;
+  char buf[PATH_MAX];
+  char buf2[PATH_MAX];
+#ifdef _MSC_VER
+  PFILE_RENAME_INFO ri = (PFILE_RENAME_INFO)fi;
+#else
+  PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
+#endif
+  char * opath = handlePath(buf, fh);
+  r = oNtSetInformationFile(fh, sb, fi, ln, ic);
+  if (NT_SUCCESS(r)) {
+    switch (ic) {
+    case FileBasicInformation:
+      queueOp(SETINFO_OP, opath);
+      break;
+    case FileRenameInformation:
+      {
+        const char *npath = utf8PathFromWide(buf2, ri->FileName, ri->FileNameLength/2);
+        queueOp2(RENAME_OP, opath, npath);
+      }
+      break;
+    case FileDispositionInformation:
+      /* emitOp('d', opath, 0); */
+      break;
+    case FileAllocationInformation:
+      /* emitOp('w', opath, 0); */
+      break;
+    default:
+      break;
+    }
+  }
+  return r;
+}
 
-/* static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh, */
-/*                                               PIO_STATUS_BLOCK sb, */
-/*                                               PVOID fi, */
-/*                                               ULONG ln, */
-/*                                               FILE_INFORMATION_CLASS ic) { */
-/*   debugprintf("am in hNtQueryInformationFile!\n"); */
-/*   NTSTATUS r; */
-/*   char buf[PATH_MAX]; */
-/*   r = oNtQueryInformationFile(fh, sb, fi, ln, ic); */
-/*   if (NT_SUCCESS(r)) { */
-/*     switch (ic) { */
-/*     case FileAllInformation:  */
-/*     case FileNetworkOpenInformation: */
-/*       /\* emitOp('q', handlePath(buf, fh), 0); *\/ */
-/*       break; */
-/*     default: */
-/*       break; */
-/*     } */
-/*   } */
-/*   return r; */
-/* } */
+static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
+                                              PIO_STATUS_BLOCK sb,
+                                              PVOID fi,
+                                              ULONG ln,
+                                              FILE_INFORMATION_CLASS ic) {
+  printf("am in hNtQueryInformationFile!\n");
+  NTSTATUS r;
+  char buf[PATH_MAX];
+  r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
+  if (NT_SUCCESS(r)) {
+    switch (ic) {
+    case FileAllInformation:
+    case FileNetworkOpenInformation:
+      queueOp(GETINFO_OP, handlePath(buf, fh));
+      break;
+    default:
+      break;
+    }
+  }
+  return r;
+}
 
 
-/* static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) { */
-/*   debugprintf("am in hNtQueryFullAttributesFile!\n"); */
-/*   NTSTATUS r; */
-/*   r = oNtQueryFullAttributesFile(oa, oi); */
-/*   if (NT_SUCCESS(r)) { */
-/*     /\* char buf[PATH_MAX]; *\/ */
-/*     /\* emitOp('q', utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2), 0); *\/ */
-/*   } */
-/*   return r; */
-/* } */
+static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) {
+  printf("am in hNtQueryFullAttributesFile!\n");
+  NTSTATUS r;
+  r = oNtQueryFullAttributesFile(oa, oi);
+  if (NT_SUCCESS(r)) {
+    char buf[PATH_MAX];
+    queueOp(GETINFO_OP, utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2));
+  }
+  return r;
+}
 
 static NTSTATUS NTAPI hNtResumeThread(HANDLE th, PULONG sc) {
   debugprintf("am in hNtResumeThread!\n");
@@ -299,13 +317,13 @@ void hooksInit(void *(*resolve)(const char *)) {
 #define HOOK(n)							\
 	addr = resolve(#n);					\
 	patchInstall(addr, (void *)h##n, (void **) &o##n, #n)
-	
+
 	HOOK(NtCreateFile);
 	HOOK(NtOpenFile);
 	HOOK(NtDeleteFile);
-	/* HOOK(NtSetInformationFile); */
-	/* HOOK(NtQueryFullAttributesFile); */
-	/* HOOK(NtQueryInformationFile); */
+	HOOK(NtSetInformationFile);
+	HOOK(NtQueryFullAttributesFile);
+	HOOK(NtQueryInformationFile);
 	HOOK(NtResumeThread);
 #undef HOOK
 }

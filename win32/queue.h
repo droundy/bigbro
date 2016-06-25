@@ -33,9 +33,14 @@ int queueTerm(struct queue *q);
 int globalQueueInit(const char *name);
 int globalQueueTerm();
 
-static const char WRITE_OP = 'w';
-static const char READ_OP = 'r';
-static const char RENAME_OP = 'v';
-static const char READDIR_OP = 'd';
+enum OPERATIONS {
+  WRITE_OP = 'w',
+  READ_OP = 'r',
+  RENAME_OP = 'n',
+  READDIR_OP = 'd',
+  GETINFO_OP = 'q',
+  SETINFO_OP = 's'
+};
 
 void queueOp(char op, const char *filename);
+void queueOp2(char op, const char *filename1, const char *filename2);

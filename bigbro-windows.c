@@ -43,7 +43,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            char ***read_from_files, char ***written_to_files) {
   create_dlls();
   struct queue q;
-  const char *shm_name = "stupid";
+  const char *shm_name = "stupid"; // fixme: need to generate unique name
   if (queueInit(&q, shm_name)) {
     printf("Error allocating shared memory.\n");
     return 1;
@@ -85,14 +85,17 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     return -1;
   }
   injectProcess(pi.hProcess);
-  if (ResumeThread(pi.hThread) != -1) {
+  if (ResumeThread(pi.hThread) == -1) {
+    printf("I got trouble ResumeThreading\n");
     return -1;
   }
-  if (!WaitForSingleObject(pi.hThread, INFINITE) != WAIT_OBJECT_0) {
+  if (WaitForSingleObject(pi.hThread, INFINITE) != WAIT_OBJECT_0) {
+    printf("funny business in WaitForSingleObject...\n");
     return -1;
   }
   DWORD dword_return_code;
   if (!GetExitCodeProcess(pi.hProcess, &dword_return_code)) {
+    printf("exit code was hard to get\n");
     return -1;
   }
   if (!CloseHandle(pi.hThread) || !CloseHandle(pi.hProcess)) {
@@ -102,6 +105,35 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   init_hashset(&read, 1024);
   init_hashset(&readdir, 1024);
   init_hashset(&written, 1024);
+  for (uint32_t i=0; i<q.buf->written_to_here; i+= strlen(q.buf->data+i)+1) {
+    const char *name = q.buf->data+i+1;
+    switch (q.buf->data[i]) {
+    case WRITE_OP:
+      insert_hashset(&written, name);
+      delete_from_hashset(&read, name);
+      delete_from_hashset(&readdir, name);
+      break;
+    case READ_OP:
+      if (!lookup_in_hash(&written, name)) {
+        insert_hashset(&read, name);
+      }
+      break;
+    case RENAME_OP:
+      break;
+    case READDIR_OP:
+      insert_hashset(&readdir, name);
+      break;
+    case GETINFO_OP:
+      insert_hashset(&read, name);
+      break;
+    case SETINFO_OP:
+      insert_hashset(&written, name);
+      break;
+    default:
+      printf("BUG: I do not know why '%c' shows up!\n", q.buf->data[i]);
+    }
+    printf("%c -> %s\n",q.buf->data[i], &q.buf->data[i+1]);
+  }
   *read_from_files = hashset_to_array(&read);
   *read_from_directories = hashset_to_array(&readdir);
   *written_to_files = hashset_to_array(&written);

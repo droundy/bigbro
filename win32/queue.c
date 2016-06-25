@@ -23,7 +23,7 @@
 #include "queue.h"
 
 int queueInit(struct queue *q, const char *key) {
-  static size_t sz = 1024;
+  static size_t sz = 1024*10;
   int i;
   char *qname = malloc(4096);
   for (i = 0; key[i]; i++) {
@@ -70,6 +70,25 @@ void queueOp(char op, const char *filename) {
   q.buf->data[write_start] = op;
   for (uint32_t i=0; i < sz-1; i++) {
     q.buf->data[(write_start+i+1) % bufsize] = filename[i];
+  }
+  printf("DEBUG: %s\n", &q.buf->data[write_start]);
+}
+
+void queueOp2(char op, const char *filename1, const char *filename2) {
+  if (!q.buf) return;
+  if (!filename1) return;
+  if (!filename2) return;
+  uint32_t sz1 = strlen(filename1)+1;
+  uint32_t sz2 = strlen(filename2)+1;
+  uint32_t sz = 1 + sz1 + sz2;
+  uint32_t bufsize = q.buf->size;
+  uint32_t write_start = __sync_fetch_and_add(&q.buf->written_to_here, sz) % bufsize;
+  q.buf->data[write_start] = op;
+  for (uint32_t i=0; i < sz1; i++) {
+    q.buf->data[(write_start+i+1) % bufsize] = filename1[i];
+  }
+  for (uint32_t i=0; i < sz2; i++) {
+    q.buf->data[(write_start+i+sz1+1) % bufsize] = filename2[i];
   }
   printf("DEBUG: %s\n", &q.buf->data[write_start]);
 }

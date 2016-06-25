@@ -36,12 +36,18 @@ if platform == 'linux2':
 for f in glob.glob('tests/*.test') + glob.glob('*.gcno') + glob.glob('*.gcda'):
     os.remove(f)
 
-print('building bigbro by running build/windows.py...')
-print('============================================')
+if platform == 'linux':
+    print('NOT building bigbro by running build/cross-windows.sh...')
+    print('===================================================')
+    #assert not os.system('sh build/cross-windows.sh')
+else:
+    print('building bigbro by running build/windows.py...')
+    print('============================================')
 
-assert not os.system('python build/windows.py')
+    assert not os.system('python build/windows.py')
 
 numfailures = 0
+numpasses = 0
 
 have_symlinks = True
 
@@ -89,7 +95,7 @@ for compiler in [compile_cl, compile_mingw]:
         if compiler is compile_cl:
             runcode = lambda test,base: 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
         else:
-            runcode = lambda test,base: 'wine64 bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
+            runcode = lambda test,base: 'wine64-development bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
         break
 
 print('running C tests:')
@@ -148,6 +154,7 @@ for testc in glob.glob('tests/*.c'):
             numfailures += 1
         if m.passes_windows(out, err):
             print(test, "passes", time_took)
+            numpasses += 1
         else:
             print(test, "FAILS!", time_took)
             numfailures += 1
@@ -162,6 +169,6 @@ test = None # to avoid bugs below where we refer to test
 if numfailures > 0:
     print("\nTests FAILED!!!")
 else:
-    print("\nAll tests passed!")
+    print("\nAll %d tests passed!" % numpasses)
 
 exit(numfailures)

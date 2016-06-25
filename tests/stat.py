@@ -8,4 +8,11 @@ def passes(out, err):
          th.count_readdir(err, 0),
      ])
 
+def passes_windows(out, err):
+    return all(
+        [th.reads(err, r'\tmp\foo'),
+         th.count_writes(err, 0),
+         th.count_readdir(err, 0),
+     ])
+
 needs_symlinks = False

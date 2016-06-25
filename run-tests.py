@@ -58,6 +58,7 @@ if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -i -d . -o tests/base.info')
 
 numfailures = 0
+numpasses = 0
 
 have_symlinks = True
 
@@ -108,6 +109,7 @@ for testc in glob.glob('tests/unit/*.c'):
             numfailures += 1
         else:
             print(test[len('tests/unit/'):], '<', inp[len(base+'.minimal/'):], "passes")
+            numpasses += 1
 
 options = ['', ' -m32', ' -m64'] # , ' -mx32']
 
@@ -166,6 +168,7 @@ for testc in glob.glob('tests/*.c'):
             numfailures += 1
         elif m.passes(out, err):
             print(test, flag, "passes", time_took)
+            numpasses += 1
         else:
             print(test, flag, "FAILS!", time_took)
             numfailures += 1
@@ -216,6 +219,7 @@ for testsh in glob.glob('tests/*.sh'):
     # print(err)
     if m.passes(out, err):
         print(testsh, "passes", time_took)
+        numpasses += 1
     else:
         print(testsh, "FAILS!", time_took)
         numfailures += 1
@@ -264,6 +268,6 @@ if have_lcov:
 if numfailures > 0:
     print("\nTests FAILED!!!")
 else:
-    print("\nAll tests passed!")
+    print("\nAll %d tests passed!" % numpasses)
 
 exit(numfailures)
