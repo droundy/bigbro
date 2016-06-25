@@ -1,4 +1,5 @@
 #include "realpath.h"
+#include "fcntl.h" // for AT_FDCWD
 
 static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   if (!path) return 0;
@@ -19,7 +20,7 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   }
 
   char *proc_fd = malloc(PATH_MAX);
-  if (fd >= 0) snprintf(proc_fd, PATH_MAX, "/proc/%d/fd/%d", pid, fd);
+  if (fd >= 0 && fd != AT_FDCWD) snprintf(proc_fd, PATH_MAX, "/proc/%d/fd/%d", pid, fd);
   else snprintf(proc_fd, PATH_MAX, "/proc/%d/cwd", pid);
   char *cwd = malloc(PATH_MAX);
   int linklen = readlink(proc_fd, cwd, PATH_MAX);

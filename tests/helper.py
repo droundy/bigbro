@@ -25,6 +25,13 @@ def doesnt_read(err, file):
         return False
     return True
 
+def doesnt_write(err, file):
+    fs = re.compile(r'w: [^\n]+%s\n' % file.replace('\\', '\\\\'), re.M).findall(err)
+    if len(fs) > 0:
+        print('  should not have written', file)
+        return False
+    return True
+
 def doesnt_ls(err, file):
     fs = re.compile(r'l: [^\n]+%s\n' % file.replace('\\', '\\\\'), re.M).findall(err)
     if len(fs) > 0:

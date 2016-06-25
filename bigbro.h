@@ -39,9 +39,10 @@
    holding the paths of directories that were read (e.g. with
    readdir).
 
-   *read_from_files is where we store the pointer to the array
-   holding the paths of files that were read (e.g. with
-   open for reading, or with stat).
+   *read_from_files is where we store the pointer to the array holding
+   the paths of files that were read (e.g. with open for reading, or
+   with stat). Note that if the file is renamed or written to after
+   being read, it is not listed as having been read.
 
    *written_to_files is where we store the pointer to the array
    holding the paths of files that were written to (e.g. with

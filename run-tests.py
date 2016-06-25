@@ -266,7 +266,7 @@ if have_lcov:
     assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" tests/coverage.info')
 
 if numfailures > 0:
-    print("\nTests FAILED!!!")
+    print("\nTests FAILED (%d)!!!" % numfailures)
 else:
     print("\nAll %d tests passed!" % numpasses)
 
