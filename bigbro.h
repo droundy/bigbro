@@ -59,5 +59,5 @@ typedef int pid_t;
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
-           char *commandline, char ***read_from_directories,
+           const char *commandline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files);

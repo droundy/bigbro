@@ -39,7 +39,7 @@ static inline char *copy_string(char *dest, const char *input) {
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
-           char *cmdline, char ***read_from_directories,
+           const char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
   create_dlls();
   struct queue q;
@@ -81,7 +81,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
   // want to pass shm_name value in the environment...
-  if (!CreateProcess(0, cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
+  if (!CreateProcess(0, (char *)cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
     return -1;
   }
   injectProcess(pi.hProcess);
