@@ -165,7 +165,7 @@ if is_in_path('x86_64-w64-mingw32-gcc'):
 # We need to remove libbigbro.a before running ar, because otherwise
 # it will be added to, rather than replaced.
 
-| rm -f libbigbro-windows.a && x86_64-w64-mingw32-ar rc libbigbro-windows.a %s && x86_64-w64-mingw32-ranlib libbigbro-windows.a
+| rm -f libbigbro-windows.a && x86_64-w64-mingw32-gcc-ar rc libbigbro-windows.a %s && x86_64-w64-mingw32-gcc-ranlib libbigbro-windows.a
 > libbigbro-windows.a
 """ % (' '.join([c[:-1]+'obj' for c in winlibraryfiles])))
     for c in winlibraryfiles:

@@ -86,11 +86,11 @@ try:
 except:
     pass
 
-cmd = ['x86_64-w64-mingw32-ar', 'rc', 'libbigbro-windows.a'] + [c[:-1]+'obj' for c in libraryfiles]
+cmd = ['x86_64-w64-mingw32-gcc-ar', 'rc', 'libbigbro-windows.a'] + [c[:-1]+'obj' for c in libraryfiles]
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
 
-cmd = ['x86_64-w64-mingw32-ranlib', 'libbigbro-windows.a']
+cmd = ['x86_64-w64-mingw32-gcc-ranlib', 'libbigbro-windows.a']
 print(' '.join(cmd))
 assert(not subprocess.call(cmd))
 
