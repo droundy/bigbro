@@ -22,35 +22,16 @@ from __future__ import division, print_function
 
 import sys, subprocess, os, binary2header
 
-for compiler in ['cl', 'x86_64-w64-mingw32-gcc',
-                 r'C:\msys64\usr\bin\gcc', 'cc']:
-    try:
-        subprocess.call([compiler, '--version'])
-        cc = compiler
-        print('using',cc,'compiler')
-        break
-    except:
-        print('NOT using',compiler,'compiler')
+cc = 'x86_64-w64-mingw32-gcc'
+print('trying', cc)
+subprocess.call([cc, '--version'])
+cc32 = 'i686-w64-mingw32-gcc'
+print('trying', cc32)
+subprocess.call([cc32, '--version'])
 
-for compiler in [r'cl',
-                 'i686-w64-mingw32-gcc',
-                 r'C:\MinGW\bin\gcc', 'cc']:
-    try:
-        subprocess.call([compiler, '--version'])
-        cc32 = compiler
-        print('using',cc32,'32-bit compiler')
-        break
-    except:
-        print('NOT using',compiler,'32-bit compiler')
-
-if cc == 'cl':
-    cflags = []
-    objout = lambda fname: '-Fo'+fname
-    exeout = lambda fname: '-Fe'+fname
-else:
-    cflags = ['-std=c99', '-g']
-    objout = lambda fname: '-o'+fname
-    exeout = objout
+cflags = ['-std=c99']
+objout = lambda fname: '-o'+fname
+exeout = objout
 
 def compile(cfile):
     cmd = [cc, '-c', '-O2'] + cflags + [objout(cfile[:-2]+'.obj'), cfile]
@@ -61,9 +42,12 @@ def compile32(cfile):
     print(' '.join(cmd))
     return subprocess.call(cmd)
 
-cfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c', 'win32/queue.c']
 
-dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c', 'win32/queue.c']
+libraryfiles = ['bigbro-windows.c', 'win32/inject.c',
+                'win32/queue.c', 'win32/create_dlls.c', 'win32/dll_paths.c']
+cfiles = libraryfiles + ['fileaccesses.c']
+dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
+              'win32/queue.c', 'win32/dll_paths.c']
 
 if 'x86' in sys.argv or 'amd64' not in sys.argv:
     # first build the helper executable
