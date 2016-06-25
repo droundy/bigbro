@@ -74,9 +74,9 @@ void injectProcess(HANDLE proc) {
 }
 
 void injectThread(HANDLE th) {
-  HANDLE h;
-  assert(0 != (h = OpenProcess(PROCESS_ALL_ACCESS, TRUE,
-                               GetProcessIdOfThread(th))));
+  HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, TRUE,
+                         GetProcessIdOfThread(th));
+  assert(0 != h);
   injectProcess(h);
   assert(CloseHandle(h));
 }
