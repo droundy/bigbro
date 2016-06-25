@@ -79,8 +79,9 @@ print("""
 > bigbro
 """ % (cc, cflags))
 
-wincfiles = ['bigbro-windows.c', 'fileaccesses.c', 'win32/inject.c',
-             'win32/queue.c', 'win32/create_dlls.c', 'win32/dll_paths.c']
+winlibraryfiles = ['bigbro-windows.c', 'win32/inject.c',
+                   'win32/queue.c', 'win32/create_dlls.c', 'win32/dll_paths.c']
+wincfiles = winlibraryfiles + ['fileaccesses.c']
 dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
               'win32/queue.c', 'win32/dll_paths.c']
 
@@ -154,10 +155,22 @@ if is_in_path('x86_64-w64-mingw32-gcc'):
 ''')
 
     print("""
-| x86_64-w64-mingw32-gcc %s -o bigbro.exe %s"""
-          % (cflags, ' '.join([c[:-1]+'obj' for c in wincfiles])))
+| x86_64-w64-mingw32-gcc -o bigbro.exe fileaccesses.obj libbigbro-windows.a
+< fileaccesses.obj
+< libbigbro-windows.a
+""")
     for c in wincfiles:
         print("< %s.obj" % c[:-2])
+    print("""
+# We need to remove libbigbro.a before running ar, because otherwise
+# it will be added to, rather than replaced.
+
+| rm -f libbigbro-windows.a && x86_64-w64-mingw32-ar rc libbigbro-windows.a %s && x86_64-w64-mingw32-ranlib libbigbro-windows.a
+> libbigbro-windows.a
+""" % (' '.join([c[:-1]+'obj' for c in winlibraryfiles])))
+    for c in winlibraryfiles:
+        print("< %s.obj" % c[:-2])
+
 
     for c in glob.glob('tests/*.c'):
         base = c[:-2]

@@ -46,5 +46,7 @@ set -ev
 
 (x86_64-w64-mingw32-gcc  -Wall -Werror -std=c99 -g -O2 -c -o win32/create_dlls.obj win32/create_dlls.c)
 
-(x86_64-w64-mingw32-gcc  -Wall -Werror -std=c99 -g -O2 -o bigbro.exe bigbro-windows.obj fileaccesses.obj win32/inject.obj win32/queue.obj win32/create_dlls.obj win32/dll_paths.obj)
+(rm -f libbigbro-windows.a && x86_64-w64-mingw32-ar rc libbigbro-windows.a bigbro-windows.obj win32/inject.obj win32/queue.obj win32/create_dlls.obj win32/dll_paths.obj && x86_64-w64-mingw32-ranlib libbigbro-windows.a)
+
+(x86_64-w64-mingw32-gcc -o bigbro.exe fileaccesses.obj libbigbro-windows.a)
 
