@@ -92,7 +92,7 @@ for compiler in [compile_cl, compile_mingw]:
     else:
         cc = compiler
         print('using',compiler('code.exe', 'code.c'))
-        if compiler is compile_cl:
+        if platform != 'linux':
             runcode = lambda test,base: 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
         else:
             runcode = lambda test,base: 'wine64-development bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
