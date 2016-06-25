@@ -47,9 +47,9 @@ with open('testing-flags/test.c', 'w') as f:
 }
 """)
 
-cc = '${CC-gcc}'
+cc = 'gcc'
 
-cflags = '${CFLAGS--O2}'
+cflags = '$CFLAGS -O2'
 for flag in ['-Wall', '-Werror', '-std=c99', '-g', '-mtune=native']:
     if not os.system('cd testing-flags && %s %s %s -c test.c' %
                      (cc, cflags, flag)):
