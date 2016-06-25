@@ -9,6 +9,8 @@ def passes(out, err):
      ])
 
 def passes_windows(out, err):
+    print('out:\n', out)
+    print('err:\n', err)
     return all(
         [th.reads(err, r'\tmp\foo'),
          th.count_writes(err, 0),

@@ -20,4 +20,15 @@ def passes(out, err):
          th.writes(err, '/tmp/newdir/test'),
      ])
 
+def passes_windows(out, err):
+    print('out:\n' + out)
+    print('err:\n' + err)
+    return all(
+        [th.count_writes(err, 2),
+         th.doesnt_write(err, r'\tmp\subdir2\hello'),
+         th.doesnt_read(err, r'\tmp\subdir2\test'),
+         th.writes(err, r'\tmp\newdir\hello'),
+         th.writes(err, r'\tmp\newdir\test'),
+     ])
+
 needs_symlinks = True

@@ -120,8 +120,49 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
       break;
     case RENAME_OP:
       i += strlen(q.buf->data+i)+1;
-      const char *newname = q.buf->data+i;
-      printf("FIXME: not handling rename %s -> %s\n", name, newname);
+      const char *from = name;
+      const char *absto = q.buf->data+i;
+      printf("handling rename %s -> %s\n", from, absto);
+
+      if (lookup_in_hash(&written, from) || lookup_in_hash(&read, from)) {
+        // Looks like it might be a file!
+        delete_from_hashset(&written, from);
+        delete_from_hashset(&read, from);
+        insert_hashset(&written, absto);
+      } else {
+        // I think it might be a directory
+        char *fromslash = malloc(strlen(from)+2);
+        strcpy(fromslash, from);
+        strcat(fromslash, "\\");
+        char *toslash = malloc(strlen(absto)+2);
+        strcpy(toslash, absto);
+        strcat(toslash, "\\");
+        int fromslashlen = strlen(fromslash);
+        int toslashlen = strlen(toslash);
+        for (struct hash_entry *e = written.first; e; e = e->next) {
+          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+            char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+            strcpy(newk, toslash);
+            strcat(newk, e->key + fromslashlen);
+            insert_hashset(&written, newk);
+            delete_from_hashset(&written, e->key);
+          }
+        }
+        for (struct hash_entry *e = read.first; e; e = e->next) {
+          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+            char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+            strcpy(newk, toslash);
+            strcat(newk, e->key + fromslashlen);
+            insert_hashset(&written, newk);
+            delete_from_hashset(&read, e->key);
+          }
+        }
+        for (struct hash_entry *e = readdir.first; e; e = e->next) {
+          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+            delete_from_hashset(&readdir, e->key);
+          }
+        }
+      }
       break;
     case READDIR_OP:
       insert_hashset(&readdir, name);
