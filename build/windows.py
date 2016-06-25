@@ -49,35 +49,52 @@ cfiles = libraryfiles + ['fileaccesses.c']
 dll_cfiles = ['win32/inject.c', 'win32/dll.c', 'win32/patch.c', 'win32/hooks.c',
               'win32/queue.c', 'win32/dll_paths.c']
 
-if 'x86' in sys.argv or 'amd64' not in sys.argv:
-    # first build the helper executable
-    cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
-    print(' '.join(cmd))
-    assert(not subprocess.call(cmd))
-    cmd = [cc32, exeout('win32/helper.exe'), 'win32/helper.obj']
-    print(' '.join(cmd))
-    assert(not subprocess.call(cmd))
+# first build the helper executable
+cmd = [cc32, '-c', '-Os', objout('win32/helper.obj'), 'win32/helper.c']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
+cmd = [cc32, exeout('win32/helper.exe'), 'win32/helper.obj']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
 
-    # now convert this executable into a header file
-    binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
-    print('I have now created win32/helper.h')
+# now convert this executable into a header file
+binary2header.convertFile('win32/helper.exe', 'win32/helper.h', 'helper')
+print('I have now created win32/helper.h')
 
-    for c in dll_cfiles:
-        assert(not compile32(c))
-    cmd = [cc32, '-shared', '-o', 'bigbro32.dll'] + [c[:-2]+'32.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
-    print(' '.join(cmd))
-    assert(not subprocess.call(cmd))
+for c in dll_cfiles:
+    assert(not compile32(c))
+cmd = [cc32, '-shared', '-o', 'bigbro32.dll'] + [c[:-2]+'32.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
 
-if 'amd64' in sys.argv or 'x86' not in sys.argv:
 
-    for c in cfiles + dll_cfiles:
-        assert(not compile(c))
+for c in dll_cfiles:
+    assert(not compile(c))
 
-    cmd = [cc, '-shared', '-o', 'bigbro64.dll'] + [c[:-2]+'.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
-    print(' '.join(cmd))
-    assert(not subprocess.call(cmd))
+cmd = [cc, '-shared', '-o', 'bigbro64.dll'] + [c[:-2]+'.obj' for c in dll_cfiles] + ['-lntdll', '-lpsapi']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
 
-    # use cc for doing the linking
-    cmd = [cc, exeout('bigbro.exe')] + [c[:-1]+'obj' for c in cfiles]
-    print(' '.join(cmd))
-    assert(not subprocess.call(cmd))
+binary2header.convertFile('bigbro64.dll', 'win32/bigbro64.h', 'bigbro64dll')
+binary2header.convertFile('bigbro32.dll', 'win32/bigbro32.h', 'bigbro32dll')
+
+for c in cfiles:
+    assert(not compile(c))
+
+try:
+    os.unlink('libbigbro-windows.a')
+except:
+    pass
+
+cmd = ['x86_64-w64-mingw32-ar', 'rc', 'libbigbro-windows.a'] + [c[:-1]+'obj' for c in libraryfiles]
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
+
+cmd = ['x86_64-w64-mingw32-ranlib', 'libbigbro-windows.a']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
+
+# use cc for doing the linking
+cmd = ['x86_64-w64-mingw32-gcc', '-o', 'bigbro.exe', 'fileaccesses.obj', 'libbigbro-windows.a']
+print(' '.join(cmd))
+assert(not subprocess.call(cmd))
