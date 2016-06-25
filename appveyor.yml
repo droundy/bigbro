@@ -1,0 +1,19 @@
+environment:
+  matrix:
+  - TARGET: x86_64-pc-windows-msvc
+    ARCH: amd64
+
+build_script:
+  - SET PATH=C:\python35;%PATH%
+  - set PATH=%PATH%;C:\msys64\mingw64\bin
+  - dir C:\msys64\mingw64\bin
+  - dir C:\msys64\mingw32\bin
+  - python build/windows.py x86
+  - python build/windows.py amd64
+
+test_script:
+  - python run-windows-tests.py
+
+branches:
+  only:
+    - master
