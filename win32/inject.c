@@ -24,7 +24,6 @@
 
 #include <shellapi.h>
 #include "../errors.h"
-#include "helper.h"
 
 #include "inject.h"
 #include "create_dlls.h"
