@@ -96,7 +96,7 @@ static inline char *handlePath(char *dst, HANDLE h) {
 #define HOOK(n) static NTSTATUS(NTAPI *o##n)()
 HOOK(NtCreateFile);
 HOOK(NtOpenFile);
-HOOK(NtDeleteFile);
+/* HOOK(NtDeleteFile); */
 HOOK(NtSetInformationFile);
 HOOK(NtQueryFullAttributesFile);
 HOOK(NtQueryInformationFile);
@@ -145,21 +145,6 @@ static const char fop(ULONG co, ACCESS_MASK am) {
   printf("GENERIC_WRITE\n");
   return 0;
 }
-
-/* static void femit(HANDLE h, int op) { */
-/*   if (op) { */
-    /* IO_STATUS_BLOCK sb; */
-    /* FILE_STANDARD_INFORMATION si; */
-    /* oNtQueryInformationFile(h, &sb, &si, sizeof(si), */
-    /*                         5 // FileStandardInformation */
-    /*                         ); */
-    /* if (!si.Directory) { */
-    /*   char buf[PATH_MAX]; */
-    /*   char * p = "fixme"; // handlePath(buf, h); */
-    /*   /\* emitOp(op, p, 0); *\/ */
-    /* } */
-/*   } */
-/* } */
 
 static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
                                     ACCESS_MASK am,
@@ -217,15 +202,15 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
   return r;
 }
 
-static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) {
-  NTSTATUS r;
-  debugprintf("am in hNtDeleteFile!\n");
-  r = oNtDeleteFile(oa);
-  if (NT_SUCCESS(r)) {
-    /* emitOp('d', utf8PathFromWide(buf, oa->ObjectName->Buffer, oa->ObjectName->Length/2), 0); */
-  }
-  return r;
-}
+/* static NTSTATUS NTAPI hNtDeleteFile(POBJECT_ATTRIBUTES oa) { */
+/*   NTSTATUS r; */
+/*   debugprintf("am in hNtDeleteFile!\n"); */
+/*   r = oNtDeleteFile(oa); */
+/*   if (NT_SUCCESS(r)) { */
+/*     // we do not actually track file deletions... */
+/*   } */
+/*   return r; */
+/* } */
 
 static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
                                             PIO_STATUS_BLOCK sb,
@@ -255,10 +240,11 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
       }
       break;
     case FileDispositionInformation:
-      /* emitOp('d', opath, 0); */
+      // used for deleting files
       break;
     case FileAllocationInformation:
-      /* emitOp('w', opath, 0); */
+      // windows version of truncate
+      queueOp(WRITE_OP, opath);
       break;
     default:
       break;
@@ -320,7 +306,7 @@ void hooksInit(void *(*resolve)(const char *)) {
 
 	HOOK(NtCreateFile);
 	HOOK(NtOpenFile);
-	HOOK(NtDeleteFile);
+	/* HOOK(NtDeleteFile); */
 	HOOK(NtSetInformationFile);
 	HOOK(NtQueryFullAttributesFile);
 	HOOK(NtQueryInformationFile);
