@@ -4,9 +4,9 @@ set -ev
 
 (python3 syscalls/linux.py > syscalls/linux.h)
 
-(gcc $CFLAGS -O2 -Wall -Werror -std=c99 -g -mtune=native -c bigbro-linux.c)
+(gcc  -O2 -Wall -Werror -std=c99 -g -mtune=native -c bigbro-linux.c)
 
 (rm -f libbigbro.a && ${AR-ar} rc libbigbro.a bigbro-linux.o && ${RANLIB-ranlib} libbigbro.a)
 
-(gcc $CFLAGS -O2 -Wall -Werror -std=c99 -g -mtune=native -o bigbro -L. fileaccesses.c -lbigbro)
+(gcc  -O2 -Wall -Werror -std=c99 -g -mtune=native -o bigbro -L. fileaccesses.c -lbigbro)
 
