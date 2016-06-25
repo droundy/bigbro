@@ -49,7 +49,7 @@ with open('testing-flags/test.c', 'w') as f:
 
 cc = 'gcc'
 
-cflags = os.getenv('CFLAGS', '')
+cflags = '$CFLAGS'
 for flag in ['-O2', '-Wall', '-Werror', '-std=c99', '-g', '-mtune=native']:
     if not os.system('cd testing-flags && %s %s %s -c test.c' %
                      (cc, cflags, flag)):
