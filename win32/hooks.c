@@ -71,7 +71,7 @@ static char *utf8PathFromWide(char *buf, const PWSTR s, int sl) {
 static inline char *handlePath(char *dst, HANDLE h) {
   WCHAR wbuf[PATH_MAX];
   int len = GetFinalPathNameByHandleW(h, wbuf, PATH_MAX, FILE_NAME_NORMALIZED);
-  if (len <= 0 || len >= PATH_MAX) {
+  if (len == 0) {
     switch (GetLastError()) {
     case ERROR_INVALID_FUNCTION:
       printf("error in GetFinalPathNameByHandleW: bad function?!\n");
@@ -92,6 +92,10 @@ static inline char *handlePath(char *dst, HANDLE h) {
       printf("error in GetFinalPathNameByHandleW: i don't understand error %d\n",
              (int) GetLastError());
     }
+    return 0;
+  }
+  if (len >= PATH_MAX) {
+    printf("error in GetFinalPathNameByHandleW: PATH_MAX was not long enough...\n");
     return 0;
   }
   return utf8PathFromWide(dst, wbuf, len);
