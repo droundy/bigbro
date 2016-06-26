@@ -86,7 +86,8 @@ static inline char *handlePath(char *dst, HANDLE h) {
       printf("error in GetFinalPathNameByHandleW: bad parameter\n");
       break;
     default:
-      printf("error in GetFinalPathNameByHandleW: i don't understand error\n");
+      printf("error in GetFinalPathNameByHandleW: i don't understand error %d\n",
+             (int) GetLastError());
     }
     return 0;
   }
