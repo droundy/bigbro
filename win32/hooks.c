@@ -73,6 +73,9 @@ static inline char *handlePath(char *dst, HANDLE h) {
   int len = GetFinalPathNameByHandleW(h, wbuf, PATH_MAX, FILE_NAME_NORMALIZED);
   if (len <= 0 || len >= PATH_MAX) {
     switch (GetLastError()) {
+    case ERROR_INVALID_FUNCTION:
+      printf("error in GetFinalPathNameByHandleW: bad function?!\n");
+      break;
     case ERROR_PATH_NOT_FOUND:
       printf("error in GetFinalPathNameByHandleW: path not found\n");
       break;
@@ -129,21 +132,21 @@ HOOK(NtResumeThread);
 
 #endif
 
-static const char fop(ULONG co, ACCESS_MASK am) {
+static const char fop(ULONG co, ACCESS_MASK am, const char *name) {
   if (co & FILE_DIRECTORY_FILE) {
-    printf("FILE_DIRECTORY_FILE\n");
+    printf("FILE_DIRECTORY_FILE %s\n", name);
     return 0;
   } else if (co & FILE_DELETE_ON_CLOSE) {
-    printf("FILE_DELETE_ON_CLOSE\n");
+    printf("FILE_DELETE_ON_CLOSE %s\n", name);
     return 0;
   } else if (am & GENERIC_WRITE) {
-    printf("GENERIC_WRITE\n");
+    printf("GENERIC_WRITE %s\n", name);
     return WRITE_OP;
   } else if (am & GENERIC_READ) {
-    printf("GENERIC_READ\n");
+    printf("GENERIC_READ %s\n", name);
     return READ_OP;
   }
-  printf("GENERIC_WRITE\n");
+  printf("what fop ??? %s\n", name);
   return 0;
 }
 
@@ -169,7 +172,7 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
     }
     printf("I am in hNtCreateFile with string %s!\n", p);
     if (p) {
-      char op = fop(co, am);
+      char op = fop(co, am, p);
       if (op) queueOp(op, p);
     }
   }
@@ -194,7 +197,7 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
     }
     printf("I am in hNtOpenFile with string %s!\n", p);
     if (p) {
-      char op = fop(oo, am);
+      char op = fop(oo, am, p);
       if (op) queueOp(op, p);
     }
   } else {
