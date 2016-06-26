@@ -81,22 +81,13 @@ def create_clean_tree(preppy='this file does not exist'):
             print("prep command failed:", cmd)
             exit(1)
 
-def compile_cl(exe, ccode):
-    return 'cl -Wall -O2 -Fe%s %s' % (exe, ccode)
-def compile_mingw(exe, ccode):
+def compiler(exe, ccode):
     return 'x86_64-w64-mingw32-gcc -Wall -O2 -o %s %s' % (exe, ccode)
 
-for compiler in [compile_cl, compile_mingw]:
-    if os.system(compiler('tests/null-test.exe', 'tests/null.c')):
-        print('NOT using',compiler('code.exe', 'code.c'))
-    else:
-        cc = compiler
-        print('using',compiler('code.exe', 'code.c'))
-        if platform != 'linux':
-            runcode = lambda test,base: 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
-        else:
-            runcode = lambda test,base: 'wine64-development bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
-        break
+if platform != 'linux':
+    runcode = lambda test,base: 'bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
+else:
+    runcode = lambda test,base: 'wine64-development bigbro.exe %s 2> %s.err 1> %s.out' % (test, base, base)
 
 print('running C tests:')
 print('================')
