@@ -144,8 +144,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
             char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
             strcpy(newk, toslash);
             strcat(newk, e->key + fromslashlen);
-            insert_hashset(&written, newk);
-            delete_from_hashset(&written, e->key);
+            printf("need to rename %s to %s\n", e->key, newk);
+            /* insert_hashset(&written, newk); */
+            /* delete_from_hashset(&written, e->key); */
           }
         }
         for (struct hash_entry *e = read.first; e; e = e->next) {
@@ -153,8 +154,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
             char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
             strcpy(newk, toslash);
             strcat(newk, e->key + fromslashlen);
-            insert_hashset(&written, newk);
-            delete_from_hashset(&read, e->key);
+            printf("need to rename %s to %s\n", e->key, newk);
+            /* insert_hashset(&written, newk); */
+            /* delete_from_hashset(&read, e->key); */
           }
         }
         for (struct hash_entry *e = readdir.first; e; e = e->next) {
