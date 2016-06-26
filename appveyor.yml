@@ -7,10 +7,10 @@ build_script:
   - SET PATH=C:\python35;%PATH%
   - set PATH=%PATH%;C:\msys64\mingw64\bin
   - set PATH=%PATH%;C:\msys64\mingw32\bin
-  - python build/windows.py
+  - python -u build/windows.py
 
 test_script:
-  - python run-windows-tests.py
+  - python -u run-windows-tests.py
 
 branches:
   only:

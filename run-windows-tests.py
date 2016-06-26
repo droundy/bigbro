@@ -46,6 +46,8 @@ else:
 
     assert not os.system('python build/windows.py')
 
+print('I finished building bigbro.exe and will now run tests!')
+
 numfailures = 0
 numpasses = 0
 
