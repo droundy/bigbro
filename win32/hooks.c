@@ -178,6 +178,8 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
       printf("I am in hNtCreateFile with string %s and handle %p!\n", p,  *ph);
       char op = fop(co, am, p);
       if (op) queueOp(op, p);
+    } else {
+      printf("I am in hNtCreateFile with string (nil) and handle %p!\n", *ph);
     }
   }
   return r;
@@ -203,6 +205,8 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
       printf("I am in hNtOpenFile with string %s and handle %p!\n", p, *ph);
       char op = fop(oo, am, p);
       if (op) queueOp(op, p);
+    } else {
+      printf("I am in hNtOpenFile with string (nil) and handle %p!\n", *ph);
     }
   } else {
     printf("no success in hNtOpenFile\n");

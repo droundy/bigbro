@@ -23,7 +23,7 @@ from __future__ import print_function
 import glob, os, importlib, sys, time, shutil
 
 if sys.version_info < (3,2):
-    print('Please run this script with python 3.2 or newer.')
+    print('Please run this script with python 3.2 or newer.', sys.version_info)
     exit(1)
 
 if 'perf_counter' in dir(time):
