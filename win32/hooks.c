@@ -174,8 +174,8 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
       printf("handlePath gives a null path pointer!\n");
       return r;
     }
-    printf("I am in hNtCreateFile with string %s!\n", p);
     if (p) {
+      printf("I am in hNtCreateFile with string %s and handle %p!\n", p,  *ph);
       char op = fop(co, am, p);
       if (op) queueOp(op, p);
     }
@@ -199,8 +199,8 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
       printf("handlePath gives a null path pointer!\n");
       return r;
     }
-    printf("I am in hNtOpenFile with string %s!\n", p);
     if (p) {
+      printf("I am in hNtOpenFile with string %s and handle %p!\n", p, *ph);
       char op = fop(oo, am, p);
       if (op) queueOp(op, p);
     }
@@ -266,7 +266,7 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
                                               PVOID fi,
                                               ULONG ln,
                                               FILE_INFORMATION_CLASS ic) {
-  printf("am in hNtQueryInformationFile!\n");
+  printf("am in hNtQueryInformationFile with handle %p!\n", fh);
   NTSTATUS r;
   char buf[PATH_MAX];
   r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
