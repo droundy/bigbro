@@ -74,7 +74,7 @@ static inline char *handlePath(char *dst, HANDLE h) {
   if (len == 0) {
     switch (GetLastError()) {
     case ERROR_INVALID_FUNCTION:
-      printf("error in GetFinalPathNameByHandleW: bad function?!\n");
+      printf("error in GetFinalPathNameByHandleW: bad function for handle %p?!\n", h);
       break;
     case ERROR_PATH_NOT_FOUND:
       printf("error in GetFinalPathNameByHandleW: path not found\n");
