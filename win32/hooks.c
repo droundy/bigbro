@@ -235,9 +235,7 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
   PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
 #endif
   char * opath = handlePath(buf, fh);
-  if (opath) {
-    printf("hNtSetInformationFile %s\n", opath);
-  }
+  printf("hNtSetInformationFile %s\n", opath);
   r = oNtSetInformationFile(fh, sb, fi, ln, ic);
   if (NT_SUCCESS(r)) {
     switch (ic) {
@@ -273,9 +271,7 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
   char buf[PATH_MAX];
   r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
   char *p = handlePath(buf, fh);
-  if (p) {
-    printf("hNtQueryInformationFile %s\n", p);
-  }
+  printf("hNtQueryInformationFile %s\n", p);
   if (NT_SUCCESS(r)) {
     switch (ic) {
     case FileAllInformation:
