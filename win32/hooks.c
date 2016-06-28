@@ -74,8 +74,7 @@ static inline char *handlePath(char *dst, HANDLE h) {
   if (len == 0) {
     switch (GetLastError()) {
     case ERROR_INVALID_FUNCTION:
-      printf("error in GetFinalPathNameByHandleW: bad function?! handle %p\n",
-             h);
+      printf("error in GetFinalPathNameByHandleW: bad function?!\n");
       break;
     case ERROR_PATH_NOT_FOUND:
       printf("error in GetFinalPathNameByHandleW: path not found\n");
@@ -151,7 +150,7 @@ static const char fop(ULONG co, ACCESS_MASK am, const char *name) {
     printf("GENERIC_READ %s\n", name);
     return READ_OP;
   }
-  printf("what fop ??? %s %0lx %0lx\n", name, co, (unsigned long)am);
+  printf("what fop ??? %s\n", name);
   return 0;
 }
 
@@ -226,6 +225,7 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
                                             PVOID fi,
                                             ULONG ln,
                                             FILE_INFORMATION_CLASS ic) {
+  printf("am in hNtSetInformationFile!\n");
   NTSTATUS r;
   char buf[PATH_MAX];
   char buf2[PATH_MAX];
@@ -235,7 +235,6 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
   PFILE_RENAME_INFORMATION ri = (PFILE_RENAME_INFORMATION)fi;
 #endif
   char * opath = handlePath(buf, fh);
-  printf("hNtSetInformationFile %s\n", opath);
   r = oNtSetInformationFile(fh, sb, fi, ln, ic);
   if (NT_SUCCESS(r)) {
     switch (ic) {
@@ -267,16 +266,15 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
                                               PVOID fi,
                                               ULONG ln,
                                               FILE_INFORMATION_CLASS ic) {
+  printf("am in hNtQueryInformationFile!\n");
   NTSTATUS r;
   char buf[PATH_MAX];
   r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
-  char *p = handlePath(buf, fh);
-  printf("hNtQueryInformationFile %s\n", p);
   if (NT_SUCCESS(r)) {
     switch (ic) {
     case FileAllInformation:
     case FileNetworkOpenInformation:
-      queueOp(GETINFO_OP, p);
+      queueOp(GETINFO_OP, handlePath(buf, fh));
       break;
     default:
       break;
