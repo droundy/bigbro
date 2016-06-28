@@ -139,31 +139,47 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
         strcat(toslash, "\\");
         int fromslashlen = strlen(fromslash);
         int toslashlen = strlen(toslash);
-        for (struct hash_entry *e = written.first; e; e = e->next) {
-          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-            char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
-            strcpy(newk, toslash);
-            strcat(newk, e->key + fromslashlen);
-            printf("need to rename %s to %s\n", e->key, newk);
-            /* insert_hashset(&written, newk); */
-            /* delete_from_hashset(&written, e->key); */
+        {
+          hashset new_written;
+          init_hashset(&new_written, 2*read.num_entries);
+          for (struct hash_entry *e = written.first; e; e = e->next) {
+            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+              strcpy(newk, toslash);
+              strcat(newk, e->key + fromslashlen);
+              printf("need to rename %s to %s\n", e->key, newk);
+              insert_hashset(&new_written, newk);
+              /* insert_hashset(&written, newk); */
+              /* delete_from_hashset(&written, e->key); */
+            } else {
+              insert_hashset(&new_written, e->key);
+            }
           }
-        }
-        for (struct hash_entry *e = read.first; e; e = e->next) {
-          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-            char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
-            strcpy(newk, toslash);
-            strcat(newk, e->key + fromslashlen);
-            printf("need to rename %s to %s\n", e->key, newk);
+          hashset new_read;
+          init_hashset(&new_read, 2*read.num_entries);
+          for (struct hash_entry *e = read.first; e; e = e->next) {
+            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+              strcpy(newk, toslash);
+              strcat(newk, e->key + fromslashlen);
+              printf("need to rename %s to %s\n", e->key, newk);
+              insert_hashset(&new_written, newk);
             /* insert_hashset(&written, newk); */
             /* delete_from_hashset(&read, e->key); */
+            } else {
+              insert_hashset(&new_read, e->key);
+            }
           }
+          free_hashset(&written);
+          free_hashset(&read);
+          written = new_written;
+          read = new_read;
         }
-        for (struct hash_entry *e = readdir.first; e; e = e->next) {
-          if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-            delete_from_hashset(&readdir, e->key);
-          }
-        }
+        /* for (struct hash_entry *e = readdir.first; e; e = e->next) { */
+        /*   if (strncmp(e->key, fromslash, fromslashlen) == 0) { */
+        /*     delete_from_hashset(&readdir, e->key); */
+        /*   } */
+        /* } */
       }
       break;
     case READDIR_OP:
