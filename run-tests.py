@@ -227,6 +227,56 @@ for testsh in glob.glob('tests/*.sh'):
     else:
         print(testsh, "FAILS!", time_took)
         numfailures += 1
+print()
+print('running python tests:')
+print('=====================')
+for testp in glob.glob('tests/*-test.py'):
+    base = testp[:-8]
+    m = importlib.import_module('tests.'+base[6:])
+    try:
+        if m.needs_symlinks and not have_symlinks:
+            if flag == '':
+                print('skipping', test, 'since we have no symlinks')
+            continue
+    except:
+        print(test, 'needs to specify needs_symlinks')
+        exit(1)
+    create_clean_tree(testp+'.prep')
+    before = perf_counter()
+    cmd = './bigbro python %s 2> %s.err 1> %s.out' % (testp, base, base)
+    if os.system(cmd):
+        os.system('cat %s.out' % base);
+        os.system('cat %s.err' % base);
+        print("command failed:", cmd)
+        exit(1)
+    measured_time = perf_counter() - before
+    err = open(base+'.err','r').read()
+    out = open(base+'.out','r').read()
+    if benchmark:
+        create_clean_tree(testp+'.prep')
+        before = perf_counter()
+        cmd = 'sh %s 2> %s.err 1> %s.out' % (testp, base, base)
+        os.system(cmd)
+        reference_time = perf_counter() - before
+        if measured_time < 1e-3:
+            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+        elif measured_time < 1:
+            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        else:
+            time_took = '(%g vs %g s)' % (measured_time, reference_time)
+    else:
+        if measured_time < 1e-3:
+            time_took = '(%g us)' % (measured_time*1e6)
+        else:
+            time_took = '(%g ms)' % (measured_time*1e3)
+    # print(err)
+    if m.passes(out, err):
+        print(testp, "passes", time_took)
+        numpasses += 1
+    else:
+        print(testp, "FAILS!", time_took)
+        numfailures += 1
+print()
 
 if benchmark:
     print()
