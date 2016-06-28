@@ -22,8 +22,8 @@ from __future__ import print_function
 
 import glob, os, subprocess, importlib, sys, time, shutil
 
-if sys.version_info < (3,4):
-    print('Please run this script with python 3.4 or newer.')
+if sys.version_info < (3,2):
+    print('Please run this script with python 3.2 or newer.')
     exit(1)
 
 if 'perf_counter' in dir(time):
