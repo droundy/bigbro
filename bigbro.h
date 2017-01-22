@@ -61,3 +61,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char *envp[],
            const char *commandline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files);
+
+int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
+                      int stdoutfd, int stderrfd, char *envp[],
+                      const char *commandline, char ***read_from_directories,
+                      char ***read_from_files, char ***written_to_files,
+                      char ***mkdir_directories);

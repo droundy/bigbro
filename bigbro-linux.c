@@ -591,6 +591,23 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            char ***read_from_directories_out,
            char ***read_from_files_out,
            char ***written_to_files_out) {
+  char **mkdir_directories = 0;
+  printf("calling bigbro_with_mkdir...\n");
+  int retval = bigbro_with_mkdir(workingdir, child_ptr, stdoutfd, stderrfd,
+                                 envp, cmdline, read_from_directories_out,
+                                 read_from_files_out, written_to_files_out,
+                                 &mkdir_directories);
+  free(mkdir_directories);
+  return retval;
+}
+
+int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
+                      int stdoutfd, int stderrfd, char **envp,
+                      const char *cmdline,
+                      char ***read_from_directories_out,
+                      char ***read_from_files_out,
+                      char ***written_to_files_out,
+                      char ***mkdir_directories) {
   pid_t firstborn = fork();
   if (firstborn == -1) {
     // Not sure what to do in case of fork error...
@@ -642,6 +659,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
         *read_from_files_out = hashset_to_array(&h.read);
         *read_from_directories_out = hashset_to_array(&h.readdir);
         *written_to_files_out = hashset_to_array(&h.written);
+        *mkdir_directories = hashset_to_array(&h.mkdir);
         free_hashset(&h.read);
         free_hashset(&h.readdir);
         free_hashset(&h.written);
