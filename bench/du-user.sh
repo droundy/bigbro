@@ -1,3 +1,3 @@
 #!/bin/sh
 
-du -sh /usr
+du -sh /usr || true
