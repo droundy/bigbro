@@ -592,7 +592,6 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            char ***read_from_files_out,
            char ***written_to_files_out) {
   char **mkdir_directories = 0;
-  printf("calling bigbro_with_mkdir...\n");
   int retval = bigbro_with_mkdir(workingdir, child_ptr, stdoutfd, stderrfd,
                                  envp, cmdline,
                                  read_from_directories_out, &mkdir_directories,
