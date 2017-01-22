@@ -44,8 +44,9 @@ int main(int argc, char **argv) {
     strcat(cmdline, argv[i]);
   }
   pid_t child_pid;
-  int retval = bigbro_with_mkdir(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
-                                 &read_from_files, &written_to_files, &mkdir_directories);
+  int retval = bigbro_with_mkdir(".", &child_pid, 0, 0, 0, cmdline,
+                                 &read_from_directories, &mkdir_directories,
+                                 &read_from_files, &written_to_files);
   free(cmdline);
 
   if (read_from_directories)
