@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
   char **written_to_files = 0;
   char **read_from_files = 0;
   char **read_from_directories = 0;
+  char **mkdir_directories = 0;
 
   int cmdlength = 10; // a little leeway
   for (int i=1; argv[i]; i++) {
@@ -43,8 +44,8 @@ int main(int argc, char **argv) {
     strcat(cmdline, argv[i]);
   }
   pid_t child_pid;
-  int retval = bigbro(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
-                      &read_from_files, &written_to_files);
+  int retval = bigbro_with_mkdir(".", &child_pid, 0, 0, 0, cmdline, &read_from_directories,
+                                 &read_from_files, &written_to_files, &mkdir_directories);
   free(cmdline);
 
   if (read_from_directories)
@@ -58,6 +59,10 @@ int main(int argc, char **argv) {
   if (written_to_files)
     for (int i=0; written_to_files[i]; i++) {
       fprintf(stderr, "w: %s\n", written_to_files[i]);
+    }
+  if (mkdir_directories)
+    for (int i=0; mkdir_directories[i]; i++) {
+      fprintf(stderr, "m: %s\n", mkdir_directories[i]);
     }
   free(read_from_directories);
   free(read_from_files);
