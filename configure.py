@@ -50,7 +50,7 @@ with open('testing-flags/test.c', 'w') as f:
 cc = 'gcc'
 
 cflags = '$CFLAGS'
-for flag in ['-O2', '-Wall', '-Werror', '-std=c99', '-g', '-mtune=native']:
+for flag in ['-O2', '-Wall', '-Werror', '-std=c99', '-g', '-mtune=native', '-fpic']:
     if not os.system('cd testing-flags && %s %s %s -c test.c' %
                      (cc, cflags, flag)):
         cflags += ' ' + flag
@@ -78,6 +78,13 @@ print("""
 < libbigbro.a
 > bigbro
 """ % (cc, cflags))
+
+print("""
+| %s %s -shared -o libbigbro.so bigbro-%s.o
+< bigbro-%s.o
+> libbigbro.so
+""" % (cc, cflags, platform, platform))
+
 
 winlibraryfiles = ['bigbro-windows.c', 'win32/inject.c',
                    'win32/queue.c', 'win32/create_dlls.c', 'win32/dll_paths.c']
