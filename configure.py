@@ -74,7 +74,7 @@ print("""
 """ % (cc, cflags, platform, platform, platform, platform))
 
 print("""
-| %s %s -o bigbro -L. fileaccesses.c -lbigbro
+| %s %s -static -o bigbro -L. fileaccesses.c -lbigbro
 < libbigbro.a
 > bigbro
 """ % (cc, cflags))
