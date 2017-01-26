@@ -324,6 +324,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
                              dirfd, arg, retval);
       }
       char *rawpath = interpret_path_at(child, dirfd, arg);
+      free(arg);
       char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
