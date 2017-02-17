@@ -61,6 +61,16 @@ def writes(err, file):
         return False
     return True
 
+def mkdirs(err, file):
+    fs = re.compile(r'm: [^\n]+%s\n' % file.replace('\\', '\\\\'), re.M).findall(err)
+    if len(fs) == 0:
+        print('  did not mkdir', file)
+        return False
+    if len(fs) > 1:
+        print('  multiple mkdirs:', file)
+        return False
+    return True
+
 def readdir(err, file):
     fs = re.compile(r'l: [^\n]+%s\n' % file.replace('\\', '\\\\'), re.M).findall(err)
     if len(fs) == 0:
@@ -75,6 +85,13 @@ def count_readdir(err, num):
     fs = re.compile(r'l: [^\n]+\n', re.M).findall(err)
     if len(fs) != num:
         print('  did not readdir', num, fs)
+        return False
+    return True
+
+def count_mkdir(err, num):
+    fs = re.compile(r'm: [^\n]+\n', re.M).findall(err)
+    if len(fs) != num:
+        print('  did not mkdir', num, fs)
         return False
     return True
 

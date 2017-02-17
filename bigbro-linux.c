@@ -513,6 +513,15 @@ static int save_syscall_access(pid_t child, rw_status *h) {
               delete_from_hashset(&h->written, e->key);
             }
           }
+          for (struct hash_entry *e = h->mkdir.first; e; e = e->next) {
+            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+              strcpy(newk, toslash);
+              strcat(newk, e->key + fromslashlen);
+              insert_hashset(&h->mkdir, newk);
+              delete_from_hashset(&h->mkdir, e->key);
+            }
+          }
           for (struct hash_entry *e = h->read.first; e; e = e->next) {
             if (strncmp(e->key, fromslash, fromslashlen) == 0) {
               char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
@@ -527,6 +536,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
               delete_from_hashset(&h->readdir, e->key);
             }
           }
+          delete_from_hashset(&h->mkdir, from);
           insert_hashset(&h->mkdir, absto);
           free(absto);
           free(fromslash);
@@ -536,6 +546,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
           delete_from_hashset(&h->read, from);
           delete_from_hashset(&h->readdir, from);
           delete_from_hashset(&h->written, from);
+          delete_from_hashset(&h->mkdir, from);
         }
       }
       free(to);
