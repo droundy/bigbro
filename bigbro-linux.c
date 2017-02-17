@@ -572,7 +572,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   } else if (sc == sc_chdir) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 0));
     /* not actually a file, but this gets symlinks in the chdir path */
-    read_file_at(child, -1, arg, h);
+    maybe_read_file_at(child, -1, arg, h);
     int retval = wait_for_return_value(child, h);
     if (arg) {
       debugprintf("%d: chdir(%s) -> %d\n", child, arg, retval);
