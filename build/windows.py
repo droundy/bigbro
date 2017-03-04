@@ -22,12 +22,27 @@ from __future__ import division, print_function
 
 import sys, subprocess, os, binary2header
 
-cc = 'x86_64-w64-mingw32-gcc'
-print('trying', cc)
-subprocess.call([cc, '--version'])
-cc32 = 'i686-w64-mingw32-gcc'
-print('trying', cc32)
-subprocess.call([cc32, '--version'])
+cc_options = ['x86_64-w64-mingw32-gcc',
+              '/mingw64/bin/gcc',
+			  'x86_64-pc-msys-gcc']
+for cc in cc_options:
+	print('trying', cc)
+	try:
+		subprocess.call([cc, '--version'])
+		break
+	except:
+		print(cc,'did not work out')
+	
+cc32_options = ['i686-w64-mingw32-gcc',
+                '/mingw32/bin/gcc',
+                'i686-pc-msys-gcc']
+for cc32 in cc32_options:
+	print('trying', cc32)
+	try:
+		subprocess.call([cc32, '--version'])
+		break
+	except:
+		print(cc32,'did not work out')
 
 cflags = ['-std=c99']
 objout = lambda fname: '-o'+fname
