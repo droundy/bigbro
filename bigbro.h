@@ -57,13 +57,20 @@
 typedef int pid_t;
 #endif
 
+#ifdef _WIN32
+typedef void *bigbro_fd_t; // actually a HANDLE
+#else
+typedef int bigbro_fd_t;
+#endif
+
+
 int bigbro(const char *workingdir, pid_t *child_ptr,
-           int stdoutfd, int stderrfd, char *envp[],
+           bigbro_fd_t stdoutfd, bigbro_fd_t stderrfd, char *envp[],
            const char *commandline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files);
 
 int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
-                      int stdoutfd, int stderrfd, char *envp[],
+                      bigbro_fd_t stdoutfd, bigbro_fd_t stderrfd, char *envp[],
                       const char *commandline,
                       char ***read_from_directories, char ***mkdir_directories,
                       char ***read_from_files, char ***written_to_files);

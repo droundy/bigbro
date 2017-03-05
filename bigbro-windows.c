@@ -38,7 +38,7 @@ static inline char *copy_string(char *dest, const char *input) {
 }
 
 int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
-                      int stdoutfd, int stderrfd, char *envp[],
+                      HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
                       const char *cmdline,
                       char ***read_from_directories, char ***mkdir_directories,
                       char ***read_from_files, char ***written_to_files) {
@@ -47,7 +47,7 @@ int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
 }
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
-           int stdoutfd, int stderrfd, char *envp[],
+           HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
            const char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
   create_dlls();
@@ -89,6 +89,10 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   PROCESS_INFORMATION pi;
   memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  si.hStdError = stderrfd;
+  si.hStdOutput = stdoutfd;
+
   // want to pass shm_name value in the environment...
   if (!CreateProcess(0, (char *)cmdline, 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si, &pi)) {
     return -1;
