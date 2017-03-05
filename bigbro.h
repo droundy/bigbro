@@ -59,8 +59,10 @@ typedef int pid_t;
 
 #ifdef _WIN32
 typedef void *bigbro_fd_t; // actually a HANDLE
+static const bigbro_fd_t invalid_bigbro_fd = NULL;
 #else
 typedef int bigbro_fd_t;
+static const bigbro_fd_t invalid_bigbro_fd = -1;
 #endif
 
 
