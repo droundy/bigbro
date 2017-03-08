@@ -219,9 +219,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     }
     printf("%c -> %s\n",q.buf->data[i], &q.buf->data[i+1]);
   }
-  free(read_from_files);
-  free(read_from_directories);
-  free(written_to_files);
+  free(*read_from_files);
+  free(*read_from_directories);
+  free(*written_to_files);
   *read_from_files = hashset_to_array(&read);
   *read_from_directories = hashset_to_array(&readdir);
   *written_to_files = hashset_to_array(&written);
