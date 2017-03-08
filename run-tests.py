@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # bigbro filetracking library
-# Copyright (C) 2015,2016 David Roundy
+# Copyright (C) 2015,2016,2017 David Roundy
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -186,8 +186,7 @@ for testsh in glob.glob('tests/*.sh'):
     m = importlib.import_module('tests.'+base[6:])
     try:
         if m.needs_symlinks and not have_symlinks:
-            if flag == '':
-                print('skipping', test, 'since we have no symlinks')
+            print('skipping', test, 'since we have no symlinks')
             continue
     except:
         print(test, 'needs to specify needs_symlinks')
@@ -235,8 +234,7 @@ for testp in glob.glob('tests/*-test.py'):
     m = importlib.import_module('tests.'+base[6:])
     try:
         if m.needs_symlinks and not have_symlinks:
-            if flag == '':
-                print('skipping', test, 'since we have no symlinks')
+            print('skipping', test, 'since we have no symlinks')
             continue
     except:
         print(test, 'needs to specify needs_symlinks')
