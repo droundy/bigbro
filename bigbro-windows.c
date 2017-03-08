@@ -52,6 +52,14 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
            const char *cmdline, char ***read_from_directories,
            char ***read_from_files, char ***written_to_files) {
+  // The following ensure that in case of error we return appropriate
+  // pointers.
+  *read_from_files = malloc(sizeof(char *));
+  **read_from_files = 0;
+  *read_from_directories = malloc(sizeof(char *));
+  **read_from_directories = 0;
+  *written_to_files = malloc(sizeof(char *));
+  **written_to_files = 0;
   create_dlls();
   struct queue q;
   const char *shm_name = "stupid"; // fixme: need to generate unique name
@@ -211,7 +219,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     }
     printf("%c -> %s\n",q.buf->data[i], &q.buf->data[i+1]);
   }
-  printf("DEBUGGING: have completed bigbro on Windows!\n");
+  free(read_from_files);
+  free(read_from_directories);
+  free(written_to_files);
   *read_from_files = hashset_to_array(&read);
   *read_from_directories = hashset_to_array(&readdir);
   *written_to_files = hashset_to_array(&written);
