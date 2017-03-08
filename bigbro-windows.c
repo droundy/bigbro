@@ -42,6 +42,8 @@ int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
                       const char *cmdline,
                       char ***read_from_directories, char ***mkdir_directories,
                       char ***read_from_files, char ***written_to_files) {
+  *mkdir_directories = malloc(sizeof(char *));
+  **mkdir_directories = 0;
   return bigbro(workingdir, child_ptr, stdoutfd, stderrfd, envp, cmdline,
                 read_from_directories, read_from_files, written_to_files);
 }
