@@ -24,7 +24,7 @@ import sys, subprocess, os, binary2header
 
 cc_options = ['x86_64-w64-mingw32-gcc',
               '/mingw64/bin/gcc',
-			  'x86_64-pc-msys-gcc']
+              'x86_64-pc-msys-gcc']
 for cc in cc_options:
 	print('trying', cc)
 	try:
@@ -49,11 +49,11 @@ objout = lambda fname: '-o'+fname
 exeout = objout
 
 def compile(cfile):
-    cmd = [cc, '-c', '-O2'] + cflags + [objout(cfile[:-2]+'.obj'), cfile]
+    cmd = [cc, '-g', '-c', '-O2'] + cflags + [objout(cfile[:-2]+'.obj'), cfile]
     print(' '.join(cmd))
     return subprocess.call(cmd)
 def compile32(cfile):
-    cmd = [cc32, '-c', '-O2'] + cflags + [objout(cfile[:-2]+'32.obj'), cfile]
+    cmd = [cc32, '-g', '-c', '-O2'] + cflags + [objout(cfile[:-2]+'32.obj'), cfile]
     print(' '.join(cmd))
     return subprocess.call(cmd)
 
