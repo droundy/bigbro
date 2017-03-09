@@ -42,6 +42,7 @@ for f in glob.glob('tests/*.test') + glob.glob('*.gcno') + glob.glob('*.gcda'):
 
 # we always run with test coverage if lcov is present!
 have_lcov = not benchmark and os.system('lcov -h') == 0
+have_gcovr = not benchmark and os.system('gcovr -h') == 0
 
 print('creating build/%s.sh...' % platform)
 print('==========================')
@@ -53,7 +54,7 @@ if not os.system('fac --help'):
 print('building bigbro by running build/%s.sh...' % platform)
 print('============================================')
 
-if have_lcov:
+if have_lcov or have_gcovr:
     os.environ['CFLAGS'] = os.environ.get('CFLAGS', default='') + ' --coverage'
 
 assert not os.system('sh build/%s.sh' % platform)
@@ -309,6 +310,10 @@ if benchmark:
         else:
             time_took = '(%g vs %g s)' % (measured_time, reference_time)
         print(testsh, time_took)
+
+if have_gcovr:
+    assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html')
+    assert not os.system('gcovr -r . --exclude-unreachable-branches')
 
 if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -d . -o tests/test.info')

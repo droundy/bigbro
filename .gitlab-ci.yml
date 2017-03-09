@@ -24,9 +24,7 @@ test:
   before_script:
     - apt-get update && apt-get -y install python3 libc6-dev-i386 gcovr
   script:
-    - CFLAGS=--coverage python3 run-tests.py
-    - gcovr -k -r . --exclude-unreachable-branches
-    - gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html
+    - python3 run-tests.py
   artifacts:
     paths:
       - coverage.html
