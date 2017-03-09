@@ -92,6 +92,8 @@ def create_clean_tree(prepsh='this file does not exist'):
     if os.path.exists(prepsh):
         cmd = 'sh %s 2> %s.err 1> %s.out' % (prepsh, prepsh, prepsh)
         if os.system(cmd):
+            print('the command')
+            os.system('cat ' + prepsh)
             print('stdout')
             os.system('cat %s.out' % prepsh);
             print('stderr')

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo running build-bigbro.sh.prep
+
 set -ev
 
 rm -rf tmp
