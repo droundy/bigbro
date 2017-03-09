@@ -6,6 +6,8 @@ image: gcc
 
 build:
   stage: build
+  before_script:
+    - apt-get update && apt-get -y install python3
   script:
     - sh build/linux.sh
   artifacts:
@@ -28,4 +30,10 @@ test:
   artifacts:
     paths:
       - coverage.html
-      - coverage.*.html
+      - coverage.bigbro-linux.c.html
+      - coverage.errors.h.html
+      - coverage.fileaccesses.c.html
+      - coverage.hashset.h.html
+      - coverage.linux-proc.h.html
+      - coverage.realpath.h.html
+
