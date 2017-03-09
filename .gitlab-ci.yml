@@ -8,9 +8,9 @@ build:
   stage: build
   # instead of calling g++ directly you can also use some build toolkit like make
   # install the necessary build tools when needed
-  before_script: 
-    - apt update && apt -y install python3 libc6-dev-i386
-  script: 
+  before_script:
+    - apt update && apt -y install libc6-dev-i386
+  script:
     - sh build/linux.sh
   artifacts:
     paths:
@@ -23,5 +23,7 @@ build:
 # run tests using the binary built before
 test:
   stage: test
+  before_script:
+    - apt update && apt -y install python3 libc6-dev-i386
   script:
     - python3 run-tests.py
