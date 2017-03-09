@@ -198,8 +198,10 @@ for testsh in glob.glob('tests/*.sh'):
     if os.system(cmd):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
-        print("command failed:", cmd)
-        exit(1)
+        print("FAIL command failed:", cmd)
+        numfailures += 1
+        os.system('./bigbro sh %s')
+        continue
     measured_time = perf_counter() - before
     err = open(base+'.err','r').read()
     out = open(base+'.out','r').read()
