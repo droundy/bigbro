@@ -6,10 +6,6 @@ image: gcc
 
 build:
   stage: build
-  # instead of calling g++ directly you can also use some build toolkit like make
-  # install the necessary build tools when needed
-  before_script:
-    - apt update && apt -y install libc6-dev-i386
   script:
     - sh build/linux.sh
   artifacts:
@@ -24,6 +20,12 @@ build:
 test:
   stage: test
   before_script:
-    - apt update && apt -y install python3 libc6-dev-i386
+    - apt-get update && apt-get -y install python3 libc6-dev-i386 gcovr
   script:
-    - python3 run-tests.py
+    - CFLAGS=--coverage python3 run-tests.py
+    - gcovr -k -r . --exclude-unreachable-branches
+    - gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html
+  artifacts:
+    paths:
+      - coverage.html
+      - coverage.*.html
