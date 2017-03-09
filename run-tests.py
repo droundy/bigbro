@@ -92,9 +92,14 @@ def create_clean_tree(prepsh='this file does not exist'):
     if os.path.exists(prepsh):
         cmd = 'sh %s 2> %s.err 1> %s.out' % (prepsh, prepsh, prepsh)
         if os.system(cmd):
+            print('stdout')
             os.system('cat %s.out' % prepsh);
+            print('stderr')
             os.system('cat %s.err' % prepsh);
             print("prep command failed:", cmd)
+            print('rerunning sh ' + prepsh)
+            os.system('sh '+prepsh)
+            print("reiterating that prep command failed:", cmd)
             exit(1)
 
 print('running AFL tests:')
