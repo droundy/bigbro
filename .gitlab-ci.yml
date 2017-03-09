@@ -1,13 +1,9 @@
-# This file is a template, and might need editing before it works on your project.
-# use the official gcc image, based on debian
-# can use verions as well, like gcc:5.2
-# see https://hub.docker.com/_/gcc/
-image: gcc
+image: debian:stable
 
 build:
   stage: build
   before_script:
-    - apt-get update && apt-get -y install python3
+    - apt-get update && apt-get -y install build-essential python3
   script:
     - sh build/linux.sh
   artifacts:
