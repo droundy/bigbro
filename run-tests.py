@@ -318,16 +318,16 @@ if benchmark:
         time_took = format_times(measured_time, reference_time)
         print(testsh, time_took)
 
-if have_gcovr:
-    assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html')
-    assert not os.system('gcovr -r . --exclude-unreachable-branches')
-
 if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -d . -o tests/test.info')
     assert not os.system('lcov --config-file .lcovrc -a tests/base.info -a tests/test.info -o tests/coverage.info')
     assert not os.system('lcov --config-file .lcovrc --remove tests/coverage.info "/usr/*" --output-file tests/coverage.info')
     assert not os.system('rm -rf web/coverage')
     assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" tests/coverage.info')
+
+if have_gcovr:
+    assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html')
+    assert not os.system('gcovr -r . --exclude-unreachable-branches')
 
 if numfailures > 0:
     print("\nTests FAILED (%d)!!!" % numfailures)

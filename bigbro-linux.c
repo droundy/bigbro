@@ -639,8 +639,19 @@ int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
       }
     }
     if (workingdir && chdir(workingdir) != 0) return -1;
-    ptrace(PTRACE_TRACEME);
-    kill(getpid(), SIGSTOP);
+    if (ptrace(PTRACE_TRACEME)) {
+      // UNABLE TO USE ptrace! This probably means seccomp is in use
+      // through docker or the like, and means bigbro won't work at
+      // all.  Currently, bigbro ignores this situation, but avoid
+      // stopping here, since if we stop we won't be able to restart
+      // using ptrace.  Perhaps we should return with an error?
+      printf("Unable to trace child process, perhaps seccomp too strict?!\n");
+      fflush(stdout);
+      fprintf(stderr,
+              "Unable to trace child process, perhaps seccomp too strict?!\n");
+    } else {
+      kill(getpid(), SIGSTOP);
+    }
     char **args = (char **)malloc(4*sizeof(char *));
     args[0] = "/bin/sh";
     args[1] = "-c";
@@ -651,9 +662,19 @@ int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
     return execve(args[0], args, envp);
   } else {
     *child_ptr = firstborn;
-    waitpid(firstborn, 0, __WALL);
+    int status;
+    waitpid(firstborn, &status, 0);
+    if (WIFEXITED(status)) {
+      // This probably means that tracing with PTRACE_TRACEME didn't
+      // work, since the child should have stopped before exiting.  At
+      // this point there isn't much to do other than return the exit
+      // code.  Presumably we are running under seccomp?
+      return WEXITSTATUS(status);
+    }
     ptrace(PTRACE_SETOPTIONS, firstborn, 0, my_ptrace_options);
-    if (ptrace(PTRACE_SYSCALL, firstborn, 0, 0) == -1) {
+    if (ptrace(PTRACE_SYSCALL, firstborn, 0, 0)) {
+      // I'm not sure what this error is, but if we can't resume the
+      // process probably we should exit.
       return -1;
     }
 
