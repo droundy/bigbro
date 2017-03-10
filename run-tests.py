@@ -26,10 +26,37 @@ if sys.version_info < (3,2):
     print('Please run this script with python 3.2 or newer.', sys.version_info)
     exit(1)
 
+# The following code disables caching on stdout.  It's a bit hacky,
+# but really pays of when the tests are taking a long time running
+# under docker, and you can't tell whether it is frozen.
+class Unbuffered(object):
+   def __init__(self, stream):
+       self.stream = stream
+   def write(self, data):
+       self.stream.write(data)
+       self.stream.flush()
+   def __getattr__(self, attr):
+       return getattr(self.stream, attr)
+sys.stdout = Unbuffered(sys.stdout)
+
 if 'perf_counter' in dir(time):
     perf_counter = time.perf_counter
 else:
     perf_counter = time.time
+def format_times(measured_time, reference_time=-1):
+    if reference_time > 0:
+        if measured_time < 1e-3:
+            return '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
+        elif measured_time < 1:
+            return '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
+        else:
+            return '(%g vs %g s)' % (measured_time, reference_time)
+    if measured_time < 1e-3:
+        return '(%g us)' % (measured_time*1e6)
+    elif measured_time < 1:
+        return '(%g ms)' % (measured_time*1e3)
+    else:
+        return '(%g s)' % (measured_time)
 
 benchmark = 'bench' in sys.argv
 
@@ -139,6 +166,11 @@ for testc in glob.glob('tests/*.c'):
             if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
+        os.system('sha1sum %s' % test)
+        print('exit code is',os.system(test))
+        print(os.system('strace ls'))
+        print(os.system('./bigbro ls'))
+        print('exit running bigbro simply',os.system('./bigbro ' + test))
         m = importlib.import_module('tests.'+base[6:])
         try:
             if m.needs_symlinks and not have_symlinks:
@@ -149,6 +181,7 @@ for testc in glob.glob('tests/*.c'):
             print(test, 'needs to specify needs_symlinks')
             exit(1)
         create_clean_tree()
+        print('about to run', base)
         before = perf_counter()
         cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
         exitcode = os.system(cmd)
@@ -162,17 +195,9 @@ for testc in glob.glob('tests/*.c'):
             cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
             os.system(cmd)
             reference_time = perf_counter() - before
-            if measured_time < 1e-3:
-                time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-            elif measured_time < 1:
-                time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
-            else:
-                time_took = '(%g vs %g s)' % (measured_time, reference_time)
+            time_took = format_times(measured_time, reference_time)
         else:
-            if measured_time < 1e-3:
-                time_took = '(%g us)' % (measured_time*1e6)
-            else:
-                time_took = '(%g ms)' % (measured_time*1e3)
+            time_took = format_times(measured_time)
         if exitcode != 0:
             os.system('cat %s.out' % base);
             os.system('cat %s.err' % base);
@@ -218,17 +243,9 @@ for testsh in glob.glob('tests/*.sh'):
         cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         os.system(cmd)
         reference_time = perf_counter() - before
-        if measured_time < 1e-3:
-            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        elif measured_time < 1:
-            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
-        else:
-            time_took = '(%g vs %g s)' % (measured_time, reference_time)
+        time_took = format_times(measured_time, reference_time)
     else:
-        if measured_time < 1e-3:
-            time_took = '(%g us)' % (measured_time*1e6)
-        else:
-            time_took = '(%g ms)' % (measured_time*1e3)
+        time_took = format_times(measured_time)
     # print(err)
     if m.passes(out, err):
         print(testsh, "passes", time_took)
@@ -266,17 +283,9 @@ for testp in glob.glob('tests/*-test.py'):
         cmd = 'sh %s 2> %s.err 1> %s.out' % (testp, base, base)
         os.system(cmd)
         reference_time = perf_counter() - before
-        if measured_time < 1e-3:
-            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        elif measured_time < 1:
-            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
-        else:
-            time_took = '(%g vs %g s)' % (measured_time, reference_time)
+        time_took = format_times(measured_time, reference_time)
     else:
-        if measured_time < 1e-3:
-            time_took = '(%g us)' % (measured_time*1e6)
-        else:
-            time_took = '(%g ms)' % (measured_time*1e3)
+        time_took = format_times(measured_time)
     # print(err)
     if m.passes(out, err):
         print(testp, "passes", time_took)
@@ -312,12 +321,7 @@ if benchmark:
         cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
         os.system(cmd)
         measured_time = perf_counter() - before
-        if measured_time < 1e-3:
-            time_took = '(%g vs %g us)' % (measured_time*1e6, reference_time*1e6)
-        elif measured_time < 1:
-            time_took = '(%g vs %g ms)' % (measured_time*1e3, reference_time*1e3)
-        else:
-            time_took = '(%g vs %g s)' % (measured_time, reference_time)
+        time_took = format_times(measured_time, reference_time)
         print(testsh, time_took)
 
 if have_gcovr:
