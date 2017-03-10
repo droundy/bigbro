@@ -166,11 +166,6 @@ for testc in glob.glob('tests/*.c'):
             if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
-        os.system('sha1sum %s' % test)
-        print('exit code is',os.system(test))
-        print(os.system('strace ls'))
-        print(os.system('./bigbro ls'))
-        print('exit running bigbro simply',os.system('./bigbro ' + test))
         m = importlib.import_module('tests.'+base[6:])
         try:
             if m.needs_symlinks and not have_symlinks:
@@ -181,7 +176,6 @@ for testc in glob.glob('tests/*.c'):
             print(test, 'needs to specify needs_symlinks')
             exit(1)
         create_clean_tree()
-        print('about to run', base)
         before = perf_counter()
         cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
         exitcode = os.system(cmd)
