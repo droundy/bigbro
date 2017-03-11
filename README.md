@@ -7,9 +7,11 @@ libbigbro
 [![build status](https://gitlab.com/daveroundy/bigbro/badges/master/build.svg)](https://gitlab.com/daveroundy/bigbro/commits/master)
 [![coverage report](https://gitlab.com/daveroundy/bigbro/badges/master/coverage.svg)](https://gitlab.com/daveroundy/bigbro/commits/master)
 
-`libbigbro` is a library that provides a single function that enables you
+`libbigbro` is a library that provides two functions that enables you
 to run a command (i.e. `fork` and `exec` on a posix system) and track
-what files it reads or modifies.
+what files it reads or modifies.  These two functions, `bigbro` and
+`bigbro_with_mkdir` are declared in `bigbro.h`, which documents their
+behavior in a comment.
 
 bigbro
 ------
