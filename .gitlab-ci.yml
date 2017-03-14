@@ -21,6 +21,8 @@ test:
     - apt-get update && apt-get -y install git gcc python3 libc6-dev-i386 gcovr
   script:
     - python3 run-tests.py
+  after_script:
+    - bash <(curl -s https://codecov.io/bash) -t ef88c866-d33f-45e5-b994-617ef7861f50
   artifacts:
     paths:
       - coverage.html
