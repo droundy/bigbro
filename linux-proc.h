@@ -1,6 +1,8 @@
 #include "realpath.h"
 #include "fcntl.h" // for AT_FDCWD
 
+#include <assert.h>
+
 static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   if (!path) return NULL;
   /* printf("path: %s\n", path); */
@@ -44,15 +46,9 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
 
 static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, ".");
-  if (!rawpath) {
-    fprintf(stderr, "read_dir_fd fails for pid %d and dirfd %d\n", pid, dirfd);
-    exit(1);
-  }
+  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, look_for_file_or_directory, false);
-  if (!abspath) {
-    fprintf(stderr, "read_dir_fd abspath fails for pid %d and dirfd %d\n", pid, dirfd);
-    exit(1);
-  }
+  assert(abspath);
   if (!lookup_in_hash(&h->mkdir, abspath)) {
     insert_hashset(&h->readdir, abspath);
   }
@@ -64,27 +60,14 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
                                      rw_status *h, enum last_symlink_handling lh,
                                      bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  if (!rawpath) {
-    if (failure_is_okay) {
-      return;
-    } else {
-      fprintf(stderr, "read_something_at fails for pid %d and dirfd %d and path %s\n",
-              pid, dirfd, path);
-      exit(1);
-    }
-  }
+  if (failure_is_okay && !rawpath) return;
+  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
-  if (!abspath) {
-    if (failure_is_okay) {
-      free(rawpath);
-      return;
-    } else {
-      fprintf(stderr, "read_something_at abspath fails for pid %d and dirfd %d path %s\n",
-              pid, dirfd, path);
-      fprintf(stderr, "rawpath was %s\n", rawpath);
-      exit(1);
-    }
+  if (failure_is_okay && !abspath) {
+    free(rawpath);
+    return;
   }
+  assert(abspath);
   /* printf("abspath: %s\n", abspath); */
   struct stat st;
   if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
@@ -98,16 +81,9 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
                                       rw_status *h, enum last_symlink_handling lh,
                                       bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  if (!rawpath) {
-    fprintf(stderr, "write_something_at fails for pid %d and dirfd %d and path %s\n",
-            pid, dirfd, path);
-    exit(1);
-  }
+  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
-  if (!abspath) {
-    fprintf(stderr, "write_something_at abspath fails for pid %d and dirfd %d\n", pid, dirfd);
-    exit(1);
-  }
+  assert(abspath);
   insert_hashset(&h->written, abspath);
   delete_from_hashset(&h->read, abspath);
   free(rawpath);
