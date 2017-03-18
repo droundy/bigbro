@@ -6,6 +6,7 @@ libbigbro
 [![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
 [![build status](https://gitlab.com/facio/bigbro/badges/master/build.svg)](https://gitlab.com/facio/bigbro/commits/master)
 [![coverage report](https://gitlab.com/facio/bigbro/badges/master/coverage.svg)](https://gitlab.com/facio/bigbro/commits/master)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/203/badge)](https://bestpractices.coreinfrastructure.org/projects/203)
 
 `libbigbro` is a library that provides two functions that enables you
 to run a command (i.e. `fork` and `exec` on a posix system) and track
