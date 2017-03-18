@@ -2,5 +2,7 @@
 
 * [home](index.html)
 * [coverage](coverage.html)
-* [fac forum](https://groups.google.com/forum/#!forum/fac-users)
+* [coverage](coverage/index.html)
+* [codecov](https://codecov.io/gl/facio/bigbro)
+* [forum](https://groups.google.com/forum/#!forum/fac-users)
 
