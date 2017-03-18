@@ -290,10 +290,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         flags = get_syscall_arg(regs, 2);
         dirfd = get_syscall_arg(regs, 0);
       }
-      if (!arg) {
-        debugprintf("%d: %s(NULL) -> %d\n", child, name, fd);
-      } else if (flags & O_DIRECTORY) {
-        if (!strcmp(name, "open")) {
+      assert(arg); // should not be possible for open to succeed with null path
+      if (flags & O_DIRECTORY) {
+        if (sc == sc_open) {
           debugprintf("%d: opendir('%s') -> %d\n", child, arg, fd);
         } else {
           debugprintf("%d: opendirat(%d, '%s') -> %d\n", child, get_syscall_arg(regs, 0), arg, fd);
@@ -342,6 +341,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(arg);
     }
   } else if (sc == sc_utimensat) {
+    // utimensat updates the time stamp of a file
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
     if (arg) {
       int dirfd = get_syscall_arg(regs,0);
@@ -351,9 +351,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
                   dirfd, arg, flags, retval);
       if (retval >= 0) {
         if (flags == AT_SYMLINK_NOFOLLOW) {
-          read_link_at(child, dirfd, arg, h);
+          write_link_at(child, dirfd, arg, h);
         } else {
-          read_file_at(child, dirfd, arg, h);
+          write_file_at(child, dirfd, arg, h);
         }
       }
       free(arg);
