@@ -16,13 +16,37 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301 USA */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#define _GNU_SOURCE
+
+#define _XOPEN_SOURCE 700
+#define __BSD_VISIBLE 1
 
 #include "bigbro.h"
 
+#ifndef _WIN32
+#include "realpath.h"
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+
 int main(int argc, char **argv) {
+  // the following are to test the corner and error cases of
+  // flexible_realpath.
+#ifndef _WIN32
+  assert(! flexible_realpath(NULL, NULL, NULL,
+                             look_for_file_or_directory, true));
+  assert(! flexible_realpath("", NULL, NULL,
+                             look_for_file_or_directory, true));
+  // the following should give null because flexible_realpath wants an
+  // absolute path.
+  assert(! flexible_realpath("tmp", NULL, NULL,
+                             look_for_file_or_directory, true));
+#endif
+
   if (argc < 2) {
     fprintf(stderr, "Usage: %s cmdline\n", argv[0]);
     exit(1);

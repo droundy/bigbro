@@ -17,7 +17,11 @@ int main() {
   // the following should all fail, but should also not cause a crash
   // that would prevent the following utimensat from being traced.
   utimensat(subd, "foo_symlink_typo", ts, AT_SYMLINK_NOFOLLOW);
-  utimensat(subd, NULL, ts, AT_SYMLINK_NOFOLLOW);
+  // The following is a way to silence a warning on using a null
+  // pointer here.  We are intentionally giving a bad value to ensure
+  // it doesn't screw up bigbro.
+  char *mynull = ((char *)5) - 5;
+  utimensat(subd, mynull, ts, AT_SYMLINK_NOFOLLOW);
   utimensat(subd, "", ts, AT_SYMLINK_NOFOLLOW);
 
   int retval = utimensat(subd, "foo_symlink", ts, AT_SYMLINK_NOFOLLOW);

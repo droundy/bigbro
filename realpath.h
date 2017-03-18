@@ -37,13 +37,15 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "hashset.h"
 
@@ -92,7 +94,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
     /* As per Single Unix Specification V2 we must return an error if
        the name argument points to an empty string.  */
     errno = (ENOENT);
-    printf("ENOENT\n");
     return NULL;
   }
 
@@ -101,7 +102,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
   if (resolved == NULL) {
     rpath = malloc(path_max);
     if (rpath == NULL) {
-      printf("malloc failed\n");
       return NULL;
     }
   } else {
@@ -112,7 +112,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
   if (name[0] != '/') {
     /* only handle absolute paths! */
     rpath[0] = '\0';
-    printf("not absolute\n");
     goto error;
     /* if (!getcwd(rpath, path_max)) { */
     /*   rpath[0] = '\0'; */
@@ -158,7 +157,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
           errno = (ENAMETOOLONG);
           if (dest > rpath + 1) dest--;
           *dest = '\0';
-          printf("msdgg\n");
           goto error;
         }
         new_size = rpath_limit - rpath;
@@ -169,7 +167,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         }
         new_rpath = (char *) realloc(rpath, new_size);
         if (new_rpath == NULL) {
-          printf("remalloc failed here\n");
           goto error;
         }
         rpath = new_rpath;
@@ -190,7 +187,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
       if (S_ISLNK(st.st_mode)) {
         if (++num_links > MAXSYMLINKS) {
           errno = (ELOOP);
-          printf("loopdsgdsgmalloc failed\n");
           goto error;
         }
 
@@ -198,10 +194,7 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         if (!buf) buf = malloc(path_max);
         size_t len;
         n = readlink(rpath, buf, path_max - 1);
-        if (n < 0) {
-          printf("readlink failed\n");
-          goto error;
-        }
+        if (n < 0) goto error;
         buf[n] = '\0';
 
         if (!extra_buf) extra_buf = malloc(path_max);
@@ -209,7 +202,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         len = strlen (end);
         if ((long int) (n + len) >= path_max) {
           errno = (ENAMETOOLONG);
-          printf("malldsdgsdshoc failed\n");
           goto error;
         }
 

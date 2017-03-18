@@ -109,7 +109,7 @@ static inline char **hashset_to_array(hashset *hs) {
   return array;
 }
 
-static void free_hashset(hashset *h) {
+static inline void free_hashset(hashset *h) {
   free(h->table);
   struct hash_entry *todelete = NULL;
   for (struct hash_entry *e = h->first; e; e = e->next) {
@@ -119,7 +119,7 @@ static void free_hashset(hashset *h) {
   free(todelete);
 }
 
-static void init_hashset(hashset *h, int size) {
+static inline void init_hashset(hashset *h, int size) {
   h->size = size;
   h->num_entries = 0;
   h->first = NULL;

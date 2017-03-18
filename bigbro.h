@@ -53,6 +53,8 @@
 
   */
 
+#include <stdlib.h>
+
 #ifdef _MSC_VER
 typedef int pid_t;
 #endif
