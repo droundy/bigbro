@@ -33,3 +33,5 @@ coverage*.html
 web/coverage/
 web/style.css
 web/style.css.map
+*.sparse
+sparse.fac

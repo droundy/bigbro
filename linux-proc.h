@@ -2,7 +2,7 @@
 #include "fcntl.h" // for AT_FDCWD
 
 static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
-  if (!path) return 0;
+  if (!path) return NULL;
   /* printf("path: %s\n", path); */
   const char *procself = "/proc/self/";
   const int procselflen = strlen(procself);
@@ -27,13 +27,13 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   if (linklen < 0) {
     fprintf(stderr, "unable to determine cwd from %s i.e. fd %d!!!\n",
             proc_fd, fd);
-    return 0;
+    return NULL;
   }
   cwd[linklen] = 0;
   /* printf("cwd(%d): %s (from %s)\n", fd, cwd, proc_fd); */
   if (strlen(cwd) + strlen(path) + 4 > PATH_MAX) {
     fprintf(stderr, "too long a path: '%s/%s'\n", cwd, path);
-    return 0;
+    return NULL;
   }
   strcat(cwd, "/");
   strcat(cwd, path);
@@ -48,7 +48,7 @@ static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
     fprintf(stderr, "read_dir_fd fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory, false);
+  char *abspath = flexible_realpath(rawpath, NULL, h, look_for_file_or_directory, false);
   if (!abspath) {
     fprintf(stderr, "read_dir_fd abspath fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);
@@ -73,7 +73,7 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
       exit(1);
     }
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, lh, failure_is_okay);
+  char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
   if (!abspath) {
     if (failure_is_okay) {
       free(rawpath);
@@ -103,7 +103,7 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
             pid, dirfd, path);
     exit(1);
   }
-  char *abspath = flexible_realpath(rawpath, 0, h, lh, failure_is_okay);
+  char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
   if (!abspath) {
     fprintf(stderr, "write_something_at abspath fails for pid %d and dirfd %d\n", pid, dirfd);
     exit(1);

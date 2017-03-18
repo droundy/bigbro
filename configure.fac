@@ -8,3 +8,6 @@ c .pyc
 
 | python3 web/mkdown.py
 > web/index.html
+
+| python3 sparse.py > sparse.fac
+> sparse.fac

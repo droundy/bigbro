@@ -30,10 +30,10 @@ static struct hash_entry * lookup_in_hash(hashset *hash, const char *str) {
   struct hash_entry *e = hash->table[h];
   while (e) {
     if (strcmp(e->key, str) == 0) return e;
-    if (!e->next || hash_function(e->next->key) % hash->size != h) return 0;
+    if (!e->next || hash_function(e->next->key) % hash->size != h) return NULL;
     e = e->next;
   }
-  return 0;
+  return NULL;
 }
 
 static inline void insert_hashset(hashset *hash, const char *key) {
@@ -41,7 +41,7 @@ static inline void insert_hashset(hashset *hash, const char *key) {
   struct hash_entry *e = malloc(sizeof(struct hash_entry)+strlen(key)+1);
   e->key = ((char *)e) + sizeof(struct hash_entry);
   strcpy((char *)e->key, key);
-  e->next = 0;
+  e->next = NULL;
 
   hash->num_entries++;
   unsigned long h = hash_function(e->key) % hash->size;
@@ -75,7 +75,7 @@ static inline void delete_from_hashset(hashset *hash, const char *key) {
       if (e->next && hash_function(e->next->key) % hash->size == h) {
         hash->table[h] = e->next;
       } else {
-        hash->table[h] = 0;
+        hash->table[h] = NULL;
       }
     }
     hash->num_entries -= 1;
@@ -105,13 +105,13 @@ static inline char **hashset_to_array(hashset *hs) {
     *strings++ = 0; // add the null termination
     i++;
   }
-  array[numentries] = 0; // terminate with a null pointer.
+  array[numentries] = NULL; // terminate with a null pointer.
   return array;
 }
 
 static void free_hashset(hashset *h) {
   free(h->table);
-  struct hash_entry *todelete = 0;
+  struct hash_entry *todelete = NULL;
   for (struct hash_entry *e = h->first; e; e = e->next) {
     free(todelete);
     todelete = e;
@@ -122,7 +122,7 @@ static void free_hashset(hashset *h) {
 static void init_hashset(hashset *h, int size) {
   h->size = size;
   h->num_entries = 0;
-  h->first = 0;
+  h->first = NULL;
   h->table = calloc(sizeof(struct hash_entry *), size);
 }
 

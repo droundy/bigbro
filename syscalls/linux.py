@@ -56,7 +56,7 @@ print('  sc_%s' % allsysnames[-1])
 print("};\n")
 
 print("""
-const char *syscall_names[] = {""")
+static const char *syscall_names[] = {""")
 for i in range(len(allsysnames)-1):
     print('  "%s",' % (allsysnames[i]))
 print('  "%s"' % allsysnames[-1])

@@ -112,7 +112,7 @@ static long get_syscall_arg_32(const struct user_regs_struct *regs, int which) {
 }
 
 static char *read_a_string(pid_t child, unsigned long addr) {
-    if (addr == 0) return 0;
+    if (addr == 0) return NULL;
 
     // There is a tradeoff here between allocating something too large
     // and wasting memory vs the cost of reallocing repeatedly.
@@ -249,8 +249,8 @@ static enum syscall get_registers(pid_t child, void **voidregs,
 static long wait_for_return_value(pid_t child, rw_status *h) {
   ptrace(PTRACE_SYSCALL, child, 0, 0); // ignore return value
   wait_for_syscall(h, -child);
-  void *regs = 0;
-  long (*get_syscall_arg)(void *regs, int which) = 0;
+  void *regs = NULL;
+  long (*get_syscall_arg)(void *regs, int which) = NULL;
   get_registers(child, &regs, &get_syscall_arg);
   long retval = get_syscall_arg(regs, RETURN_VALUE);
   free(regs);
@@ -258,8 +258,8 @@ static long wait_for_return_value(pid_t child, rw_status *h) {
 }
 
 static int save_syscall_access(pid_t child, rw_status *h) {
-  void *regs = 0;
-  long (*get_syscall_arg)(void *regs, int which) = 0;
+  void *regs = NULL;
+  long (*get_syscall_arg)(void *regs, int which) = NULL;
 
   enum syscall sc = get_registers(child, &regs, &get_syscall_arg);
   if (sc == sc_invalid_syscall) {
@@ -325,7 +325,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       char *rawpath = interpret_path_at(child, dirfd, arg);
       free(arg);
-      char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
+      char *abspath = flexible_realpath(rawpath, NULL, h, look_for_symlink, false);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
@@ -418,7 +418,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (arg) {
         debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
         char *rawpath = interpret_path_at(child, dirfd, arg);
-        char *abspath = flexible_realpath(rawpath, 0, h, look_for_file_or_directory, false);
+        char *abspath = flexible_realpath(rawpath, NULL, h, look_for_file_or_directory, false);
         insert_hashset(&h->mkdir, abspath);
         free(rawpath);
         free(abspath);
@@ -475,7 +475,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     }
     if (from) {
       char *rawpath = interpret_path_at(child, dirfd, from);
-      char *abspath = flexible_realpath(rawpath, 0, h, look_for_symlink, false);
+      char *abspath = flexible_realpath(rawpath, NULL, h, look_for_symlink, false);
       free(rawpath);
       free(from);
       from = abspath;
@@ -603,7 +603,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            char ***read_from_directories_out,
            char ***read_from_files_out,
            char ***written_to_files_out) {
-  char **mkdir_directories = 0;
+  char **mkdir_directories = NULL;
   int retval = bigbro_with_mkdir(workingdir, child_ptr, stdoutfd, stderrfd,
                                  envp, cmdline,
                                  read_from_directories_out, &mkdir_directories,
@@ -656,9 +656,9 @@ int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
     args[0] = "/bin/sh";
     args[1] = "-c";
     args[2] = (char *)cmdline;
-    args[3] = 0;
+    args[3] = NULL;
     // when envp == 0, we are supposed to inherit our environment.
-    if (envp == 0) envp = environ;
+    if (!envp) envp = environ;
     return execve(args[0], args, envp);
   } else {
     *child_ptr = firstborn;

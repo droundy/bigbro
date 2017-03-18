@@ -5,8 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
 [![coverage report](https://gitlab.com/facio/bigbro/badges/master/coverage.svg)](coverage.html)
 [![codecov](https://codecov.io/gl/facio/bigbro/branch/master/graph/badge.svg)](https://codecov.io/gl/facio/bigbro)
-
-<!-- [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/203/badge)](https://bestpractices.coreinfrastructure.org/projects/203) -->
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/203/badge)](https://bestpractices.coreinfrastructure.org/projects/203)
 
 
 libbigbro
