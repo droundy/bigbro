@@ -3,6 +3,10 @@
 from __future__ import print_function
 import glob, os, sys, platform, subprocess
 
+if 'SKIPSPARSE' in os.environ:
+    print("# skipping sparse as requested")
+    exit(1)
+
 myplatform = sys.platform
 if myplatform == 'linux2':
     myplatform = 'linux'
