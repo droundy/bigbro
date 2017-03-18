@@ -5,7 +5,7 @@ import glob, os, sys, platform, subprocess
 
 if 'SKIPSPARSE' in os.environ:
     print("# skipping sparse as requested")
-    exit(1)
+    exit(0)
 
 myplatform = sys.platform
 if myplatform == 'linux2':
