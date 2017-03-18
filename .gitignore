@@ -17,7 +17,6 @@ tmp
 *.lock
 target
 .#.*
-web
 *.info
 *.gcda
 *.gcno
@@ -29,3 +28,8 @@ win32/bigbro64.h
 *.so
 *.gcov
 coverage*.html
+*.html
+.sass-cache
+web/coverage/
+web/style.css
+web/style.css.map

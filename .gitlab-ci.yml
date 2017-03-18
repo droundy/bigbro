@@ -1,9 +1,7 @@
-image: debian:stable
+image: facio/bigbro
 
 build:
   stage: build
-  before_script:
-    - apt-get update && apt-get -y install gcc python3
   script:
     - sh build/linux.sh
   artifacts:
@@ -17,19 +15,25 @@ build:
 # run tests using the binary built before
 test:
   stage: test
-  before_script:
-    - apt-get update && apt-get -y install git gcc python3 libc6-dev-i386 gcovr curl
   script:
     - python3 run-tests.py
   after_script:
     - bash <(curl -s https://codecov.io/bash) -t ef88c866-d33f-45e5-b994-617ef7861f50
   artifacts:
     paths:
-      - coverage.html
-      - coverage.bigbro-linux.c.html
-      - coverage.errors.h.html
-      - coverage.fileaccesses.c.html
-      - coverage.hashset.h.html
-      - coverage.linux-proc.h.html
-      - coverage.realpath.h.html
+      - web
+
+pages:
+  stage: deploy
+  script:
+    - git clone git://github.com/daveroundy/fac.git
+    - cd fac
+    - sh build/linux.sh
+    - ./fac
+    - cd ..
+    - fac/fac
+    - mv web public
+  artifacts:
+    paths:
+      - public
 

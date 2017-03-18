@@ -1,0 +1,229 @@
+
+@import "web/normalize.scss";
+
+*, *:after, *:before {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+$menuback: #fff;
+$menuhoverback: #ddf;
+$menucurrent: #06d;
+$menufore: #333;
+$menuitem: #eee;
+$menushadow: #ddd;
+
+$codebackground: #ddf;
+
+html { /* make scrollbar always visible */
+overflow: -moz-scrollbars-vertical;
+overflow-y: scroll;
+}
+
+body { /* just define the font once! */
+    font:normal 1em Helvetica, Verdana, Arial, sans-serif;
+}
+
+@mixin border-radius($radius) {
+    -webkit-border-radius: $radius;
+    -moz-border-radius: $radius;
+    -ms-border-radius: $radius;
+    border-radius: $radius;
+}
+
+nav {
+    background: $menuback;
+    height: 2.2em;
+    max-width: 45em;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: .5em;
+    padding-right: .5em;
+
+    ul {
+        margin:0;
+        margin-top: 0.2em;
+        padding:0;list-style-type:none;display:block;
+        font-weight:bold;
+        line-height:165%;
+        width:100%;
+    }
+
+    ul li{margin:0;padding:0;border-top:.15em solid $menuback;
+          margin-right: 0.3em;
+          display:block;
+          position:relative;float:left;height:2em;}
+
+    ul li a{
+        display:block;text-decoration:none;color:$menufore;
+        background:$menuitem;padding:0 0 0 1.25em;width:100%;
+        height:2em;padding-right:0.5em;padding-left:0.5em;
+        border-right:.1em solid $menushadow;
+        border-left:.2em solid $menuback;
+        border-bottom:.15em solid $menushadow;
+    }
+
+    ul li a:hover{
+background:$menuhoverback;}
+
+    ul li a.current,
+    ul li a.current:hover{
+       color:$menucurrent;
+    }
+}
+
+.docnav {
+    height: auto;
+    width: 12em;
+    float: right;
+    ul li{
+        width: 100%;
+    }
+}
+
+main {
+   margin-left: auto;
+   margin-right: auto;
+   padding-left: .5em;
+   padding-right: .5em;
+   max-width: 45em;
+   text-align: justify;
+   h2 {
+       clear: both;
+   }
+   h3:nth-of-type(even) {
+       clear: left;
+   }
+   h3:nth-of-type(odd) {
+       clear: right;
+   }
+   pre {
+       margin-left: 1em;
+       margin-right: 1em;
+       padding: .5em;
+       background: $codebackground;
+   }
+
+   img {
+       max-width: 20em;
+   }
+   p:nth-of-type(even) {
+       img {
+           /* margin-right: -10em; */
+           float: right;
+       }
+   }
+   p:nth-of-type(odd) {
+       img {
+           /* margin-left: -10em; */
+           float: left;
+       }
+   }
+}
+
+@media screen and (min-width: 80em) {
+    nav {
+        max-width: 40em;
+    }
+    main {
+        max-width: 40em;
+        p:nth-of-type(even) {
+            img {
+                margin-right: -20em;
+                margin-top: -2em; /* This means pictures can overlap by a bit.  :( */
+            }
+        }
+        p:nth-of-type(odd) {
+            img {
+                margin-left: -20em;
+                margin-top: -2em; /* This means pictures can overlap by a bit.  :( */
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 100em) {
+    nav {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: auto;
+    }
+    main {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+
+        header {
+            -webkit-column-span: all; /* Chrome, Safari, Opera */
+            column-span: all;
+        }
+
+        -webkit-column-gap: 5em; /* Chrome, Safari, Opera */
+        -moz-column-gap: 5em; /* Firefox */
+        column-gap: 4em;
+        margin-left: 4em;
+        margin-right: 4em;
+        max-width: none;
+
+        .indivisible {
+            /* -webkit-column-break-inside: avoid; */
+	          /* break-inside: avoid-column; */
+            display: inline-block;
+        }
+
+        p:nth-of-type(even) {
+            img {
+                margin-right: 0;
+                margin-top: 0;
+            }
+        }
+        p:nth-of-type(odd) {
+            img {
+                margin-left: 0;
+                margin-top: 0; /* This means pictures can overlap by a bit.  :( */
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 160em) {
+    main {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+        -webkit-column-gap: 0em; /* Chrome, Safari, Opera */
+        -moz-column-gap: 0em; /* Firefox */
+        column-gap: 0em;
+        margin-left: 2em;
+        margin-right: 2em;
+        header {
+            padding-left: 21em;
+            padding-right: 21em;
+        }
+        .indivisible {
+            padding-left: 21em;
+            padding-right: 21em;
+        }
+        p:nth-of-type(even) {
+            img {
+                margin-right: -20em;
+                margin-top: -2em; /* This means pictures can overlap by a bit.  :( */
+            }
+        }
+        p:nth-of-type(odd) {
+            img {
+                margin-left: -20em;
+                margin-top: -2em; /* This means pictures can overlap by a bit.  :( */
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 240em) {
+    main {
+        -webkit-column-count: 3; /* Chrome, Safari, Opera */
+        -moz-column-count: 3; /* Firefox */
+        column-count: 3;
+    }
+}

@@ -190,3 +190,12 @@ if is_in_path('x86_64-w64-mingw32-gcc'):
                   % (cflags, c[:-2], c))
 
 os.system('rm -rf testing-flags')
+
+if is_in_path('sass'):
+    print('''
+| sass -I. web/style.scss web/style.css
+> web/style.css
+C .sass-cache
+''')
+else:
+    print("# no sass, so we won't build style.css")

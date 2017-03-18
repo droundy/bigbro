@@ -5,3 +5,6 @@ c .pyc
 | python3 syscalls/linux.py > syscalls/linux.h
 > syscalls/linux.h
 c .pyc
+
+| python3 web/mkdown.py
+> web/index.html

@@ -326,7 +326,7 @@ if have_lcov:
     assert not os.system('genhtml --config-file .lcovrc --show-details -o web/coverage -t "bigbro coverage" tests/coverage.info')
 
 if have_gcovr:
-    assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o coverage.html')
+    assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o web/coverage.html')
     assert not os.system('gcovr -r . --exclude-unreachable-branches')
 
 if numfailures > 0:
