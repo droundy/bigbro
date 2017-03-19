@@ -64,8 +64,7 @@ enum last_symlink_handling {
 
 static inline char *flexible_realpath(const char *name,
                                       rw_status *h,
-                                      enum last_symlink_handling lasth,
-                                      bool failure_is_okay) {
+                                      enum last_symlink_handling lasth) {
   char *rpath; // rpath is where we hold the path as we have
                // determined it so far
   char *dest; // dest is the location for the next portion of the path
@@ -198,9 +197,6 @@ static inline char *flexible_realpath(const char *name,
         }
       } else if (!S_ISDIR(st.st_mode) && *end != '\0') {
         errno = (ENOTDIR);
-        if (!failure_is_okay)
-          fprintf(stderr, "error: %s is not a dir (realpaht of %s, w/ end %s)\n",
-                  rpath, name, end);
         goto error;
       }
     }

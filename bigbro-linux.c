@@ -323,7 +323,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       }
       char *rawpath = interpret_path_at(child, dirfd, arg);
       free(arg);
-      char *abspath = flexible_realpath(rawpath, h, look_for_symlink, false);
+      char *abspath = flexible_realpath(rawpath, h, look_for_symlink);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
@@ -417,7 +417,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       if (arg) {
         debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
         char *rawpath = interpret_path_at(child, dirfd, arg);
-        char *abspath = flexible_realpath(rawpath, h, look_for_file_or_directory, false);
+        char *abspath = flexible_realpath(rawpath, h, look_for_file_or_directory);
         insert_hashset(&h->mkdir, abspath);
         free(rawpath);
         free(abspath);
@@ -474,7 +474,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     }
     if (from) {
       char *rawpath = interpret_path_at(child, dirfd, from);
-      char *abspath = flexible_realpath(rawpath, h, look_for_symlink, false);
+      char *abspath = flexible_realpath(rawpath, h, look_for_symlink);
       free(rawpath);
       free(from);
       from = abspath;

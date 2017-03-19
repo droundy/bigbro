@@ -70,7 +70,7 @@ int main() {
     else printf("parent '%s' is NOT a directory\n", parent);
 
     char *actual_rp = realpath(buf, 0);
-    char *rp = flexible_realpath(buf, &st, look_for_file_or_directory, true);
+    char *rp = flexible_realpath(buf, &st, look_for_file_or_directory);
     printf("input %s\n", buf);
     printf("actual_rp %s\n", actual_rp);
     printf("flexible_realpath look_for_file_or_directory true returns %s\n", rp);
@@ -89,7 +89,7 @@ int main() {
       assert(actual_rp);
       assert(!strcmp(rp, actual_rp));
     }
-    char *symrp = flexible_realpath(buf, &st, look_for_symlink, true);
+    char *symrp = flexible_realpath(buf, &st, look_for_symlink);
     if (*buf != '/') {
       printf("relative paths count as failure...\n");
       assert(!rp);
