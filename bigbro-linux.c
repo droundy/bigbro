@@ -463,12 +463,13 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       maybe_read_file_at(child, dirfd, arg, h);
     }
     free(arg);
-  } else if (sc == sc_rename || sc == sc_renameat) {
+  } else if (sc == sc_rename || sc == sc_renameat || sc == sc_renameat2) {
     char *from, *to;
     int dirfd = AT_FDCWD;
     if (sc == sc_rename) {
         from = read_a_string(child, get_syscall_arg(regs, 0));
     } else {
+      // this is either renameat2 or renameat
       from = read_a_string(child, get_syscall_arg(regs, 1));
       dirfd = get_syscall_arg(regs, 0);
     }
@@ -481,25 +482,32 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     }
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
+      int tofd = AT_FDCWD;
       if (sc == sc_rename) {
         to = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
-        to = read_a_string(child, get_syscall_arg(regs, 2));
+        tofd = get_syscall_arg(regs, 2);
+        to = read_a_string(child, get_syscall_arg(regs, 3));
       }
       if (to && from) {
+        char *rawto = interpret_path_at(child, tofd, to);
+        char *absto = flexible_realpath(rawto, h, look_for_symlink);
+        free(to);
+        to = absto;
+        free(rawto);
         debugprintf("%d: %s('%s', '%s') -> %d\n", child, name, from, to, retval);
 
         struct stat path_stat;
-        if (!fstatat(dirfd, to, &path_stat, AT_SYMLINK_NOFOLLOW)
+        if (!fstatat(tofd, to, &path_stat, AT_SYMLINK_NOFOLLOW)
             && S_ISDIR(path_stat.st_mode)) {
+          debugprintf("the thingy is a directory\n");
           // it is a directory, so we need to generate write events
           // for children, and remove events for children... yuck.
-          char *absto = interpret_path_at(child, dirfd, to);
           char *fromslash = malloc(strlen(from)+2);
           strcpy(fromslash, from);
           strcat(fromslash, "/");
-          char *toslash = malloc(strlen(absto)+2);
-          strcpy(toslash, absto);
+          char *toslash = malloc(strlen(to)+2);
+          strcpy(toslash, to);
           strcat(toslash, "/");
           int fromslashlen = strlen(fromslash);
           int toslashlen = strlen(toslash);
@@ -536,12 +544,12 @@ static int save_syscall_access(pid_t child, rw_status *h) {
             }
           }
           delete_from_hashset(&h->mkdir, from);
-          insert_hashset(&h->mkdir, absto);
-          free(absto);
+          insert_hashset(&h->mkdir, to);
           free(fromslash);
           free(toslash);
         } else {
-          write_link_at(child, dirfd, to, h);
+          debugprintf("the thing is not a directory!\n");
+          write_link_at(child, tofd, to, h);
           delete_from_hashset(&h->read, from);
           delete_from_hashset(&h->readdir, from);
           delete_from_hashset(&h->written, from);

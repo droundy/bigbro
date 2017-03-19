@@ -4,8 +4,7 @@ import tests.helper as th
 
 def passes(out, err):
     return all(
-        [th.reads(err, '/tests/utimensat_NOFOLLOW.test'),
-         th.writes(err, '/tmp/subdir1/foo_symlink'),
+        [th.writes(err, '/tmp/subdir1/foo_symlink'),
          th.writes(err, '/tmp/subdir1/openat'),
          th.count_writes(err, 2),
          th.count_readdir(err, 0),

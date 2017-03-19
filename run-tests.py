@@ -150,14 +150,15 @@ for testc in glob.glob('tests/unit/*.c'):
             print(test[len('tests/unit/'):], '<', inp[len(base+'.minimal/'):], "passes")
             numpasses += 1
 
-options = ['', ' -m32', ' -m64'] # , ' -mx32']
+options = ['', '-m32', '-m64'] # , ' -mx32']
 
-print('running C tests:')
+print('compiling C tests:')
 print('================')
+ctest_executables = []
 for testc in glob.glob('tests/*.c'):
     base = testc[:-2]
-    test = base+'.test'
     for flag in options:
+        test = base + flag + '.test'
         if '-static' in testc:
             if os.system('${CC-gcc} %s -Wall -static -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
@@ -166,43 +167,47 @@ for testc in glob.glob('tests/*.c'):
             if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
-        m = importlib.import_module('tests.'+base[6:])
-        try:
-            if m.needs_symlinks and not have_symlinks:
-                if flag == '':
-                    print('skipping', test, 'since we have no symlinks')
-                continue
-        except:
-            print(test, 'needs to specify needs_symlinks')
-            exit(1)
+        ctest_executables.append((base,test))
+print('running C tests:')
+print('================')
+for (base,test) in ctest_executables:
+    m = importlib.import_module('tests.'+base[6:])
+    try:
+        if m.needs_symlinks and not have_symlinks:
+            if flag == '':
+                print('skipping', test, 'since we have no symlinks')
+            continue
+    except:
+        print(test, 'needs to specify needs_symlinks')
+        exit(1)
+    create_clean_tree()
+    before = perf_counter()
+    cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
+    exitcode = os.system(cmd)
+    measured_time = perf_counter() - before
+    err = open(base+'.err','r').read()
+    out = open(base+'.out','r').read()
+    # print(err)
+    if benchmark:
         create_clean_tree()
         before = perf_counter()
-        cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
-        exitcode = os.system(cmd)
-        measured_time = perf_counter() - before
-        err = open(base+'.err','r').read()
-        out = open(base+'.out','r').read()
-        # print(err)
-        if benchmark:
-            create_clean_tree()
-            before = perf_counter()
-            cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
-            os.system(cmd)
-            reference_time = perf_counter() - before
-            time_took = format_times(measured_time, reference_time)
-        else:
-            time_took = format_times(measured_time)
-        if exitcode != 0:
-            os.system('cat %s.out' % base);
-            os.system('cat %s.err' % base);
-            print(test, flag, "COMMAND FAILS WITH EXIT CODE", exitcode)
-            numfailures += 1
-        elif m.passes(out, err):
-            print(test, flag, "passes", time_took)
-            numpasses += 1
-        else:
-            print(test, flag, "FAILS!", time_took)
-            numfailures += 1
+        cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
+        os.system(cmd)
+        reference_time = perf_counter() - before
+        time_took = format_times(measured_time, reference_time)
+    else:
+        time_took = format_times(measured_time)
+    if exitcode != 0:
+        os.system('cat %s.out' % base);
+        os.system('cat %s.err' % base);
+        print(test, "COMMAND FAILS WITH EXIT CODE", exitcode)
+        numfailures += 1
+    elif m.passes(out, err):
+        print(test, "passes", time_took)
+        numpasses += 1
+    else:
+        print(test, "FAILS!", time_took)
+        numfailures += 1
 
 test = None # to avoid bugs below where we refer to test
 print()

@@ -12,8 +12,7 @@ def passes(out, err):
 
     """
     return all(
-        [th.reads(err, '/tests/rename-directory.test'),
-         th.count_writes(err, 2),
+        [th.count_writes(err, 2),
          th.doesnt_write(err, '/tmp/subdir2/hello'),
          th.doesnt_read(err, '/tmp/subdir2/test'),
          th.writes(err, '/tmp/newdir/hello'),
