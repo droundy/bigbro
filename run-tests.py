@@ -136,7 +136,7 @@ print('==================')
 for testc in glob.glob('tests/unit/*.c'):
     base = testc[:-2]
     test = base+'.test'
-    if os.system('${CC-gcc} -I. --std=c99 -Wall -O2 -o %s %s' % (test, testc)):
+    if os.system('${CC-gcc} --coverage -I. --std=c99 -Wall -O2 -o %s %s' % (test, testc)):
         print('%s fails to compile, skipping unit test' % (testc))
         continue
     for inp in glob.glob('%s.minimal/*' % base):
