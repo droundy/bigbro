@@ -369,7 +369,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       int retval = wait_for_return_value(child, h);
       debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
                   dirfd, arg, retval);
-      if (retval >= 0) read_file_at(child, dirfd, arg, h);
+      if (retval >= 0) write_file_at(child, dirfd, arg, h);
       free(arg);
     } else {
       int retval = wait_for_return_value(child, h);
