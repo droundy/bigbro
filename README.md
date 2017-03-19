@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/droundy/bigbro.svg?branch=master)](https://travis-ci.org/droundy/bigbro)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/w0uttk4ayga2f45w?svg=true)](https://ci.appveyor.com/project/droundy/bigbro)
 [![build status](https://gitlab.com/facio/bigbro/badges/master/build.svg)](https://gitlab.com/facio/bigbro/commits/master)
 
