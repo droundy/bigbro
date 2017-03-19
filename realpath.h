@@ -55,20 +55,14 @@ typedef struct {
 
 /* Return the canonical absolute name of file NAME.  A canonical name
    does not contain any `.', `..' components nor any repeated path
-   separators ('/') or symlinks.  All path components must exist.  If
-   RESOLVED is null, the result is malloc'd; otherwise, if the
-   canonical name is PATH_MAX chars or more, returns null with `errno'
-   set to ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
-   returns the name in RESOLVED.  If the name cannot be resolved and
-   RESOLVED is non-NULL, it contains the path of the first component
-   that cannot be resolved.  If the path can be resolved, RESOLVED
-   holds the same value as the value returned.  */
+   separators ('/') or symlinks.  All path components must exist.  The
+   result is malloc'd.  */
 
 enum last_symlink_handling {
   look_for_file_or_directory, look_for_symlink
 };
 
-static inline char *flexible_realpath(const char *name, char *resolved,
+static inline char *flexible_realpath(const char *name,
                                       rw_status *h,
                                       enum last_symlink_handling lasth,
                                       bool failure_is_okay) {
@@ -82,10 +76,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
   int num_links = 0;
 
   if (name == NULL) {
-    /* As per Single Unix Specification V2 we must return an error if
-       either parameter is a null pointer.  We extend this to allow
-       the RESOLVED parameter to be NULL in case the we are expected to
-       allocate the room for the return value.  */
     errno = (EINVAL);
     return NULL;
   }
@@ -99,14 +89,9 @@ static inline char *flexible_realpath(const char *name, char *resolved,
 
   path_max = PATH_MAX;
 
-  if (resolved == NULL) {
-    rpath = malloc(path_max);
-    if (rpath == NULL) {
-      return NULL;
-    }
-  } else {
-    rpath = resolved;
-  }
+  rpath = malloc(path_max);
+  if (rpath == NULL) return NULL;
+
   rpath_limit = rpath + path_max;
 
   if (name[0] != '/') {
@@ -153,12 +138,6 @@ static inline char *flexible_realpath(const char *name, char *resolved,
         ptrdiff_t dest_offset = dest - rpath;
         char *new_rpath;
 
-        if (resolved) {
-          errno = (ENAMETOOLONG);
-          if (dest > rpath + 1) dest--;
-          *dest = '\0';
-          goto error;
-        }
         new_size = rpath_limit - rpath;
         if (end - start + 1 > path_max) {
           new_size += end - start + 1;
@@ -229,15 +208,13 @@ static inline char *flexible_realpath(const char *name, char *resolved,
   if (dest > rpath + 1 && dest[-1] == '/') --dest;
   *dest = '\0';
 
-  assert (resolved == NULL || resolved == rpath);
   if (buf) free(buf);
   if (extra_buf) free(extra_buf);
   return rpath;
 
 error:
-  assert (resolved == NULL || resolved == rpath);
   if (buf) free(buf);
   if (extra_buf) free(extra_buf);
-  if (resolved == NULL) free(rpath);
+  free(rpath);
   return NULL;
 }

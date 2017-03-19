@@ -42,7 +42,7 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
 
 static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, ".");
-  char *abspath = flexible_realpath(rawpath, NULL, h, look_for_file_or_directory, false);
+  char *abspath = flexible_realpath(rawpath, h, look_for_file_or_directory, false);
   if (!lookup_in_hash(&h->mkdir, abspath)) {
     insert_hashset(&h->readdir, abspath);
   }
@@ -54,7 +54,7 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
                                      rw_status *h, enum last_symlink_handling lh,
                                      bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
+  char *abspath = flexible_realpath(rawpath, h, lh, failure_is_okay);
   struct stat st;
   if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
     insert_hashset(&h->read, abspath);
@@ -67,7 +67,7 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
                                       rw_status *h, enum last_symlink_handling lh,
                                       bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
+  char *abspath = flexible_realpath(rawpath, h, lh, failure_is_okay);
   insert_hashset(&h->written, abspath);
   delete_from_hashset(&h->read, abspath);
   free(rawpath);

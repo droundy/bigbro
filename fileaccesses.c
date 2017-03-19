@@ -37,13 +37,13 @@ int main(int argc, char **argv) {
   // the following are to test the corner and error cases of
   // flexible_realpath.
 #ifndef _WIN32
-  assert(! flexible_realpath(NULL, NULL, NULL,
+  assert(! flexible_realpath(NULL, NULL,
                              look_for_file_or_directory, true));
-  assert(! flexible_realpath("", NULL, NULL,
+  assert(! flexible_realpath("", NULL,
                              look_for_file_or_directory, true));
   // the following should give null because flexible_realpath wants an
   // absolute path.
-  assert(! flexible_realpath("tmp", NULL, NULL,
+  assert(! flexible_realpath("tmp", NULL,
                              look_for_file_or_directory, true));
 #endif
 
