@@ -1,4 +1,6 @@
-* [linux](linux.html)
-* [windows](windows.html)
+* [semantics](semantics.html)
+* [coverage (gcovr)](coverage.html)
+* [coverage (lcov)](coverage/index.html)
+* [coverage (codecov)](https://codecov.io/gl/facio/bigbro)
 
 
