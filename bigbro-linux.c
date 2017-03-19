@@ -290,7 +290,6 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         flags = get_syscall_arg(regs, 2);
         dirfd = get_syscall_arg(regs, 0);
       }
-      assert(arg); // should not be possible for open to succeed with null path
       if (flags & O_DIRECTORY) {
         if (sc == sc_open) {
           debugprintf("%d: opendir('%s') -> %d\n", child, arg, fd);
@@ -557,18 +556,20 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       int dirfd = -1;
+      int todirfd = -1;
       if (sc == sc_link) {
         from = read_a_string(child, get_syscall_arg(regs, 0));
         to = read_a_string(child, get_syscall_arg(regs, 1));
       } else {
         from = read_a_string(child, get_syscall_arg(regs, 1));
-        to = read_a_string(child, get_syscall_arg(regs, 2));
+        to = read_a_string(child, get_syscall_arg(regs, 3));
         dirfd = get_syscall_arg(regs, 0);
+        todirfd = get_syscall_arg(regs, 2);
       }
       if (to && from) {
         debugprintf("%d: link('%s', '%s') -> %d\n", child, from, to, retval);
         read_file_at(child, dirfd, from, h);
-        write_file_at(child, dirfd, to, h);
+        write_file_at(child, todirfd, to, h);
       }
       free(from);
       free(to);

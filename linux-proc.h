@@ -1,8 +1,6 @@
 #include "realpath.h"
 #include "fcntl.h" // for AT_FDCWD
 
-#include <assert.h>
-
 static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   if (!path) return NULL;
   /* printf("path: %s\n", path); */
@@ -27,16 +25,14 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
   char *cwd = malloc(PATH_MAX);
   int linklen = readlink(proc_fd, cwd, PATH_MAX);
   if (linklen < 0) {
-    fprintf(stderr, "unable to determine cwd from %s i.e. fd %d!!!\n",
-            proc_fd, fd);
+    fprintf(stderr, "unable to determine cwd from %s i.e. fd %d!!! (%s)\n",
+            proc_fd, fd, strerror(errno));
     return NULL;
   }
   cwd[linklen] = 0;
   /* printf("cwd(%d): %s (from %s)\n", fd, cwd, proc_fd); */
-  if (strlen(cwd) + strlen(path) + 4 > PATH_MAX) {
-    fprintf(stderr, "too long a path: '%s/%s'\n", cwd, path);
-    return NULL;
-  }
+  int total_len = strlen(cwd) + strlen(path) + 4;
+  if (total_len > PATH_MAX) cwd = realloc(cwd, total_len);
   strcat(cwd, "/");
   strcat(cwd, path);
   free(proc_fd);
@@ -46,9 +42,7 @@ static inline char *interpret_path_at(pid_t pid, int fd, const char *path) {
 
 static inline void read_dir_fd(pid_t pid, int dirfd, rw_status *h) {
   char *rawpath = interpret_path_at(pid, dirfd, ".");
-  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, look_for_file_or_directory, false);
-  assert(abspath);
   if (!lookup_in_hash(&h->mkdir, abspath)) {
     insert_hashset(&h->readdir, abspath);
   }
@@ -60,15 +54,7 @@ static inline void read_something_at(pid_t pid, int dirfd, const char *path,
                                      rw_status *h, enum last_symlink_handling lh,
                                      bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  if (failure_is_okay && !rawpath) return;
-  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
-  if (failure_is_okay && !abspath) {
-    free(rawpath);
-    return;
-  }
-  assert(abspath);
-  /* printf("abspath: %s\n", abspath); */
   struct stat st;
   if (!lookup_in_hash(&h->written, abspath) && !stat(abspath, &st) && S_ISREG(st.st_mode)) {
     insert_hashset(&h->read, abspath);
@@ -81,9 +67,7 @@ static inline void write_something_at(pid_t pid, int dirfd, const char *path,
                                       rw_status *h, enum last_symlink_handling lh,
                                       bool failure_is_okay) {
   char *rawpath = interpret_path_at(pid, dirfd, path);
-  assert(rawpath);
   char *abspath = flexible_realpath(rawpath, NULL, h, lh, failure_is_okay);
-  assert(abspath);
   insert_hashset(&h->written, abspath);
   delete_from_hashset(&h->read, abspath);
   free(rawpath);

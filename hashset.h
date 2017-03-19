@@ -26,6 +26,7 @@ static inline unsigned long hash_function(const char *strinput) {
 
 /* Find the data stored under str in the hash */
 static struct hash_entry * lookup_in_hash(hashset *hash, const char *str) {
+  if (!str) return NULL;
   unsigned long h = hash_function(str) % hash->size;
   struct hash_entry *e = hash->table[h];
   while (e) {
@@ -37,6 +38,7 @@ static struct hash_entry * lookup_in_hash(hashset *hash, const char *str) {
 }
 
 static inline void insert_hashset(hashset *hash, const char *key) {
+  if (!key) return;
   if (lookup_in_hash(hash, key)) return;
   struct hash_entry *e = malloc(sizeof(struct hash_entry)+strlen(key)+1);
   e->key = ((char *)e) + sizeof(struct hash_entry);
@@ -57,6 +59,7 @@ static inline void insert_hashset(hashset *hash, const char *key) {
 }
 
 static inline void delete_from_hashset(hashset *hash, const char *key) {
+  if (!key) return;
   struct hash_entry *e = lookup_in_hash(hash, key);
   if (e) {
     struct hash_entry *x = hash->first;
