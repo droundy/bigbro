@@ -314,67 +314,54 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       int dirfd = -1;
       if (sc == sc_unlink) {
         arg = read_a_string(child, get_syscall_arg(regs, 0));
-        if (arg) debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+        debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
       } else {
         arg = read_a_string(child, get_syscall_arg(regs, 1));
         dirfd = get_syscall_arg(regs, 0);
-        if (arg) debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
-                             dirfd, arg, retval);
+        debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
+                    dirfd, arg, retval);
       }
-      char *rawpath = interpret_path_at(child, dirfd, arg);
+      char *abspath = flexible_realpath_at(child, dirfd, arg, h, look_for_symlink);
       free(arg);
-      char *abspath = flexible_realpath(rawpath, h, look_for_symlink);
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
-      free(rawpath);
       free(abspath);
     }
   } else if (sc == sc_creat || sc == sc_truncate ||
              sc == sc_utime || sc == sc_utimes) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 0));
     int retval = wait_for_return_value(child, h);
-    if (arg) {
-      debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-      if (retval >= 0) write_file_at(child, -1, arg, h);
-      free(arg);
-    }
+
+    debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+    if (retval >= 0) write_file_at(child, -1, arg, h);
+    free(arg);
   } else if (sc == sc_utimensat) {
     // utimensat updates the time stamp of a file
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
-    if (arg) {
-      int dirfd = get_syscall_arg(regs,0);
-      int flags = get_syscall_arg(regs,3);
-      int retval = wait_for_return_value(child, h);
-      debugprintf("%d: %s(%d, '%s', ? , %d) -> %d\n", child, name,
-                  dirfd, arg, flags, retval);
-      if (retval >= 0) {
-        if (flags == AT_SYMLINK_NOFOLLOW) {
-          write_link_at(child, dirfd, arg, h);
-        } else {
-          write_file_at(child, dirfd, arg, h);
-        }
+
+    int dirfd = get_syscall_arg(regs,0);
+    int flags = get_syscall_arg(regs,3);
+    int retval = wait_for_return_value(child, h);
+    debugprintf("%d: %s(%d, '%s', ? , %d) -> %d\n", child, name,
+                dirfd, arg, flags, retval);
+    if (retval >= 0) {
+      if (flags == AT_SYMLINK_NOFOLLOW) {
+        write_link_at(child, dirfd, arg, h);
+      } else {
+        write_file_at(child, dirfd, arg, h);
       }
-      free(arg);
-    } else {
-      int retval = wait_for_return_value(child, h);
-      debugprintf("%d: %s(%d, NULL) -> %d\n", child, name,
-                  (int)get_syscall_arg(regs,0), retval);
     }
+    free(arg);
   } else if (sc == sc_futimesat) {
     char *arg = read_a_string(child, get_syscall_arg(regs, 1));
-    if (arg) {
-      int dirfd = get_syscall_arg(regs,0);
-      int retval = wait_for_return_value(child, h);
-      debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
-                  dirfd, arg, retval);
-      if (retval >= 0) write_file_at(child, dirfd, arg, h);
-      free(arg);
-    } else {
-      int retval = wait_for_return_value(child, h);
-      debugprintf("%d: %s(%d, NULL) -> %d\n", child, name,
-                  (int)get_syscall_arg(regs,0), retval);
-    }
+
+    int dirfd = get_syscall_arg(regs,0);
+    int retval = wait_for_return_value(child, h);
+    debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
+                dirfd, arg, retval);
+    if (retval >= 0) write_file_at(child, dirfd, arg, h);
+    free(arg);
   } else if (sc == sc_lstat || sc == sc_lstat64 ||
              sc == sc_readlink || sc == sc_readlinkat) {
     char *arg;
@@ -387,21 +374,19 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         arg = read_a_string(child, get_syscall_arg(regs, 1));
         dirfd = get_syscall_arg(regs, 0);
       }
-      if (arg) {
-        debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-        read_link_at(child, dirfd, arg, h);
-      }
+
+      debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+      read_link_at(child, dirfd, arg, h);
       free(arg);
     }
   } else if (sc == sc_stat || sc == sc_stat64) {
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       char *arg = read_a_string(child, get_syscall_arg(regs, 0));
-      if (arg) {
-        debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-        read_file_at(child, -1, arg, h);
-        free(arg);
-      }
+
+      debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+      read_file_at(child, AT_FDCWD, arg, h);
+      free(arg);
     }
   } else if (sc == sc_mkdir || sc == sc_mkdirat) {
     int retval = wait_for_return_value(child, h);
@@ -414,15 +399,11 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         dirfd = get_syscall_arg(regs, 0);
         arg = read_a_string(child, get_syscall_arg(regs, 1));
       }
-      if (arg) {
-        debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-        char *rawpath = interpret_path_at(child, dirfd, arg);
-        char *abspath = flexible_realpath(rawpath, h, look_for_file_or_directory);
-        insert_hashset(&h->mkdir, abspath);
-        free(rawpath);
-        free(abspath);
-        free(arg);
-      }
+      debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
+      char *abspath = flexible_realpath_at(child, dirfd, arg, h, look_for_file_or_directory);
+      insert_hashset(&h->mkdir, abspath);
+      free(abspath);
+      free(arg);
     }
   } else if (sc == sc_symlink || sc == sc_symlinkat) {
     char *arg, *target;
@@ -438,14 +419,13 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         arg = read_a_string(child, get_syscall_arg(regs, 2));
       }
       debugprintf("%d: %s(%p %p %d)\n", child, name, arg, target, dirfd);
-      if (arg && target) {
-        if (sc == sc_symlink) {
-          debugprintf("%d: %s('%s', '%s')\n", child, name, target, arg);
-        } else {
-          debugprintf("%d: %s('%s', %d, '%s')\n", child, name, target, dirfd, arg);
-        }
-        write_link_at(child, dirfd, arg, h);
+
+      if (sc == sc_symlink) {
+        debugprintf("%d: %s('%s', '%s')\n", child, name, target, arg);
+      } else {
+        debugprintf("%d: %s('%s', %d, '%s')\n", child, name, target, dirfd, arg);
       }
+      write_link_at(child, dirfd, arg, h);
       free(arg);
       free(target);
     }
@@ -458,10 +438,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       arg = read_a_string(child, get_syscall_arg(regs, 1));
       dirfd = get_syscall_arg(regs, 0);
     }
-    if (arg && strlen(arg)) {
-      debugprintf("%d: %s('%s')\n", child, name, arg);
-      maybe_read_file_at(child, dirfd, arg, h);
-    }
+
+    debugprintf("%d: %s('%s')\n", child, name, arg);
+    maybe_read_file_at(child, dirfd, arg, h);
     free(arg);
   } else if (sc == sc_rename || sc == sc_renameat || sc == sc_renameat2) {
     char *from, *to;
@@ -473,13 +452,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       from = read_a_string(child, get_syscall_arg(regs, 1));
       dirfd = get_syscall_arg(regs, 0);
     }
-    if (from) {
-      char *rawpath = interpret_path_at(child, dirfd, from);
-      char *abspath = flexible_realpath(rawpath, h, look_for_symlink);
-      free(rawpath);
-      free(from);
-      from = abspath;
-    }
+    char *abspath = flexible_realpath_at(child, dirfd, from, h, look_for_symlink);
+    free(from);
+    from = abspath;
     int retval = wait_for_return_value(child, h);
     if (retval == 0) {
       int tofd = AT_FDCWD;
@@ -490,11 +465,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         to = read_a_string(child, get_syscall_arg(regs, 3));
       }
       if (to && from) {
-        char *rawto = interpret_path_at(child, tofd, to);
-        char *absto = flexible_realpath(rawto, h, look_for_symlink);
+        char *absto = flexible_realpath_at(child, tofd, to, h, look_for_symlink);
         free(to);
         to = absto;
-        free(rawto);
         debugprintf("%d: %s('%s', '%s') -> %d\n", child, name, from, to, retval);
 
         struct stat path_stat;
@@ -594,12 +567,9 @@ static int save_syscall_access(pid_t child, rw_status *h) {
     /* not actually a file, but this gets symlinks in the chdir path */
     maybe_read_file_at(child, -1, arg, h);
     int retval = wait_for_return_value(child, h);
-    if (arg) {
-      debugprintf("%d: chdir(%s) -> %d\n", child, arg, retval);
-      free(arg);
-    } else {
-      debugprintf("%d: chdir(NULL) -> %d\n", child, retval);
-    }
+
+    debugprintf("%d: chdir(%s) -> %d\n", child, arg, retval);
+    free(arg);
   }
 
   free(regs);
