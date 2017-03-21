@@ -580,24 +580,9 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char **envp,
            const char *cmdline,
            char ***read_from_directories_out,
+           char ***mkdir_directories,
            char ***read_from_files_out,
            char ***written_to_files_out) {
-  char **mkdir_directories = NULL;
-  int retval = bigbro_with_mkdir(workingdir, child_ptr, stdoutfd, stderrfd,
-                                 envp, cmdline,
-                                 read_from_directories_out, &mkdir_directories,
-                                 read_from_files_out, written_to_files_out);
-  free(mkdir_directories);
-  return retval;
-}
-
-int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
-                      int stdoutfd, int stderrfd, char **envp,
-                      const char *cmdline,
-                      char ***read_from_directories_out,
-                      char ***mkdir_directories,
-                      char ***read_from_files_out,
-                      char ***written_to_files_out) {
   pid_t firstborn = fork();
   if (firstborn == -1) {
     // Not sure what to do in case of fork error...

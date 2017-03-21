@@ -44,6 +44,9 @@
    with stat). Note that if the file is renamed or written to after
    being read, it is not listed as having been read.
 
+   *mkdir_directories is where we store a pointer to an array holding
+  the paths of directories we have created.
+
    *written_to_files is where we store the pointer to the array
    holding the paths of files that were written to (e.g. with
    open for writing, or with truncate).
@@ -70,11 +73,6 @@ static const bigbro_fd_t invalid_bigbro_fd = -1;
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
            bigbro_fd_t stdoutfd, bigbro_fd_t stderrfd, char *envp[],
-           const char *commandline, char ***read_from_directories,
+           const char *commandline,
+           char ***read_from_directories, char ***mkdir_directories,
            char ***read_from_files, char ***written_to_files);
-
-int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
-                      bigbro_fd_t stdoutfd, bigbro_fd_t stderrfd, char *envp[],
-                      const char *commandline,
-                      char ***read_from_directories, char ***mkdir_directories,
-                      char ***read_from_files, char ***written_to_files);

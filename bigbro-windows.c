@@ -37,20 +37,10 @@ static inline char *copy_string(char *dest, const char *input) {
   return dest;
 }
 
-int bigbro_with_mkdir(const char *workingdir, pid_t *child_ptr,
-                      HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
-                      const char *cmdline,
-                      char ***read_from_directories, char ***mkdir_directories,
-                      char ***read_from_files, char ***written_to_files) {
-  *mkdir_directories = malloc(sizeof(char *));
-  **mkdir_directories = 0;
-  return bigbro(workingdir, child_ptr, stdoutfd, stderrfd, envp, cmdline,
-                read_from_directories, read_from_files, written_to_files);
-}
-
 int bigbro(const char *workingdir, pid_t *child_ptr,
            HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
-           const char *cmdline, char ***read_from_directories,
+           const char *cmdline,
+           char ***read_from_directories, char ***mkdir_directories,
            char ***read_from_files, char ***written_to_files) {
   // The following ensure that in case of error we return appropriate
   // pointers.
@@ -60,6 +50,8 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   **read_from_directories = 0;
   *written_to_files = malloc(sizeof(char *));
   **written_to_files = 0;
+  *mkdir_directories = malloc(sizeof(char *));
+  **mkdir_directories = 0;
   create_dlls();
   struct queue q;
   const char *shm_name = "stupid"; // fixme: need to generate unique name
