@@ -11,6 +11,7 @@ build_script:
 
 test_script:
   - python -u run-windows-tests.py
+  - python -u tests/noninterference/test.py
 
 branches:
   only:
