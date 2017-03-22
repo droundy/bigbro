@@ -22,6 +22,8 @@ from __future__ import print_function
 
 import glob, os, importlib, sys, time, shutil
 
+import tests.noninterference.test as noninterference
+
 if sys.version_info < (3,2):
     print('Please run this script with python 3.2 or newer.', sys.version_info)
     exit(1)
@@ -333,6 +335,10 @@ if have_lcov:
 if have_gcovr:
     assert not os.system('gcovr -k -r . --exclude-unreachable-branches --html --html-details -o web/coverage.html')
     assert not os.system('gcovr -r . --exclude-unreachable-branches')
+
+p,s,f = noninterference.run_all_tests()
+numfailures += f
+numpasses += p
 
 if numfailures > 0:
     print("\nTests FAILED (%d)!!!" % numfailures)
