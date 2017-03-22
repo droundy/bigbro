@@ -1,5 +1,4 @@
 *~
-syscalls/*.h
 *.o
 *.obj
 *.tum
