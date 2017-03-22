@@ -43,14 +43,14 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved) {
     char *shm_name = malloc(50);
     DWORD ret = GetEnvironmentVariable("bigbro_shm", shm_name, 50);
     if (ret == 0) {
-      printf("There is no bigbro_sm environment variable!\n");
+      debugprintf("There is no bigbro_sm environment variable!\n");
       return FALSE;
     } else if (ret >= 50) {
-      printf("There is a long bigbro_pipe environment variable that seems like an attack!\n");
+      debugprintf("There is a long bigbro_pipe environment variable that seems like an attack!\n");
       return FALSE;
     } else {
       if (globalQueueInit(shm_name)) {
-        printf("error with shm opening '%s'!\n", shm_name);
+        debugprintf("error with shm opening '%s'!\n", shm_name);
         return FALSE;
       }
     }

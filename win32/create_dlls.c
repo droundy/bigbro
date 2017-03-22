@@ -11,7 +11,6 @@
 #include "create_dlls.h"
 
 static int write_file(const wchar_t *fname, const unsigned char *content, size_t size) {
-  wprintf(TEXT("Creating file %s\n"), fname);
   SECURITY_DESCRIPTOR sd;
   InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
   HANDLE h = CreateFile(fname, GENERIC_WRITE | GENERIC_EXECUTE,
@@ -21,7 +20,6 @@ static int write_file(const wchar_t *fname, const unsigned char *content, size_t
                         FILE_ATTRIBUTE_NORMAL,// normal file
                         NULL);                // no template
   if (h == INVALID_HANDLE_VALUE) {
-    wprintf(TEXT("unable to create %s\n"), fname);
     return 1;
   }
 
@@ -29,7 +27,7 @@ static int write_file(const wchar_t *fname, const unsigned char *content, size_t
   BOOL success = WriteFile(h, content, size, &dwBytesWritten, NULL);
   CloseHandle(h);
   if (!success) {
-    wprintf(TEXT("Trouble writing to file %s\n"), fname);
+    // wprintf(TEXT("Trouble writing to file %s\n"), fname);
   }
   return !success;
 }

@@ -20,6 +20,7 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include "../errors.h"
 #include "queue.h"
 
 int queueInit(struct queue *q, const char *key) {
@@ -71,7 +72,7 @@ void queueOp(char op, const char *filename) {
   for (uint32_t i=0; i < sz-1; i++) {
     q.buf->data[(write_start+i+1) % bufsize] = filename[i];
   }
-  printf("DEBUG: %s\n", &q.buf->data[write_start]);
+  debugprintf("DEBUG: %s\n", &q.buf->data[write_start]);
 }
 
 void queueOp2(char op, const char *filename1, const char *filename2) {
@@ -90,5 +91,5 @@ void queueOp2(char op, const char *filename1, const char *filename2) {
   for (uint32_t i=0; i < sz2; i++) {
     q.buf->data[(write_start+i+sz1+1) % bufsize] = filename2[i];
   }
-  printf("DEBUG: %s\n", &q.buf->data[write_start]);
+  debugprintf("DEBUG: %s\n", &q.buf->data[write_start]);
 }

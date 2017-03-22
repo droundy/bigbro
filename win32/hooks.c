@@ -74,28 +74,28 @@ static inline char *handlePath(char *dst, HANDLE h) {
   if (len == 0) {
     switch (GetLastError()) {
     case ERROR_INVALID_FUNCTION:
-      printf("error in GetFinalPathNameByHandleW: bad function for handle %p?!\n", h);
+      debugprintf("error in GetFinalPathNameByHandleW: bad function for handle %p?!\n", h);
       break;
     case ERROR_PATH_NOT_FOUND:
-      printf("error in GetFinalPathNameByHandleW: path not found\n");
+      debugprintf("error in GetFinalPathNameByHandleW: path not found\n");
       break;
     case ERROR_NOT_ENOUGH_MEMORY:
-      printf("error in GetFinalPathNameByHandleW: not enough memory\n");
+      debugprintf("error in GetFinalPathNameByHandleW: not enough memory\n");
       break;
     case ERROR_INVALID_HANDLE:
-      printf("error in GetFinalPathNameByHandleW: the handle is invalid\n");
+      debugprintf("error in GetFinalPathNameByHandleW: the handle is invalid\n");
       break;
     case ERROR_INVALID_PARAMETER:
-      printf("error in GetFinalPathNameByHandleW: bad parameter\n");
+      debugprintf("error in GetFinalPathNameByHandleW: bad parameter\n");
       break;
     default:
-      printf("error in GetFinalPathNameByHandleW: i don't understand error %d\n",
+      debugprintf("error in GetFinalPathNameByHandleW: i don't understand error %d\n",
              (int) GetLastError());
     }
     return 0;
   }
   if (len >= PATH_MAX) {
-    printf("error in GetFinalPathNameByHandleW: PATH_MAX was not long enough...\n");
+    debugprintf("error in GetFinalPathNameByHandleW: PATH_MAX was not long enough...\n");
     return 0;
   }
   return utf8PathFromWide(dst, wbuf, len);
@@ -138,19 +138,19 @@ HOOK(NtResumeThread);
 
 static const char fop(ULONG co, ACCESS_MASK am, const char *name) {
   if (co & FILE_DIRECTORY_FILE) {
-    printf("FILE_DIRECTORY_FILE %s\n", name);
+    debugprintf("FILE_DIRECTORY_FILE %s\n", name);
     return 0;
   } else if (co & FILE_DELETE_ON_CLOSE) {
-    printf("FILE_DELETE_ON_CLOSE %s\n", name);
+    debugprintf("FILE_DELETE_ON_CLOSE %s\n", name);
     return 0;
   } else if (am & GENERIC_WRITE) {
-    printf("GENERIC_WRITE %s\n", name);
+    debugprintf("GENERIC_WRITE %s\n", name);
     return WRITE_OP;
   } else if (am & GENERIC_READ) {
-    printf("GENERIC_READ %s\n", name);
+    debugprintf("GENERIC_READ %s\n", name);
     return READ_OP;
   }
-  printf("what fop ??? %s\n", name);
+  debugprintf("what fop ??? %s\n", name);
   return 0;
 }
 
@@ -171,15 +171,15 @@ static NTSTATUS NTAPI hNtCreateFile(PHANDLE ph,
     char buf[4096];
     char *p = handlePath(buf, *ph);
     if (!p) {
-      printf("handlePath gives a null path pointer!\n");
+      debugprintf("handlePath gives a null path pointer!\n");
       return r;
     }
     if (p) {
-      printf("I am in hNtCreateFile with string %s and handle %p!\n", p,  *ph);
+      debugprintf("I am in hNtCreateFile with string %s and handle %p!\n", p,  *ph);
       char op = fop(co, am, p);
       if (op) queueOp(op, p);
     } else {
-      printf("I am in hNtCreateFile with string (nil) and handle %p!\n", *ph);
+      debugprintf("I am in hNtCreateFile with string (nil) and handle %p!\n", *ph);
     }
   }
   return r;
@@ -192,24 +192,24 @@ static NTSTATUS NTAPI hNtOpenFile(PHANDLE ph,
                                   ULONG sa,
                                   ULONG oo) {
   NTSTATUS r;
-  printf("am in hNtOpenFile!\n");
+  debugprintf("am in hNtOpenFile!\n");
   r = oNtOpenFile(ph, am, oa, sb, sa, oo);
   if (NT_SUCCESS(r)) {
     char buf[4096];
     char *p = handlePath(buf, *ph);
     if (!p) {
-      printf("handlePath gives a null path pointer!\n");
+      debugprintf("handlePath gives a null path pointer!\n");
       return r;
     }
     if (p) {
-      printf("I am in hNtOpenFile with string %s and handle %p!\n", p, *ph);
+      debugprintf("I am in hNtOpenFile with string %s and handle %p!\n", p, *ph);
       char op = fop(oo, am, p);
       if (op) queueOp(op, p);
     } else {
-      printf("I am in hNtOpenFile with string (nil) and handle %p!\n", *ph);
+      debugprintf("I am in hNtOpenFile with string (nil) and handle %p!\n", *ph);
     }
   } else {
-    printf("no success in hNtOpenFile\n");
+    debugprintf("no success in hNtOpenFile\n");
   }
   return r;
 }
@@ -229,7 +229,7 @@ static NTSTATUS NTAPI hNtSetInformationFile(HANDLE fh,
                                             PVOID fi,
                                             ULONG ln,
                                             FILE_INFORMATION_CLASS ic) {
-  printf("am in hNtSetInformationFile!\n");
+  debugprintf("am in hNtSetInformationFile!\n");
   NTSTATUS r;
   char buf[PATH_MAX];
   char buf2[PATH_MAX];
@@ -270,7 +270,7 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
                                               PVOID fi,
                                               ULONG ln,
                                               FILE_INFORMATION_CLASS ic) {
-  printf("am in hNtQueryInformationFile with handle %p!\n", fh);
+  debugprintf("am in hNtQueryInformationFile with handle %p!\n", fh);
   NTSTATUS r;
   char buf[PATH_MAX];
   r = oNtQueryInformationFile(fh, sb, fi, ln, ic);
@@ -289,7 +289,7 @@ static NTSTATUS NTAPI hNtQueryInformationFile(HANDLE fh,
 
 
 static NTSTATUS NTAPI hNtQueryFullAttributesFile(POBJECT_ATTRIBUTES oa, PFILE_NETWORK_OPEN_INFORMATION oi) {
-  printf("am in hNtQueryFullAttributesFile!\n");
+  debugprintf("am in hNtQueryFullAttributesFile!\n");
   NTSTATUS r;
   r = oNtQueryFullAttributesFile(oa, oi);
   if (NT_SUCCESS(r)) {

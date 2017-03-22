@@ -50,8 +50,5 @@ int init_dll_paths() {
   if (pathcat(helper_filename, path, helper_wstr)) return 1;
   if (pathcat(dll32_filename, path, dll32_wstr)) return 1;
   if (pathcat(dll64_filename, path, dll64_wstr)) return 1;
-  /* wprintf(TEXT("helper_filename is %s\n"), helper_filename); */
-  /* wprintf(TEXT("dll32_filename is %s\n"), dll32_filename); */
-  /* wprintf(TEXT("dll64_filename is %s\n"), dll64_filename); */
   return 0;
 }
