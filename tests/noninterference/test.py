@@ -25,8 +25,11 @@ import os, glob, subprocess, importlib
 def same_output(cmd):
     try:
         with open(os.devnull, 'w') as devnull:
-            ver = subprocess.check_output(['git', '--version'], stderr=devnull)
-            ver2 = subprocess.check_output(['./bigbro', 'git', '--version'], stderr=devnull)
+            ver = subprocess.check_output(cmd, stderr=devnull)
+            ver2 = subprocess.check_output(['./bigbro']+cmd, stderr=devnull)
+        if ver != ver2:
+            print('command:', cmd)
+            print('alone: %s\nbigbro: %s' % (ver, ver2))
         return ver == ver2
     except:
         return None
