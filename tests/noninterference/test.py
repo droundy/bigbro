@@ -40,6 +40,7 @@ def run_all_tests():
     num_skipped = 0
 
     alltests = glob.glob('tests/noninterference/*.py')
+    print('alltests are', alltests)
     alltests.remove('tests/noninterference/test.py')
     for t in alltests:
         tname = t[len('tests/noninterference/'):-3]
