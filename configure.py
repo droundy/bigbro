@@ -199,3 +199,12 @@ C .sass-cache
 ''')
 else:
     print("# no sass, so we won't build style.css")
+
+if is_in_path('doxygen'):
+    print('''
+| doxygen build/Doxyfile
+> web/doxy/bigbro_8h.html
+
+| cp web/doxy/bigbro_8h.html web/documentation.html
+< web/doxy/bigbro_8h.html
+''')

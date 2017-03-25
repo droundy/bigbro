@@ -35,3 +35,4 @@ web/style.css.map
 *.sparse
 sparse.fac
 syscalls/linux.h
+web/doxy/

@@ -576,6 +576,14 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   return 0;
 }
 
+
+///////////////////////////////////////////////////////////////////////
+/// \fn bigbro
+/// \brief run a command and track its file accesses
+/// \param workingdir the directory
+/// \return a new image as an QImage.
+/////////////////////////////////////////////////////////////////////////
+
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char **envp,
            const char *cmdline,

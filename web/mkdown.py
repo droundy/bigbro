@@ -79,6 +79,26 @@ def mkdown(mdfile, htfile = None):
     #f.write(myhtml)
     f.close()
 
+def improve_header(headerin, headerout):
+    htfile = headerout
+
+    with open('web/sidebar.md', 'r') as f:
+        sidebar = '<nav>'+mmdd.markdown(f.read(), extensions=['def_list'])+'</nav>'
+
+    with open('web/docnav.md', 'r') as f:
+        docnav = '<nav class="docnav">'+mmdd.markdown(f.read(), extensions=['def_list'])+'</nav>'
+
+    with open(headerin, 'r') as f:
+        templatestr = f.read()
+
+    templatestr = templatestr.replace('$docnav', docnav)
+    templatestr = templatestr.replace('$sidebar', sidebar)
+
+    with open(headerout, 'w') as ff:
+        ff.write(templatestr)
+
+improve_header('build/doxy/header.in.html', 'build/doxy/header.html')
+
 mkdown('README.md', 'web/index.html')
 for f in glob.glob('web/*.md'):
     mkdown(f)
