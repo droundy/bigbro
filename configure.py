@@ -204,6 +204,7 @@ if is_in_path('doxygen'):
     print('''
 | doxygen build/Doxyfile
 > web/doxy/bigbro_8h.html
+< build/doxy/header.html
 
 | cp web/doxy/bigbro_8h.html web/documentation.html
 < web/doxy/bigbro_8h.html
