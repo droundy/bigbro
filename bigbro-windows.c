@@ -227,3 +227,38 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
   /* free_hashset(&written); */
   return dword_return_code;
 }
+
+int bigbro_blind(const char *workingdir, pid_t *child_ptr,
+                 HANDLE stdoutfd, HANDLE stderrfd, char *envp[],
+                 const char *cmdline) {
+
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  memset(&si, 0, sizeof(si));
+  si.cb = sizeof(si);
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  si.hStdError = stderrfd;
+  if (!stderrfd) si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+  si.hStdOutput = stdoutfd;
+  if (!stdoutfd) si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+  si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+  if (!CreateProcess(NULL, (char *)cmdline, NULL, NULL,
+                     TRUE, // we do want to inherit our handle
+                     0, NULL, NULL, &si, &pi)) {
+    return -1;
+  }
+  if (WaitForSingleObject(pi.hThread, INFINITE) != WAIT_OBJECT_0) {
+    printf("funny business in WaitForSingleObject...\n");
+    return -1;
+  }
+  DWORD dword_return_code;
+  if (!GetExitCodeProcess(pi.hProcess, &dword_return_code)) {
+    printf("exit code was hard to get\n");
+    return -1;
+  }
+  if (!CloseHandle(pi.hThread) || !CloseHandle(pi.hProcess)) {
+    return 1;
+  }
+  return dword_return_code;
+}

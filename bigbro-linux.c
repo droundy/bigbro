@@ -577,13 +577,6 @@ static int save_syscall_access(pid_t child, rw_status *h) {
 }
 
 
-///////////////////////////////////////////////////////////////////////
-/// \fn bigbro
-/// \brief run a command and track its file accesses
-/// \param workingdir the directory
-/// \return a new image as an QImage.
-/////////////////////////////////////////////////////////////////////////
-
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char **envp,
            const char *cmdline,
@@ -682,4 +675,53 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     }
   }
   return 0;
+}
+
+int bigbro_blind(const char *workingdir, pid_t *child_ptr,
+                 int stdoutfd, int stderrfd, char **envp,
+                 const char *cmdline) {
+  pid_t firstborn = fork();
+  if (firstborn == -1) {
+    // Not sure what to do in case of fork error...
+  }
+  setpgid(firstborn, firstborn); // causes grandchildren to be killed along with firstborn
+
+  if (firstborn == 0) {
+    if (stdoutfd > 0 || stderrfd > 0) {
+      close(0); // close stdin so programs won't wait on input
+      open("/dev/null", O_RDONLY);
+      if (stdoutfd > 0) {
+        close(1);
+        dup2(stdoutfd, 1);
+      }
+      if (stderrfd > 0) {
+        close(2);
+        dup2(stderrfd, 2);
+      }
+    }
+    if (workingdir && chdir(workingdir) != 0) return -1;
+    char **args = (char **)malloc(4*sizeof(char *));
+    args[0] = "/bin/sh";
+    args[1] = "-c";
+    args[2] = (char *)cmdline;
+    args[3] = NULL;
+    // when envp == 0, we are supposed to inherit our environment.
+    if (!envp) envp = environ;
+    return execve(args[0], args, envp);
+  }
+  *child_ptr = firstborn;
+  int status;
+  waitpid(firstborn, &status, 0);
+  if (WIFEXITED(status)) {
+    // This probably means that tracing with PTRACE_TRACEME didn't
+    // work, since the child should have stopped before exiting.  At
+    // this point there isn't much to do other than return the exit
+    // code.  Presumably we are running under seccomp?
+    return WEXITSTATUS(status);
+  }
+  if (WIFSIGNALED(status)) {
+    return -WTERMSIG(status);
+  }
+  debugprintf("I do not understand what is going on here not exited and not signalled?!\n");
+  return -1;
 }
