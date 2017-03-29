@@ -473,53 +473,57 @@ static int save_syscall_access(pid_t child, rw_status *h) {
         struct stat path_stat;
         if (!fstatat(tofd, to, &path_stat, AT_SYMLINK_NOFOLLOW)
             && S_ISDIR(path_stat.st_mode)) {
-          debugprintf("the thingy is a directory\n");
-          // it is a directory, so we need to generate write events
-          // for children, and remove events for children... yuck.
-          char *fromslash = malloc(strlen(from)+2);
-          strcpy(fromslash, from);
-          strcat(fromslash, "/");
-          char *toslash = malloc(strlen(to)+2);
-          strcpy(toslash, to);
-          strcat(toslash, "/");
-          int fromslashlen = strlen(fromslash);
-          int toslashlen = strlen(toslash);
-          for (struct hash_entry *e = h->written.first; e; e = e->next) {
-            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
-              strcpy(newk, toslash);
-              strcat(newk, e->key + fromslashlen);
-              insert_hashset(&h->written, newk);
-              delete_from_hashset(&h->written, e->key);
+          if (strcmp(to, from) == 0) {
+            debugprintf("a directory renamed onto itself has no effect.\n");
+          } else {
+            debugprintf("the thingy is a directory\n");
+            // it is a directory, so we need to generate write events
+            // for children, and remove events for children... yuck.
+            char *fromslash = malloc(strlen(from)+2);
+            strcpy(fromslash, from);
+            strcat(fromslash, "/");
+            char *toslash = malloc(strlen(to)+2);
+            strcpy(toslash, to);
+            strcat(toslash, "/");
+            int fromslashlen = strlen(fromslash);
+            int toslashlen = strlen(toslash);
+            for (struct hash_entry *e = h->written.first; e; e = e->next) {
+              if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+                char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+                strcpy(newk, toslash);
+                strcat(newk, e->key + fromslashlen);
+                insert_hashset(&h->written, newk);
+                delete_from_hashset(&h->written, e->key);
+              }
             }
-          }
-          for (struct hash_entry *e = h->mkdir.first; e; e = e->next) {
-            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
-              strcpy(newk, toslash);
-              strcat(newk, e->key + fromslashlen);
-              insert_hashset(&h->mkdir, newk);
-              delete_from_hashset(&h->mkdir, e->key);
+            for (struct hash_entry *e = h->mkdir.first; e; e = e->next) {
+              if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+                char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+                strcpy(newk, toslash);
+                strcat(newk, e->key + fromslashlen);
+                insert_hashset(&h->mkdir, newk);
+                delete_from_hashset(&h->mkdir, e->key);
+              }
             }
-          }
-          for (struct hash_entry *e = h->read.first; e; e = e->next) {
-            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-              char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
-              strcpy(newk, toslash);
-              strcat(newk, e->key + fromslashlen);
-              insert_hashset(&h->written, newk);
-              delete_from_hashset(&h->read, e->key);
+            for (struct hash_entry *e = h->read.first; e; e = e->next) {
+              if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+                char *newk = malloc(strlen(e->key) - fromslashlen + toslashlen + 1);
+                strcpy(newk, toslash);
+                strcat(newk, e->key + fromslashlen);
+                insert_hashset(&h->written, newk);
+                delete_from_hashset(&h->read, e->key);
+              }
             }
-          }
-          for (struct hash_entry *e = h->readdir.first; e; e = e->next) {
-            if (strncmp(e->key, fromslash, fromslashlen) == 0) {
-              delete_from_hashset(&h->readdir, e->key);
+            for (struct hash_entry *e = h->readdir.first; e; e = e->next) {
+              if (strncmp(e->key, fromslash, fromslashlen) == 0) {
+                delete_from_hashset(&h->readdir, e->key);
+              }
             }
+            delete_from_hashset(&h->mkdir, from);
+            insert_hashset(&h->mkdir, to);
+            free(fromslash);
+            free(toslash);
           }
-          delete_from_hashset(&h->mkdir, from);
-          insert_hashset(&h->mkdir, to);
-          free(fromslash);
-          free(toslash);
         } else {
           debugprintf("the thing is not a directory!\n");
           delete_from_hashset(&h->read, from);
