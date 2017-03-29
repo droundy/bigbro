@@ -522,11 +522,14 @@ static int save_syscall_access(pid_t child, rw_status *h) {
           free(toslash);
         } else {
           debugprintf("the thing is not a directory!\n");
-          write_link_at(child, tofd, to, h);
           delete_from_hashset(&h->read, from);
           delete_from_hashset(&h->readdir, from);
           delete_from_hashset(&h->written, from);
           delete_from_hashset(&h->mkdir, from);
+          // WARNING: it is important for write_link_at to be last
+          // here, since we may be renaming a file onto itself, in
+          // which case we could otherwise remove it from written!
+          write_link_at(child, tofd, to, h);
         }
       }
       free(to);
