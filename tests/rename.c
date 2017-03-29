@@ -7,5 +7,10 @@ int main(void) {
   fprintf(stderr, "about to rename\n");
   int returncode = rename("tmp/foodle", "tmp/barbaz");
   fprintf(stderr, "rename gives %d\n", returncode);
-  return 0;
+
+  f = fopen("tmp/silly-file", "a");
+  fprintf(f, "hi there!\n");
+  fclose(f);
+  rename("tmp/silly-file", "tmp/silly-file");
+return 0;
 }
