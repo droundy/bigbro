@@ -209,3 +209,18 @@ if is_in_path('doxygen'):
 | cp web/doxy/bigbro_8h.html web/documentation.html
 < web/doxy/bigbro_8h.html
 ''')
+
+if is_in_path('cargo'):
+        print('''
+| cargo build
+< syscalls/linux.h
+c ~
+c .tum
+c .pyc
+C bench
+C tests
+C web
+''')
+else:
+    print('# no cargo, so cannot build using rust')
+
