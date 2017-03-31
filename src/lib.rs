@@ -82,18 +82,19 @@ impl BigBro for std::process::Command {
         let exitcode = unsafe {
             private::bigbro_process(child.id() as c_int, &mut rd, &mut md, &mut rf, &mut wf)
         };
-        let mut status: Status;
-        status.status = std::process::ExitStatus::from_raw(exitcode);
-        status.read_from_directories = null_c_array_to_osstr(rd as *const *const i8);
-        status.read_from_files = null_c_array_to_osstr(rf as *const *const i8);
-        status.written_to_files = null_c_array_to_osstr(wf as *const *const i8);
-        status.mkdir_directories = null_c_array_to_osstr(md as *const *const i8);
+        let status = Status {
+            status: std::process::ExitStatus::from_raw(exitcode),
+            read_from_directories: null_c_array_to_osstr(rd as *const *const i8),
+            read_from_files: null_c_array_to_osstr(rf as *const *const i8),
+            written_to_files: null_c_array_to_osstr(wf as *const *const i8),
+            mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
+        };
         unsafe {
             libc::free(rd as *mut libc::c_void);
             libc::free(md as *mut libc::c_void);
             libc::free(rf as *mut libc::c_void);
             libc::free(wf as *mut libc::c_void);
         }
-        unimplemented!()
+        Ok(status)
     }
 }
