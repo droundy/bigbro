@@ -212,7 +212,7 @@ if is_in_path('doxygen'):
 
 if is_in_path('cargo'):
         print('''
-| cargo build
+| cargo build && cargo doc
 < syscalls/linux.h
 c ~
 c .tum
@@ -220,6 +220,9 @@ c .pyc
 C bench
 C tests
 C web
+
+| cp -a target/doc web/
+> web/doc/bigbro/index.html
 ''')
 else:
     print('# no cargo, so cannot build using rust')
