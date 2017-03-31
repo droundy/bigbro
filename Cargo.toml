@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["daveroundy@gmail.com"]
 build = "build.rs"
 
+[lib]
+name = "bigbro"
+path = "src/lib.rs"
+
+[[bin]]
+name = "test-bigbro"
+path = "src/bin.rs"
+
 [dependencies]
 
 libc = "^0.2"
