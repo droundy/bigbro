@@ -32,7 +32,6 @@ pages:
     - ./fac
     - cd ..
     - fac/fac
-    - mv target/doc web/
     - mv web public
   artifacts:
     paths:
