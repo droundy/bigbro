@@ -583,6 +583,74 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   return 0;
 }
 
+void bigbro_before_exec(void) {
+  if (ptrace(PTRACE_TRACEME)) {
+    // UNABLE TO USE ptrace! This probably means seccomp is in use
+    // through docker or the like, and means bigbro won't work at
+    // all.  Currently, bigbro ignores this situation, but avoid
+    // stopping here, since if we stop we won't be able to restart
+    // using ptrace.  Perhaps we should return with an error?
+    fprintf(stderr,
+            "Unable to trace child process, perhaps seccomp too strict?!\n");
+  } else {
+    kill(getpid(), SIGSTOP);
+  }
+}
+
+
+int bigbro_process(pid_t child,
+                   char ***read_from_directories_out,
+                   char ***mkdir_directories,
+                   char ***read_from_files_out,
+                   char ***written_to_files_out) {
+  int status;
+  waitpid(child, &status, 0);
+  if (WIFEXITED(status)) {
+    // This probably means that tracing with PTRACE_TRACEME didn't
+    // work, since the child should have stopped before exiting.  At
+    // this point there isn't much to do other than return the exit
+    // code.  Presumably we are running under seccomp?
+    return WEXITSTATUS(status);
+  }
+  ptrace(PTRACE_SETOPTIONS, child, 0, my_ptrace_options);
+  if (ptrace(PTRACE_SYSCALL, child, 0, 0)) {
+    // I'm not sure what this error is, but if we can't resume the
+    // process probably we should exit.
+    return -1;
+  }
+
+  rw_status h;
+  init_hashset(&h.read, 1024);
+  init_hashset(&h.readdir, 1024);
+  init_hashset(&h.written, 1024);
+  init_hashset(&h.mkdir, 1024);
+
+  while (1) {
+    pid_t this_child = wait_for_syscall(&h, child);
+    if (this_child <= 0) {
+      debugprintf("Returning with exit value %d\n", -this_child);
+      *read_from_files_out = hashset_to_array(&h.read);
+      *read_from_directories_out = hashset_to_array(&h.readdir);
+      *written_to_files_out = hashset_to_array(&h.written);
+      *mkdir_directories = hashset_to_array(&h.mkdir);
+      free_hashset(&h.read);
+      free_hashset(&h.readdir);
+      free_hashset(&h.written);
+      free_hashset(&h.mkdir);
+      return -this_child;
+    }
+
+    if (save_syscall_access(this_child, &h) == -1) {
+      /* We were unable to read the process's registers.  Assume
+         that this is bad news, and that we should exit.  I'm not
+         sure what else to do here. */
+      return -1;
+    }
+
+    ptrace(PTRACE_SYSCALL, this_child, 0, 0); // ignore return value
+  }
+  return 0;
+}
 
 int bigbro(const char *workingdir, pid_t *child_ptr,
            int stdoutfd, int stderrfd, char **envp,
@@ -611,19 +679,11 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
       }
     }
     if (workingdir && chdir(workingdir) != 0) return -1;
-    if (ptrace(PTRACE_TRACEME)) {
-      // UNABLE TO USE ptrace! This probably means seccomp is in use
-      // through docker or the like, and means bigbro won't work at
-      // all.  Currently, bigbro ignores this situation, but avoid
-      // stopping here, since if we stop we won't be able to restart
-      // using ptrace.  Perhaps we should return with an error?
-      printf("Unable to trace child process, perhaps seccomp too strict?!\n");
-      fflush(stdout);
-      fprintf(stderr,
-              "Unable to trace child process, perhaps seccomp too strict?!\n");
-    } else {
-      kill(getpid(), SIGSTOP);
-    }
+
+    // The following enables ptrace and stops the process so we can
+    // start it below from our own process.
+    bigbro_before_exec();
+
     char **args = (char **)malloc(4*sizeof(char *));
     args[0] = "/bin/sh";
     args[1] = "-c";
@@ -632,56 +692,14 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     // when envp == 0, we are supposed to inherit our environment.
     if (!envp) envp = environ;
     return execve(args[0], args, envp);
-  } else {
-    *child_ptr = firstborn;
-    int status;
-    waitpid(firstborn, &status, 0);
-    if (WIFEXITED(status)) {
-      // This probably means that tracing with PTRACE_TRACEME didn't
-      // work, since the child should have stopped before exiting.  At
-      // this point there isn't much to do other than return the exit
-      // code.  Presumably we are running under seccomp?
-      return WEXITSTATUS(status);
-    }
-    ptrace(PTRACE_SETOPTIONS, firstborn, 0, my_ptrace_options);
-    if (ptrace(PTRACE_SYSCALL, firstborn, 0, 0)) {
-      // I'm not sure what this error is, but if we can't resume the
-      // process probably we should exit.
-      return -1;
-    }
-
-    rw_status h;
-    init_hashset(&h.read, 1024);
-    init_hashset(&h.readdir, 1024);
-    init_hashset(&h.written, 1024);
-    init_hashset(&h.mkdir, 1024);
-
-    while (1) {
-      pid_t child = wait_for_syscall(&h, firstborn);
-      if (child <= 0) {
-        debugprintf("Returning with exit value %d\n", -child);
-        *read_from_files_out = hashset_to_array(&h.read);
-        *read_from_directories_out = hashset_to_array(&h.readdir);
-        *written_to_files_out = hashset_to_array(&h.written);
-        *mkdir_directories = hashset_to_array(&h.mkdir);
-        free_hashset(&h.read);
-        free_hashset(&h.readdir);
-        free_hashset(&h.written);
-        free_hashset(&h.mkdir);
-        return -child;
-      }
-
-      if (save_syscall_access(child, &h) == -1) {
-        /* We were unable to read the process's registers.  Assume
-           that this is bad news, and that we should exit.  I'm not
-           sure what else to do here. */
-        return -1;
-      }
-
-      ptrace(PTRACE_SYSCALL, child, 0, 0); // ignore return value
-    }
   }
-  return 0;
+  // bigbro_process does the heavy lifting of actually tracing the
+  // file accesses.
+  return bigbro_process(firstborn,
+                        read_from_directories_out,
+                        mkdir_directories,
+                        read_from_files_out,
+                        written_to_files_out);
 }
 
 int bigbro_blind(const char *workingdir, pid_t *child_ptr,

@@ -167,3 +167,33 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
 int bigbro_blind(const char *workingdir, pid_t *child_ptr,
                  bigbro_fd_t stdoutfd, bigbro_fd_t stderrfd, char *envp[],
                  const char *commandline);
+
+/**
+
+   \brief Fuction to run after forking but before exec in order to
+   enable a process to be traced by bigbro_process.
+
+   In practice, I don't believe you need actually exec, if you're
+   interested in tracing your own executable, for instance...
+
+ */
+
+void bigbro_before_exec(void);
+
+
+/**
+
+   \brief Track filesystem access from an existing process that has
+   run `bigbro_before_exec`.
+
+   \param child The process ID of the child to be traced.
+
+   The rest of the parameters are the same as those of `bigbro`.
+
+ */
+
+int bigbro_process(pid_t child,
+                   char ***read_from_directories,
+                   char ***mkdir_directories,
+                   char ***read_from_files,
+                   char ***written_to_files);
