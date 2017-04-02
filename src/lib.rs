@@ -17,13 +17,17 @@
 //! ```
 extern crate libc;
 
-use std::ffi::{OsString};
+use std::ffi::{OsStr, OsString, CString};
 use std::io;
 use libc::{c_int, c_char};
 
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 
-use std::os::unix::ffi::{ OsStrExt };
+use std::os::unix::ffi::{ OsStrExt, OsStringExt };
+
+fn cstr(x: &OsStr) -> CString {
+    CString::new(x.as_bytes()).unwrap()
+}
 
 mod private {
     use libc::c_char;
@@ -131,6 +135,77 @@ fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<O
     v.into_iter().collect()
 }
 
+pub struct Command {
+    argv: Vec<CString>,
+    envs: Option<std::collections::HashMap<CString, CString>>,
+    workingdir: Option<std::path::PathBuf>,
+    stdin: StdioInner,
+    stdout: StdioInner,
+    stderr: StdioInner,
+}
+
+impl Command {
+    /// Constructs a new `Command` for launching the program at
+    /// path `program`, with the following default configuration:
+    ///
+    /// * No arguments to the program
+    /// * Inherit the current process's environment
+    /// * Inherit the current process's working directory
+    /// * Inherit stdin/stdout/stderr for `spawn` or `status`, but create pipes for `output`
+    ///
+    /// Builder methods are provided to change these defaults and
+    /// otherwise configure the process.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use bigbro::Command;
+    ///
+    /// Command::new("sh")
+    ///         .spawn()
+    ///         .expect("sh command failed to start");
+    /// ```
+    pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
+        Command {
+            argv: vec![cstr(program.as_ref())],
+            envs: None,
+            workingdir: None,
+            stdin: StdioInner::Inherit,
+            stdout: StdioInner::Inherit,
+            stderr: StdioInner::Inherit,
+        }
+    }
+}
+
+enum StdioInner {
+    Inherit,
+    MakePipe,
+    Null,
+    Fd(std::os::unix::io::RawFd),
+}
+
+pub struct Stdio(StdioInner);
+
+impl Stdio {
+    /// A new pipe should be arranged to connect the parent and child processes.
+    pub fn piped() -> Stdio { Stdio(StdioInner::MakePipe) }
+
+    /// The child inherits from the corresponding parent descriptor.
+    pub fn inherit() -> Stdio { Stdio(StdioInner::Inherit) }
+
+    /// This stream will be ignored. This is the equivalent of attaching the
+    /// stream to `/dev/null`
+    pub fn null() -> Stdio { Stdio(StdioInner::Null) }
+}
+
+impl std::os::unix::io::FromRawFd for Stdio {
+    unsafe fn from_raw_fd(fd: std::os::unix::io::RawFd) -> Stdio {
+        Stdio(StdioInner::Fd(fd))
+    }
+}
+
 impl BigBro for std::process::Command {
     fn bigbro(&mut self) -> io::Result<Status> {
         self.before_exec(bb_before);
@@ -156,5 +231,55 @@ impl BigBro for std::process::Command {
             libc::free(wf as *mut libc::c_void);
         }
         Ok(status)
+    }
+}
+
+pub struct ChildStdin {
+    inner: std::os::unix::io::RawFd,
+}
+pub struct ChildStdout {
+    inner: std::os::unix::io::RawFd,
+}
+pub struct ChildStderr {
+    inner: std::os::unix::io::RawFd,
+}
+
+pub struct Child {
+    pub stdin: Option<ChildStdin>,
+    pub stdout: Option<ChildStdout>,
+    pub stderr: Option<ChildStderr>,
+    pid: c_int,
+}
+
+impl Command {
+    pub fn spawn(&mut self) -> io::Result<Child> {
+        let mut argv = Vec::with_capacity(self.argv.len()+1);
+        for v in &self.argv {
+            argv.push(v.as_ptr());
+        }
+        argv.push(std::ptr::null());
+        let pid = unsafe {
+            match cvt(libc::fork())? {
+                0 => {
+                    libc::execvp(argv[0], argv.as_ptr());
+                    libc::exit(137)
+                },
+                n => n,
+            }
+        };
+        Ok(Child {
+            stdin: None,
+            stdout: None,
+            stderr: None,
+            pid: pid,
+        })
+    }
+}
+
+fn cvt(t: c_int) -> io::Result<c_int> {
+    if t == -1 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(t)
     }
 }
