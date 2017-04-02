@@ -106,6 +106,9 @@ fn bb_before() -> std::io::Result<()> {
 }
 
 fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<OsString> {
+    if a == std::ptr::null() {
+        return vec![].into_iter().collect(); // surely there is a nicer way to get empty set?
+    }
     let mut count = 0;
     unsafe {
         while *a.offset(count as isize) != std::ptr::null() {
