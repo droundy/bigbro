@@ -5,12 +5,9 @@
 //! # Example
 //!
 //! ```
-//! use std::process::Command;
-//! use bigbro::BigBro;
-//!
-//! let status = Command::new("cargo")
-//!                      .args(&["--version"])
-//!                      .bigbro().unwrap();
+//! let status = bigbro::Command::new("cargo")
+//!                             .args(&["--version"])
+//!                             .status().unwrap();
 //! for f in status.read_from_files() {
 //!    println!("read file: {}", f.to_string_lossy());
 //! }
@@ -23,7 +20,7 @@ use libc::{c_int, c_char};
 
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 
-use std::os::unix::ffi::{ OsStrExt, OsStringExt };
+use std::os::unix::ffi::{ OsStrExt };
 
 fn cstr(x: &OsStr) -> CString {
     CString::new(x.as_bytes()).unwrap()
@@ -140,9 +137,9 @@ pub struct Command {
     argv: Vec<CString>,
     envs: Option<std::collections::HashMap<CString, CString>>,
     workingdir: Option<std::path::PathBuf>,
-    stdin: StdioInner,
-    stdout: StdioInner,
-    stderr: StdioInner,
+    stdin: Std,
+    stdout: Std,
+    stderr: Std,
 }
 
 impl Command {
@@ -165,17 +162,17 @@ impl Command {
     /// use bigbro::Command;
     ///
     /// Command::new("sh")
-    ///         .spawn()
-    ///         .expect("sh command failed to start");
+    ///         .status()
+    ///         .expect("sh command failed to run");
     /// ```
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
         Command {
             argv: vec![cstr(program.as_ref())],
             envs: None,
             workingdir: None,
-            stdin: StdioInner::Inherit,
-            stdout: StdioInner::Inherit,
-            stderr: StdioInner::Inherit,
+            stdin: Std::Inherit,
+            stdout: Std::Inherit,
+            stderr: Std::Inherit,
         }
     }
 
@@ -192,10 +189,44 @@ impl Command {
         }
         self
     }
+
+    pub fn stdin(&mut self, cfg: Stdio) -> &mut Command {
+        self.stdin = cfg.0;
+        self
+    }
+
+    pub fn stdout(&mut self, cfg: Stdio) -> &mut Command {
+        self.stdout = cfg.0;
+        self
+    }
+
+    pub fn stderr(&mut self, cfg: Stdio) -> &mut Command {
+        self.stderr = cfg.0;
+        self
+    }
+
     pub fn status(&mut self) -> io::Result<Status> {
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
         args_raw.push(std::ptr::null());
+        let stdin = match self.stdin {
+            Std::MakePipe => unimplemented!(),
+            Std::Null => unimplemented!(),
+            Std::Inherit => None,
+            Std::Fd(fd) => Some(fd),
+        };
+        let stdout = match self.stdout {
+            Std::MakePipe => unimplemented!(),
+            Std::Null => unimplemented!(),
+            Std::Inherit => None,
+            Std::Fd(fd) => Some(fd),
+        };
+        let stderr = match self.stderr {
+            Std::MakePipe => unimplemented!(),
+            Std::Null => unimplemented!(),
+            Std::Inherit => None,
+            Std::Fd(fd) => Some(fd),
+        };
         let mut rd = std::ptr::null_mut();
         let mut rf = std::ptr::null_mut();
         let mut wf = std::ptr::null_mut();
@@ -204,6 +235,15 @@ impl Command {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
             if pid == 0 {
+                if let Some(fd) = stdin {
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                }
+                if let Some(fd) = stdout {
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                }
+                if let Some(fd) = stderr {
+                        libc::dup2(fd, libc::STDERR_FILENO);
+                }
                 private::bigbro_before_exec();
                 println!("running execvp...");
                 libc::execvp(args_raw[0], args_raw.as_ptr());
@@ -232,30 +272,76 @@ impl Command {
     }
 }
 
-enum StdioInner {
+enum Std {
     Inherit,
     MakePipe,
     Null,
     Fd(std::os::unix::io::RawFd),
 }
 
-pub struct Stdio(StdioInner);
+// impl Std {
+//     fn to_child_fd(&self)
+//                       -> io::Result<(Std, Option<std::os::unix::io::RawFd>)> {
+//         match *self {
+//             Std::Inherit => {
+//                 Ok((Std::Inherit, None))
+//             },
+
+//             // Make sure that the source descriptors are not an stdio
+//             // descriptor, otherwise the order which we set the child's
+//             // descriptors may blow away a descriptor which we are hoping to
+//             // save. For example, suppose we want the child's stderr to be the
+//             // parent's stdout, and the child's stdout to be the parent's
+//             // stderr. No matter which we dup first, the second will get
+//             // overwritten prematurely.
+//             Stdio::Fd(ref fd) => {
+//                 if fd.raw() >= 0 && fd.raw() <= libc::STDERR_FILENO {
+//                     Ok((ChildStdio::Owned(fd.duplicate()?), None))
+//                 } else {
+//                     Ok((ChildStdio::Explicit(fd.raw()), None))
+//                 }
+//             }
+
+//             Stdio::MakePipe => {
+//                 let (reader, writer) = pipe::anon_pipe()?;
+//                 let (ours, theirs) = if readable {
+//                     (writer, reader)
+//                 } else {
+//                     (reader, writer)
+//                 };
+//                 Ok((ChildStdio::Owned(theirs.into_fd()), Some(ours)))
+//             }
+
+//             Stdio::Null => {
+//                 let mut opts = OpenOptions::new();
+//                 opts.read(readable);
+//                 opts.write(!readable);
+//                 let path = unsafe {
+//                     CStr::from_ptr("/dev/null\0".as_ptr() as *const _)
+//                 };
+//                 let fd = File::open_c(&path, &opts)?;
+//                 Ok((ChildStdio::Owned(fd.into_fd()), None))
+//             }
+//         }
+// }
+
+pub struct Stdio(Std);
 
 impl Stdio {
     /// A new pipe should be arranged to connect the parent and child processes.
-    pub fn piped() -> Stdio { Stdio(StdioInner::MakePipe) }
+    pub fn piped() -> Stdio { Stdio(Std::MakePipe) }
 
     /// The child inherits from the corresponding parent descriptor.
-    pub fn inherit() -> Stdio { Stdio(StdioInner::Inherit) }
+    pub fn inherit() -> Stdio { Stdio(Std::Inherit) }
 
     /// This stream will be ignored. This is the equivalent of attaching the
     /// stream to `/dev/null`
-    pub fn null() -> Stdio { Stdio(StdioInner::Null) }
+    pub fn null() -> Stdio { Stdio(Std::Null) }
 }
 
 impl std::os::unix::io::FromRawFd for Stdio {
     unsafe fn from_raw_fd(fd: std::os::unix::io::RawFd) -> Stdio {
-        Stdio(StdioInner::Fd(fd))
+        Stdio(Std::Fd(fd))
     }
 }
 

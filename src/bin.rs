@@ -1,6 +1,5 @@
 extern crate bigbro;
 
-use bigbro::BigBro;
 pub fn main() {
     println!("running cargo...");
     let status = bigbro::Command::new("cargo")
