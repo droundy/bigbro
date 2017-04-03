@@ -177,6 +177,27 @@ impl Command {
             stderr: StdioInner::Inherit,
         }
     }
+
+    pub fn spawn(&mut self) -> io::Result<Child> {
+        let mut args_raw: Vec<*const c_char> =
+            self.argv.iter().map(|arg| arg.as_ptr()).collect();
+        args_raw.push(std::ptr::null());
+        let pid = unsafe {
+            match cvt(libc::fork())? {
+                0 => {
+                    libc::execvp(args_raw[0], args_raw.as_ptr());
+                    libc::exit(137)
+                },
+                n => n,
+            }
+        };
+        Ok(Child {
+            stdin: None,
+            stdout: None,
+            stderr: None,
+            pid: pid,
+        })
+    }
 }
 
 enum StdioInner {
@@ -249,31 +270,6 @@ pub struct Child {
     pub stdout: Option<ChildStdout>,
     pub stderr: Option<ChildStderr>,
     pid: c_int,
-}
-
-impl Command {
-    pub fn spawn(&mut self) -> io::Result<Child> {
-        let mut argv = Vec::with_capacity(self.argv.len()+1);
-        for v in &self.argv {
-            argv.push(v.as_ptr());
-        }
-        argv.push(std::ptr::null());
-        let pid = unsafe {
-            match cvt(libc::fork())? {
-                0 => {
-                    libc::execvp(argv[0], argv.as_ptr());
-                    libc::exit(137)
-                },
-                n => n,
-            }
-        };
-        Ok(Child {
-            stdin: None,
-            stdout: None,
-            stderr: None,
-            pid: pid,
-        })
-    }
 }
 
 fn cvt(t: c_int) -> io::Result<c_int> {
