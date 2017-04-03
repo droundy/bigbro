@@ -145,7 +145,7 @@ static pid_t wait_for_syscall(rw_status *h, int firstborn) {
     long signal_to_send_back = 0;
     child = waitpid(-firstborn, &status, __WALL);
     if (child == -1) {
-      fprintf(stderr, "had trouble waiting: %s", strerror(errno));
+      fprintf(stderr, "had trouble waiting for %d: %s\n", -firstborn, strerror(errno));
       exit(1);
     }
     if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
@@ -612,6 +612,8 @@ int bigbro_process(pid_t child,
     // code.  Presumably we are running under seccomp?
     return WEXITSTATUS(status);
   }
+  assert(WIFSTOPPED(status));
+  assert(WSTOPSIG(status) == SIGSTOP);
   ptrace(PTRACE_SETOPTIONS, child, 0, my_ptrace_options);
   if (ptrace(PTRACE_SYSCALL, child, 0, 0)) {
     // I'm not sure what this error is, but if we can't resume the
@@ -626,6 +628,7 @@ int bigbro_process(pid_t child,
   init_hashset(&h.mkdir, 1024);
 
   while (1) {
+    debugprintf("waiting for syscall... %d\n", child);
     pid_t this_child = wait_for_syscall(&h, child);
     if (this_child <= 0) {
       debugprintf("Returning with exit value %d\n", -this_child);

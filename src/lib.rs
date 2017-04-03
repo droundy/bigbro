@@ -48,7 +48,8 @@ mod private {
                           read_from_directories: *mut *mut *mut c_char,
                           mkdir_directories: *mut *mut *mut c_char,
                           read_from_files: *mut *mut *mut c_char,
-                          written_to_files: *mut *mut *mut c_char) -> c_int;
+                              written_to_files: *mut *mut *mut c_char) -> c_int;
+        pub fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     }
 }
 
@@ -178,25 +179,56 @@ impl Command {
         }
     }
 
-    pub fn spawn(&mut self) -> io::Result<Child> {
+    pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Command {
+        self.argv.push(cstr(arg.as_ref()));
+        self
+    }
+
+    pub fn args<I, S>(&mut self, args: I) -> &mut Command
+        where I: IntoIterator<Item=S>, S: AsRef<OsStr>
+    {
+        for arg in args {
+            self.arg(arg.as_ref());
+        }
+        self
+    }
+    pub fn status(&mut self) -> io::Result<Status> {
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
         args_raw.push(std::ptr::null());
+        let mut rd = std::ptr::null_mut();
+        let mut rf = std::ptr::null_mut();
+        let mut wf = std::ptr::null_mut();
+        let mut md = std::ptr::null_mut();
         let pid = unsafe {
-            match cvt(libc::fork())? {
-                0 => {
-                    libc::execvp(args_raw[0], args_raw.as_ptr());
-                    libc::exit(137)
-                },
-                n => n,
+            let pid = cvt(libc::fork())?;
+            private::setpgid(pid, pid);
+            if pid == 0 {
+                private::bigbro_before_exec();
+                println!("running execvp...");
+                libc::execvp(args_raw[0], args_raw.as_ptr());
+                libc::exit(137)
             }
+            pid
         };
-        Ok(Child {
-            stdin: None,
-            stdout: None,
-            stderr: None,
-            pid: pid,
-        })
+        println!("running bigbro_process {}!", pid);
+        let exitcode = unsafe {
+            private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
+        };
+        let status = Status {
+            status: std::process::ExitStatus::from_raw(exitcode),
+            read_from_directories: null_c_array_to_osstr(rd as *const *const i8),
+            read_from_files: null_c_array_to_osstr(rf as *const *const i8),
+            written_to_files: null_c_array_to_osstr(wf as *const *const i8),
+            mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
+        };
+        unsafe {
+            libc::free(rd as *mut libc::c_void);
+            libc::free(md as *mut libc::c_void);
+            libc::free(rf as *mut libc::c_void);
+            libc::free(wf as *mut libc::c_void);
+        }
+        Ok(status)
     }
 }
 
@@ -253,23 +285,6 @@ impl BigBro for std::process::Command {
         }
         Ok(status)
     }
-}
-
-pub struct ChildStdin {
-    inner: std::os::unix::io::RawFd,
-}
-pub struct ChildStdout {
-    inner: std::os::unix::io::RawFd,
-}
-pub struct ChildStderr {
-    inner: std::os::unix::io::RawFd,
-}
-
-pub struct Child {
-    pub stdin: Option<ChildStdin>,
-    pub stdout: Option<ChildStdout>,
-    pub stderr: Option<ChildStderr>,
-    pid: c_int,
 }
 
 fn cvt(t: c_int) -> io::Result<c_int> {
