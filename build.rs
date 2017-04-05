@@ -14,6 +14,7 @@ fn main() {
     }
 
     gcc::Config::new()
+                .flag("-std=c99")
                 .file("bigbro-linux.c")
                 .include(".")
                 .compile("libbigbro.a");
