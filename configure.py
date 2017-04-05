@@ -223,7 +223,7 @@ C web
 
 | cp -a target/doc web/
 > web/doc/bigbro/index.html
-< target/doc/index.html
+< target/doc/bigbro/index.html
 ''')
 else:
     print('# no cargo, so cannot build using rust')
