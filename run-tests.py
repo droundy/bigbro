@@ -96,6 +96,14 @@ numpasses = 0
 
 have_symlinks = True
 
+def should_fail(m):
+    try:
+        if m.should_fail:
+            return True
+    except:
+        return False
+    return False
+
 def create_clean_tree(prepsh='this file does not exist'):
     for tmp in glob.glob('tmp*'):
         if os.path.isdir(tmp):
@@ -228,7 +236,7 @@ for testsh in glob.glob('tests/*.sh'):
     create_clean_tree(testsh+'.prep')
     before = perf_counter()
     cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
-    if os.system(cmd):
+    if os.system(cmd) and not should_fail(m):
         os.system('cat %s.out' % base);
         os.system('cat %s.err' % base);
         print("FAIL command failed:", cmd)

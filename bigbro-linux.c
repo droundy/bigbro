@@ -628,10 +628,8 @@ int bigbro_process(pid_t child,
   init_hashset(&h.mkdir, 1024);
 
   while (1) {
-    debugprintf("waiting for syscall... %d\n", child);
     pid_t this_child = wait_for_syscall(&h, child);
     if (this_child <= 0) {
-      debugprintf("Returning with exit value %d\n", -this_child);
       *read_from_files_out = hashset_to_array(&h.read);
       *read_from_directories_out = hashset_to_array(&h.readdir);
       *written_to_files_out = hashset_to_array(&h.written);
