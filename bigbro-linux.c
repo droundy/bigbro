@@ -694,6 +694,7 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
     if (!envp) envp = environ;
     return execve(args[0], args, envp);
   }
+  *child_ptr = firstborn;
   // bigbro_process does the heavy lifting of actually tracing the
   // file accesses.
   return bigbro_process(firstborn,
