@@ -162,11 +162,11 @@ for testc in glob.glob('tests/*.c'):
     for flag in options:
         test = base + flag + '.test'
         if '-static' in testc:
-            if os.system('${CC-gcc} %s -Wall -static -O2 -o %s %s' % (flag, test, testc)):
+            if os.system('${CC-gcc} %s -Wall -std=c99 -static -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
         else:
-            if os.system('${CC-gcc} %s -Wall -O2 -o %s %s' % (flag, test, testc)):
+            if os.system('${CC-gcc} %s -Wall -std=c99 -O2 -o %s %s' % (flag, test, testc)):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
         ctest_executables.append((base,test))
