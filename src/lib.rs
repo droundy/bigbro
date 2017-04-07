@@ -18,7 +18,7 @@ use std::ffi::{OsStr, OsString, CString};
 use std::io;
 use libc::{c_int, c_char};
 
-use std::os::unix::process::{CommandExt, ExitStatusExt};
+use std::os::unix::process::{ExitStatusExt};
 
 use std::os::unix::ffi::{ OsStrExt };
 
@@ -91,20 +91,6 @@ impl Status {
     pub fn mkdir_directories(&self) -> std::collections::HashSet<OsString> {
         self.mkdir_directories.clone()
     }
-}
-
-/// This trait adds a single method that enables running bigbro.
-/// Perhaps I should have created a function rather than adding a
-/// method?
-pub trait BigBro {
-    /// Run the command while tracking all reads and writes to the
-    /// filesystem.
-    fn bigbro(&mut self) -> io::Result<Status>;
-}
-
-fn bb_before() -> std::io::Result<()> {
-    unsafe { private::bigbro_before_exec(); }
-    Ok(())
 }
 
 fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<OsString> {
@@ -209,24 +195,10 @@ impl Command {
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
         args_raw.push(std::ptr::null());
-        let stdin = match self.stdin {
-            Std::MakePipe => unimplemented!(),
-            Std::Null => unimplemented!(),
-            Std::Inherit => None,
-            Std::Fd(fd) => Some(fd),
-        };
-        let stdout = match self.stdout {
-            Std::MakePipe => unimplemented!(),
-            Std::Null => unimplemented!(),
-            Std::Inherit => None,
-            Std::Fd(fd) => Some(fd),
-        };
-        let stderr = match self.stderr {
-            Std::MakePipe => unimplemented!(),
-            Std::Null => unimplemented!(),
-            Std::Inherit => None,
-            Std::Fd(fd) => Some(fd),
-        };
+        let stdin = self.stdin.to_child_fd()?;
+        let stdout = self.stdout.to_child_fd()?;
+        let stderr = self.stderr.to_child_fd()?;
+
         let mut rd = std::ptr::null_mut();
         let mut rf = std::ptr::null_mut();
         let mut wf = std::ptr::null_mut();
@@ -277,6 +249,47 @@ enum Std {
     MakePipe,
     Null,
     Fd(std::os::unix::io::RawFd),
+}
+
+fn fd_cloexec(fd: std::os::unix::io::RawFd) -> io::Result<()> {
+    unsafe {
+        if libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+}
+
+fn dup_cloexec(src: std::os::unix::io::RawFd)
+               -> io::Result<std::os::unix::io::RawFd> {
+    let fd = unsafe {
+        let fd = libc::dup(src);
+        if fd < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        fd
+    };
+    fd_cloexec(fd)?;
+    Ok(fd)
+}
+
+impl Std {
+    fn to_child_fd(&self) -> io::Result<Option<std::os::unix::io::RawFd>> {
+        match *self {
+            Std::MakePipe => unimplemented!(),
+            Std::Null =>
+                Ok(Some(cvt(unsafe {
+                    libc::open("/dev/null\0".as_ptr() as *const c_char,
+                               libc::O_RDWR)
+                })?)),
+            Std::Inherit => Ok(None),
+            Std::Fd(fd) => if fd >= 0 && fd <= libc::STDERR_FILENO {
+                Ok(Some(dup_cloexec(fd)?))
+            } else {
+                Ok(Some(fd))
+            },
+        }
+    }
 }
 
 // impl Std {
@@ -342,34 +355,6 @@ impl Stdio {
 impl std::os::unix::io::FromRawFd for Stdio {
     unsafe fn from_raw_fd(fd: std::os::unix::io::RawFd) -> Stdio {
         Stdio(Std::Fd(fd))
-    }
-}
-
-impl BigBro for std::process::Command {
-    fn bigbro(&mut self) -> io::Result<Status> {
-        self.before_exec(bb_before);
-        let mut rd = std::ptr::null_mut();
-        let mut rf = std::ptr::null_mut();
-        let mut wf = std::ptr::null_mut();
-        let mut md = std::ptr::null_mut();
-        let child = try!(self.spawn());
-        let exitcode = unsafe {
-            private::bigbro_process(child.id() as c_int, &mut rd, &mut md, &mut rf, &mut wf)
-        };
-        let status = Status {
-            status: std::process::ExitStatus::from_raw(exitcode),
-            read_from_directories: null_c_array_to_osstr(rd as *const *const i8),
-            read_from_files: null_c_array_to_osstr(rf as *const *const i8),
-            written_to_files: null_c_array_to_osstr(wf as *const *const i8),
-            mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
-        };
-        unsafe {
-            libc::free(rd as *mut libc::c_void);
-            libc::free(md as *mut libc::c_void);
-            libc::free(rf as *mut libc::c_void);
-            libc::free(wf as *mut libc::c_void);
-        }
-        Ok(status)
     }
 }
 
