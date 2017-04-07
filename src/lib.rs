@@ -1,3 +1,6 @@
+#![cfg_attr(feature = "strict", deny(warnings))]
+// #![cfg_attr(feature = "strict", deny(missing_docs))]
+
 //! bigbro is a crate that enables running external commands and
 //! tracking their use of the filesystem.  It currently only works
 //! under linux.
@@ -46,7 +49,11 @@ mod private {
                           mkdir_directories: *mut *mut *mut c_char,
                           read_from_files: *mut *mut *mut c_char,
                               written_to_files: *mut *mut *mut c_char) -> c_int;
+
         pub fn setpgid(pid: c_int, pgid: c_int) -> c_int;
+        pub fn execvpe(path: *const c_char, argv: *const *const c_char,
+                       envp: *const *const c_char) -> c_int;
+        pub static environ: *const *const c_char;
     }
 }
 
@@ -199,6 +206,24 @@ impl Command {
         let stdout = self.stdout.to_child_fd()?;
         let stderr = self.stderr.to_child_fd()?;
 
+        let mut envptr = unsafe { private::environ };
+        // the following needs to live beyond execvpe to keep string data alive
+        let mut env: Vec<CString>;
+        // the following needs to live beyond execvpe to keep string pointers alive
+        let envps: Vec<*const c_char>;
+        if let Some(ref e) = self.envs {
+            env = vec![];
+            for (k,v) in e {
+                let mut newv: Vec<u8> = vec![];
+                newv.extend(k.as_bytes());
+                newv.extend(b"=");
+                newv.extend(v.as_bytes());
+                env.push(unsafe { CString::from_vec_unchecked(newv) });
+            }
+            envps = env.iter().map(|arg| arg.as_ptr() as *const c_char).collect();
+            envptr = envps.as_ptr();
+        }
+
         let mut rd = std::ptr::null_mut();
         let mut rf = std::ptr::null_mut();
         let mut wf = std::ptr::null_mut();
@@ -207,6 +232,9 @@ impl Command {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
             if pid == 0 {
+                if let Some(ref p) = self.workingdir {
+                    std::env::set_current_dir(p)?;
+                }
                 if let Some(fd) = stdin {
                         libc::dup2(fd, libc::STDIN_FILENO);
                 }
@@ -217,8 +245,7 @@ impl Command {
                         libc::dup2(fd, libc::STDERR_FILENO);
                 }
                 private::bigbro_before_exec();
-                println!("running execvp...");
-                libc::execvp(args_raw[0], args_raw.as_ptr());
+                private::execvpe(args_raw[0], args_raw.as_ptr(), envptr);
                 libc::exit(137)
             }
             pid
