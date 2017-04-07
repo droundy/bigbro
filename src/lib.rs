@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
-// #![cfg_attr(feature = "strict", deny(missing_docs))]
+#![cfg_attr(feature = "strict", deny(missing_docs))]
 
 //! bigbro is a crate that enables running external commands and
 //! tracking their use of the filesystem.  It currently only works
@@ -71,6 +71,7 @@ pub struct Status {
 }
 
 impl Status {
+    /// This returns the ExitStatus of the process.
     pub fn status(&self) -> std::process::ExitStatus {
         self.status
     }
@@ -126,6 +127,33 @@ fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<O
     v.into_iter().collect()
 }
 
+/// A process builder, providing fine-grained control over how a new
+/// process should be spawned.
+///
+/// Strongly modelled after `std::process::Command`.  A default
+/// configuration is generated using `Command::new(program)`, where
+/// `program` gives a path to the program to be executed. Additional
+/// builder methods allow the configuration to be changed (for
+/// example, by adding arguments) prior to running:
+///
+/// ```
+/// use bigbro::Command;
+///
+/// let status = if cfg!(target_os = "windows") {
+///     Command::new("cmd")
+///             .args(&["/C", "echo hello"])
+///             .status()
+///             .expect("failed to execute process")
+/// } else {
+///     Command::new("sh")
+///             .arg("-c")
+///             .arg("echo hello")
+///             .status()
+///             .expect("failed to execute process")
+/// };
+///
+/// assert!(status.status().success());
+/// ```
 pub struct Command {
     argv: Vec<CString>,
     envs: Option<std::collections::HashMap<CString, CString>>,
@@ -169,11 +197,13 @@ impl Command {
         }
     }
 
+    /// Add a single argument to the command.
     pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Command {
         self.argv.push(cstr(arg.as_ref()));
         self
     }
 
+    /// Add arguments to the command.
     pub fn args<I, S>(&mut self, args: I) -> &mut Command
         where I: IntoIterator<Item=S>, S: AsRef<OsStr>
     {
@@ -183,21 +213,25 @@ impl Command {
         self
     }
 
+    /// Set the stdin of the command.
     pub fn stdin(&mut self, cfg: Stdio) -> &mut Command {
         self.stdin = cfg.0;
         self
     }
 
+    /// Set the stdout of the command.
     pub fn stdout(&mut self, cfg: Stdio) -> &mut Command {
         self.stdout = cfg.0;
         self
     }
 
+    /// Set the stderr of the command.
     pub fn stderr(&mut self, cfg: Stdio) -> &mut Command {
         self.stderr = cfg.0;
         self
     }
 
+    /// Run the Command, wait for it to complete, and return its results.
     pub fn status(&mut self) -> io::Result<Status> {
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
@@ -319,52 +353,7 @@ impl Std {
     }
 }
 
-// impl Std {
-//     fn to_child_fd(&self)
-//                       -> io::Result<(Std, Option<std::os::unix::io::RawFd>)> {
-//         match *self {
-//             Std::Inherit => {
-//                 Ok((Std::Inherit, None))
-//             },
-
-//             // Make sure that the source descriptors are not an stdio
-//             // descriptor, otherwise the order which we set the child's
-//             // descriptors may blow away a descriptor which we are hoping to
-//             // save. For example, suppose we want the child's stderr to be the
-//             // parent's stdout, and the child's stdout to be the parent's
-//             // stderr. No matter which we dup first, the second will get
-//             // overwritten prematurely.
-//             Stdio::Fd(ref fd) => {
-//                 if fd.raw() >= 0 && fd.raw() <= libc::STDERR_FILENO {
-//                     Ok((ChildStdio::Owned(fd.duplicate()?), None))
-//                 } else {
-//                     Ok((ChildStdio::Explicit(fd.raw()), None))
-//                 }
-//             }
-
-//             Stdio::MakePipe => {
-//                 let (reader, writer) = pipe::anon_pipe()?;
-//                 let (ours, theirs) = if readable {
-//                     (writer, reader)
-//                 } else {
-//                     (reader, writer)
-//                 };
-//                 Ok((ChildStdio::Owned(theirs.into_fd()), Some(ours)))
-//             }
-
-//             Stdio::Null => {
-//                 let mut opts = OpenOptions::new();
-//                 opts.read(readable);
-//                 opts.write(!readable);
-//                 let path = unsafe {
-//                     CStr::from_ptr("/dev/null\0".as_ptr() as *const _)
-//                 };
-//                 let fd = File::open_c(&path, &opts)?;
-//                 Ok((ChildStdio::Owned(fd.into_fd()), None))
-//             }
-//         }
-// }
-
+/// A description of what you want done with one of the standard streams.
 pub struct Stdio(Std);
 
 impl Stdio {
