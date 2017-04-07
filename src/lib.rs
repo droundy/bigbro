@@ -71,19 +71,68 @@ pub struct Status {
 }
 
 impl Status {
-    /// This returns the ExitStatus of the process.
+    /// This returns the `std::process::ExitStatus` of the process.
+
+    /// Was termination successful? Signal termination not considered a success,
+    /// and success is defined as a zero exit status.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let status = Command::new("sh")
+    ///                      .arg("-c")
+    ///                      .arg("false")
+    ///                      .status()
+    ///                      .expect("failed to execute sh");
+    ///
+    /// assert!(! status.status().success() ); // should fail because "false" always fails
+    /// ```
     pub fn status(&self) -> std::process::ExitStatus {
         self.status
     }
     /// This retuns the set of directories that the process read from.
     /// For details of what is meant by a process having "read from a
     /// directory", see [semantics](semantics.html).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let dir = std::ffi::OsString::from("/tmp");
+    /// let status = Command::new("ls")
+    ///                      .arg(&dir)
+    ///                      .status()
+    ///                      .expect("failed to execute ls");
+    ///
+    /// assert!(status.status().success() );
+    /// assert!(status.read_from_directories().contains(&dir) );
+    /// ```
     pub fn read_from_directories(&self) -> std::collections::HashSet<OsString> {
        self.read_from_directories.clone()
     }
     /// This retuns the set of files that the process read.  For
     /// details of what is meant by a process having "read from a
     /// directory", see [semantics](semantics.html).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let p = std::ffi::OsString::from("/usr/bin/python");
+    /// let status = Command::new("sha1sum")
+    ///                      .arg(&p)
+    ///                      .status()
+    ///                      .expect("failed to execute sha1sum");
+    ///
+    /// assert!(status.status().success() );
+    /// for f in status.read_from_files() {
+    ///    println!("read file {:#?}", f);
+    /// }
+    /// assert!(status.read_from_files().contains(&p) );
     pub fn read_from_files(&self) -> std::collections::HashSet<OsString> {
         self.read_from_files.clone()
     }
