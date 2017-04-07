@@ -139,6 +139,24 @@ impl Status {
     /// This retuns the set of files that the process wrote to.  For
     /// details of what is meant by a process having "read from a
     /// directory", see [semantics](semantics.html).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let p = std::ffi::OsString::from("/tmp/hello");
+    /// let status = Command::new("sh")
+    ///                      .args(&["-c", "echo hello > /tmp/hello"])
+    ///                      .status()
+    ///                      .expect("failed to execute sh");
+    ///
+    /// assert!(status.status().success() );
+    /// for f in status.written_to_files() {
+    ///    println!("wrote file {:#?}", f);
+    /// }
+    /// assert!(status.written_to_files().contains(&p) );
+    /// assert!(status.written_to_files().len() == 1 );
     pub fn written_to_files(&self) -> std::collections::HashSet<OsString> {
         self.written_to_files.clone()
     }
