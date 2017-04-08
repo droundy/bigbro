@@ -186,7 +186,7 @@ for testc in glob.glob('tests/*.c'):
                 continue
         ctest_executables.append((base,test))
 
-bigbro_binaries = ['./bigbro', 'target/debug/test-bigbro']
+bigbro_binaries = ['./bigbro', 'target/debug/test-bigbro', 'target/release/test-bigbro']
 
 for bigbro in bigbro_binaries:
     print('running C tests with %s:' % bigbro)

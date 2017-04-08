@@ -221,6 +221,15 @@ C bench
 C tests
 C web
 
+| cargo build --release
+< target/debug/test-bigbro
+c ~
+c .tum
+c .pyc
+C bench
+C tests
+C web
+
 | cp -a target/doc web/
 > web/doc/bigbro/index.html
 < target/doc/bigbro/index.html
