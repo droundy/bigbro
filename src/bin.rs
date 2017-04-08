@@ -1,19 +1,28 @@
 extern crate bigbro;
 
+use std::io::Write;
+
+/// This code is only intended for testing the bigbro library, and
+/// hence does very poor argument handling.
+
 pub fn main() {
-    let status = bigbro::Command::new("cargo")
-        .args(&["--version"])
-        .status().unwrap();
+    let mut args = std::env::args();
+    args.next(); // throw away argv[0]
+    let mut cmd = bigbro::Command::new(args.next().unwrap());
+    for a in args {
+        cmd.arg(a);
+    }
+    let status = cmd.status().unwrap();
     for f in status.read_from_files() {
-        println!("r: {}", f.to_string_lossy());
+        writeln!(&mut std::io::stderr(), "r: {}", f.to_string_lossy()).unwrap();
     }
     for f in status.written_to_files() {
-        println!("w: {}", f.to_string_lossy());
+        writeln!(&mut std::io::stderr(), "w: {}", f.to_string_lossy()).unwrap();
     }
     for f in status.read_from_directories() {
-        println!("l: {}", f.to_string_lossy());
+        writeln!(&mut std::io::stderr(), "l: {}", f.to_string_lossy()).unwrap();
     }
     for f in status.mkdir_directories() {
-        println!("m: {}", f.to_string_lossy());
+        writeln!(&mut std::io::stderr(), "m: {}", f.to_string_lossy()).unwrap();
     }
 }

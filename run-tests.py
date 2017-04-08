@@ -83,8 +83,15 @@ if not os.system('fac --help'):
 print('building bigbro by running build/%s.sh...' % platform)
 print('============================================')
 
+if not os.system('fac --help'):
+    assert not os.system('fac')
+
 if have_lcov or have_gcovr:
     os.environ['CFLAGS'] = os.environ.get('CFLAGS', default='') + ' --coverage'
+    os.environ['LDFLAGS'] = os.environ.get('LDFLAGS', default='') + ' --coverage'
+
+if not os.system('fac --help'):
+    assert not os.system('fac bigbro')
 
 assert not os.system('sh build/%s.sh' % platform)
 
@@ -178,160 +185,169 @@ for testc in glob.glob('tests/*.c'):
                 print('%s %s fails to compile, skipping test' % (testc, flag))
                 continue
         ctest_executables.append((base,test))
-print('running C tests:')
-print('================')
-for (base,test) in ctest_executables:
-    m = importlib.import_module('tests.'+base[6:])
-    try:
-        if m.needs_symlinks and not have_symlinks:
-            if flag == '':
-                print('skipping', test, 'since we have no symlinks')
-            continue
-    except:
-        print(test, 'needs to specify needs_symlinks')
-        exit(1)
-    create_clean_tree()
-    before = perf_counter()
-    cmd = './bigbro %s 2> %s.err 1> %s.out' % (test, base, base)
-    exitcode = os.system(cmd)
-    measured_time = perf_counter() - before
-    err = open(base+'.err','r').read()
-    out = open(base+'.out','r').read()
-    # print(err)
-    if benchmark:
+
+bigbro_binaries = ['./bigbro', 'target/debug/test-bigbro']
+
+for bigbro in bigbro_binaries:
+    print('running C tests with %s:' % bigbro)
+    print('================')
+    for (base,test) in ctest_executables:
+        m = importlib.import_module('tests.'+base[6:])
+        try:
+            if m.needs_symlinks and not have_symlinks:
+                if flag == '':
+                    print('skipping', test, 'since we have no symlinks')
+                continue
+        except:
+            print(test, 'needs to specify needs_symlinks')
+            exit(1)
         create_clean_tree()
         before = perf_counter()
-        cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
-        os.system(cmd)
-        reference_time = perf_counter() - before
-        time_took = format_times(measured_time, reference_time)
-    else:
-        time_took = format_times(measured_time)
-    if exitcode != 0:
-        os.system('cat %s.out' % base);
-        os.system('cat %s.err' % base);
-        print(test, "COMMAND FAILS WITH EXIT CODE", exitcode)
-        numfailures += 1
-    elif m.passes(out, err):
-        print(test, "passes", time_took)
-        numpasses += 1
-    else:
-        print(test, "FAILS!", time_took)
-        numfailures += 1
+        cmd = '%s %s 2> %s.err 1> %s.out' % (bigbro, test, base, base)
+        exitcode = os.system(cmd)
+        measured_time = perf_counter() - before
+        err = open(base+'.err','r').read()
+        out = open(base+'.out','r').read()
+        # print(err)
+        if benchmark:
+            create_clean_tree()
+            before = perf_counter()
+            cmd = '%s 2> %s.err 1> %s.out' % (test, base, base)
+            os.system(cmd)
+            reference_time = perf_counter() - before
+            time_took = format_times(measured_time, reference_time)
+        else:
+            time_took = format_times(measured_time)
+        if exitcode != 0:
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print(test, "COMMAND FAILS WITH EXIT CODE", exitcode)
+            numfailures += 1
+        elif m.passes(out, err):
+            print(test, "passes", time_took)
+            numpasses += 1
+        else:
+            print(test, "FAILS!", time_took)
+            numfailures += 1
 
-test = None # to avoid bugs below where we refer to test
-print()
-print('running sh tests:')
-print('=================')
-for testsh in glob.glob('tests/*.sh'):
-    base = testsh[:-3]
-    m = importlib.import_module('tests.'+base[6:])
-    try:
-        if m.needs_symlinks and not have_symlinks:
-            print('skipping', test, 'since we have no symlinks')
-            continue
-    except:
-        print(test, 'needs to specify needs_symlinks')
-        exit(1)
-    create_clean_tree(testsh+'.prep')
-    before = perf_counter()
-    cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
-    if os.system(cmd) and not should_fail(m):
-        os.system('cat %s.out' % base);
-        os.system('cat %s.err' % base);
-        print("FAIL command failed:", cmd)
-        numfailures += 1
-        os.system('./bigbro sh %s')
-        continue
-    measured_time = perf_counter() - before
-    err = open(base+'.err','r').read()
-    out = open(base+'.out','r').read()
-    if benchmark:
+    test = None # to avoid bugs below where we refer to test
+    print()
+
+for bigbro in bigbro_binaries:
+    print('running sh tests with %s:' % bigbro)
+    print('=================')
+    for testsh in glob.glob('tests/*.sh'):
+        base = testsh[:-3]
+        m = importlib.import_module('tests.'+base[6:])
+        try:
+            if m.needs_symlinks and not have_symlinks:
+                print('skipping', test, 'since we have no symlinks')
+                continue
+        except:
+            print(test, 'needs to specify needs_symlinks')
+            exit(1)
         create_clean_tree(testsh+'.prep')
         before = perf_counter()
-        cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
-        os.system(cmd)
-        reference_time = perf_counter() - before
-        time_took = format_times(measured_time, reference_time)
-    else:
-        time_took = format_times(measured_time)
-    # print(err)
-    if m.passes(out, err):
-        print(testsh, "passes", time_took)
-        numpasses += 1
-    else:
-        print(testsh, "FAILS!", time_took)
-        numfailures += 1
-print()
-print('running python tests:')
-print('=====================')
-for testp in glob.glob('tests/*-test.py'):
-    base = testp[:-8]
-    m = importlib.import_module('tests.'+base[6:])
-    try:
-        if m.needs_symlinks and not have_symlinks:
-            print('skipping', test, 'since we have no symlinks')
+        cmd = '%s sh %s 2> %s.err 1> %s.out' % (bigbro, testsh, base, base)
+        if os.system(cmd) and not should_fail(m):
+            os.system('cat %s.out' % base);
+            os.system('cat %s.err' % base);
+            print("FAIL command failed:", cmd)
+            numfailures += 1
+            os.system('%s sh %s' % (bigbro, testsh))
             continue
-    except:
-        print(test, 'needs to specify needs_symlinks')
-        exit(1)
-    create_clean_tree(testp+'.prep')
-    before = perf_counter()
-    cmd = './bigbro python %s 2> %s.err 1> %s.out' % (testp, base, base)
-    if os.system(cmd):
-        os.system('cat %s.out' % base);
-        os.system('cat %s.err' % base);
-        print("command failed:", cmd)
-        exit(1)
-    measured_time = perf_counter() - before
-    err = open(base+'.err','r').read()
-    out = open(base+'.out','r').read()
-    if benchmark:
+        measured_time = perf_counter() - before
+        err = open(base+'.err','r').read()
+        out = open(base+'.out','r').read()
+        if benchmark:
+            create_clean_tree(testsh+'.prep')
+            before = perf_counter()
+            cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+            os.system(cmd)
+            reference_time = perf_counter() - before
+            time_took = format_times(measured_time, reference_time)
+        else:
+            time_took = format_times(measured_time)
+        # print(err)
+        if m.passes(out, err):
+            print(testsh, "passes", time_took)
+            numpasses += 1
+        else:
+            print(testsh, "FAILS!", time_took)
+            numfailures += 1
+    print()
+
+for bigbro in bigbro_binaries:
+    print('running python tests with %s:' % bigbro)
+    print('=====================')
+    for testp in glob.glob('tests/*-test.py'):
+        base = testp[:-8]
+        m = importlib.import_module('tests.'+base[6:])
+        try:
+            if m.needs_symlinks and not have_symlinks:
+                print('skipping', test, 'since we have no symlinks')
+                continue
+        except:
+            print(test, 'needs to specify needs_symlinks')
+            exit(1)
         create_clean_tree(testp+'.prep')
         before = perf_counter()
-        cmd = 'sh %s 2> %s.err 1> %s.out' % (testp, base, base)
-        os.system(cmd)
-        reference_time = perf_counter() - before
-        time_took = format_times(measured_time, reference_time)
-    else:
-        time_took = format_times(measured_time)
-    # print(err)
-    if m.passes(out, err):
-        print(testp, "passes", time_took)
-        numpasses += 1
-    else:
-        print(testp, "FAILS!", time_took)
-        numfailures += 1
-print()
-
-if benchmark:
-    print()
-    print('running sh benchmarks:')
-    print('======================')
-    for testsh in glob.glob('bench/*.sh'):
-        base = testsh[:-3]
-        create_clean_tree(testsh+'.prep')
-        before = perf_counter()
-        cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+        cmd = '%s python %s 2> %s.err 1> %s.out' % (bigbro, testp, base, base)
         if os.system(cmd):
             os.system('cat %s.out' % base);
             os.system('cat %s.err' % base);
             print("command failed:", cmd)
             exit(1)
         measured_time = perf_counter() - before
-        # The first time is just to warm up the file system cache...
+        err = open(base+'.err','r').read()
+        out = open(base+'.out','r').read()
+        if benchmark:
+            create_clean_tree(testp+'.prep')
+            before = perf_counter()
+            cmd = 'sh %s 2> %s.err 1> %s.out' % (testp, base, base)
+            os.system(cmd)
+            reference_time = perf_counter() - before
+            time_took = format_times(measured_time, reference_time)
+        else:
+            time_took = format_times(measured_time)
+        # print(err)
+        if m.passes(out, err):
+            print(testp, "passes", time_took)
+            numpasses += 1
+        else:
+            print(testp, "FAILS!", time_took)
+            numfailures += 1
+    print()
 
-        create_clean_tree(testsh+'.prep')
-        before = perf_counter()
-        cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
-        os.system(cmd)
-        reference_time = perf_counter() - before
-        before = perf_counter()
-        cmd = './bigbro sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
-        os.system(cmd)
-        measured_time = perf_counter() - before
-        time_took = format_times(measured_time, reference_time)
-        print(testsh, time_took)
+for bigbro in bigbro_binaries:
+    if benchmark:
+        print()
+        print('running sh benchmarks with %s:' % bigbro)
+        print('======================')
+        for testsh in glob.glob('bench/*.sh'):
+            base = testsh[:-3]
+            create_clean_tree(testsh+'.prep')
+            before = perf_counter()
+            cmd = '%s sh %s 2> %s.err 1> %s.out' % (bigbro, testsh, base, base)
+            if os.system(cmd):
+                os.system('cat %s.out' % base);
+                os.system('cat %s.err' % base);
+                print("command failed:", cmd)
+                exit(1)
+            measured_time = perf_counter() - before
+            # The first time is just to warm up the file system cache...
+
+            create_clean_tree(testsh+'.prep')
+            before = perf_counter()
+            cmd = 'sh %s 2> %s.err 1> %s.out' % (testsh, base, base)
+            os.system(cmd)
+            reference_time = perf_counter() - before
+            before = perf_counter()
+            cmd = '%s sh %s 2> %s.err 1> %s.out' % (bigbro, testsh, base, base)
+            os.system(cmd)
+            measured_time = perf_counter() - before
+            time_took = format_times(measured_time, reference_time)
+            print(testsh, time_took)
 
 if have_lcov:
     assert not os.system('lcov --config-file .lcovrc -c -d . -o tests/test.info')
