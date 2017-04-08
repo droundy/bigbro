@@ -261,6 +261,7 @@ pub struct Command {
     stdout: Std,
     stderr: Std,
     can_read_stdout: bool,
+    have_error: Option<std::io::Error>,
 }
 
 impl Command {
@@ -295,7 +296,18 @@ impl Command {
             stdout: Std::Inherit,
             stderr: Std::Inherit,
             can_read_stdout: false,
+            have_error: None,
         }
+    }
+
+    fn assert_no_error(&mut self) -> std::io::Result<()> {
+        if let Some(e) = self.have_error.take() {
+            return Err(e)
+        }
+        Ok(())
+    }
+    fn errored(&self) -> bool {
+        self.have_error.is_some()
     }
 
     /// Add a single argument to the command.
@@ -353,23 +365,34 @@ impl Command {
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents);
     /// assert_eq!(contents, "hello");
+    /// ```
     pub fn save_stdouterr(&mut self) -> &mut Command {
-        let namebuf = CString::new("/tmp/bigbro-XXXXXX").unwrap();
-        let fd = unsafe {
-            libc::mkstemp(namebuf.as_ptr() as *mut c_char)
-        };
-        unsafe {
-            libc::unlink(namebuf.as_ptr() as *const c_char);
-        }
+        if ! self.errored() {
+            let namebuf = CString::new("/tmp/bigbro-XXXXXX").unwrap();
+            let fd = unsafe {
+                libc::mkstemp(namebuf.as_ptr() as *mut c_char)
+            };
+            if fd == -1 {
+                self.have_error = Some(io::Error::last_os_error());
+                return self;
+            }
+            unsafe {
+                libc::unlink(namebuf.as_ptr() as *const c_char);
+                // Ignore error on unlink, since it doesn't precisely hurt
+                // to leave the file around, and it's not clear that
+                // aborting is a solution?
+            }
 
-        self.stderr = Std::Fd(fd);
-        self.stdout = Std::Fd(fd);
-        self.can_read_stdout = true;
+            self.stderr = Std::Fd(fd);
+            self.stdout = Std::Fd(fd);
+            self.can_read_stdout = true;
+        }
         self
     }
 
     /// Run the Command, wait for it to complete, and return its results.
     pub fn status(&mut self) -> io::Result<Status> {
+        self.assert_no_error()?;
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
         args_raw.push(std::ptr::null());
