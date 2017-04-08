@@ -70,7 +70,7 @@ pub struct Status {
     read_from_files: std::collections::HashSet<OsString>,
     written_to_files: std::collections::HashSet<OsString>,
     mkdir_directories: std::collections::HashSet<OsString>,
-    stdout_fd: Option<std::os::unix::io::RawFd>,
+    stdout_fd: Option<std::fs::File>,
 }
 
 impl Status {
@@ -171,9 +171,8 @@ impl Status {
     }
 
     /// This retuns the stdout, if it has been saved.
-    pub fn stdout(&self) -> std::io::Result<Option<Box<std::io::Read>>> {
-        if let Some(fd) = self.stdout_fd {
-            let mut f = unsafe { std::fs::File::from_raw_fd(fd) };
+    pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
+        if let Some(mut f) = self.stdout_fd.take() {
             f.seek(std::io::SeekFrom::Start(0))?;
             return Ok(Some(Box::new(f)));
         }
@@ -314,19 +313,19 @@ impl Command {
     }
 
     /// Set the stderr and stdout of the command to go to a temp file,
-    /// from which they can be read.
+    /// from which they can be read after the command is run.
     ///
     /// # Examples
     ///
     /// ```
     /// use bigbro::Command;
     ///
-    /// let status = Command::new("echo")
-    ///                      .arg("-n")
-    ///                      .arg("hello")
-    ///                      .stdouterr_temp()
-    ///                      .status()
-    ///                      .expect("failed to execute echo");
+    /// let mut status = Command::new("echo")
+    ///                          .arg("-n")
+    ///                          .arg("hello")
+    ///                          .save_stdouterr()
+    ///                          .status()
+    ///                          .expect("failed to execute echo");
     ///
     /// assert!(status.status().success() );
     /// let mut f = status.stdout().unwrap();
@@ -334,7 +333,7 @@ impl Command {
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents);
     /// assert_eq!(contents, "hello");
-    pub fn stdouterr_temp(&mut self) -> &mut Command {
+    pub fn save_stdouterr(&mut self) -> &mut Command {
         let namebuf = CString::new("/tmp/bigbro-XXXXXX").unwrap();
         let fd = unsafe {
             libc::mkstemp(namebuf.as_ptr() as *mut c_char)
@@ -412,7 +411,11 @@ impl Command {
             read_from_files: null_c_array_to_osstr(rf as *const *const i8),
             written_to_files: null_c_array_to_osstr(wf as *const *const i8),
             mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
-            stdout_fd: if self.can_read_stdout { stdout } else { None },
+            stdout_fd: if self.can_read_stdout {
+                if let Some(ref fd) = stdout {
+                    Some (unsafe { std::fs::File::from_raw_fd(*fd) })
+                } else { None }
+            } else { None },
         };
         unsafe {
             libc::free(rd as *mut libc::c_void);
