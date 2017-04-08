@@ -444,7 +444,6 @@ impl Command {
             }
             pid
         };
-        println!("running bigbro_process {}!", pid);
         let exitcode = unsafe {
             private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
         };
