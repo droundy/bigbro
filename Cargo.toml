@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["David Roundy <daveroundy@gmail.com>"]
 
 description = "Library for tracking file accesses of processes"
-license = "GPLv2"
+license = "GPL-2.0+"
 repository = "https://github.com/droundy/bigbro"
 homepage = "https://facio.gitlab.io/bigbro"
 documentation = "http://facio.gitlab.io/bigbro/doc/bigbro/index.html"
