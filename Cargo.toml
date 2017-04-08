@@ -11,6 +11,9 @@ documentation = "http://facio.gitlab.io/bigbro/doc/bigbro/index.html"
 
 build = "build.rs"
 
+[badges]
+gitlab = { repository = "facio/bigbro", branch = "master" }
+
 [lib]
 name = "bigbro"
 path = "src/lib.rs"
