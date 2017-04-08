@@ -170,7 +170,27 @@ impl Status {
         self.mkdir_directories.clone()
     }
 
-    /// This retuns the stdout, if it has been saved.
+    /// This retuns the stdout, if it has been saved using `save_stdouterr`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let mut status = Command::new("ls")
+    ///                          .arg("-l")
+    ///                          .save_stdouterr()
+    ///                          .status()
+    ///                          .expect("failed to execute ls");
+    ///
+    /// assert!(status.status().success() );
+    /// let mut f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut contents = String::new();
+    /// f.unwrap().read_to_string(&mut contents);
+    /// println!("ls gives: {}", contents);
+    /// assert!(contents.contains("Cargo.toml"));
+    /// assert!(contents.contains("src"));
     pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
         if let Some(mut f) = self.stdout_fd.take() {
             f.seek(std::io::SeekFrom::Start(0))?;
