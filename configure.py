@@ -217,6 +217,8 @@ if is_in_path('cargo'):
 c ~
 c .tum
 c .pyc
+c .gcda
+c .gcno
 C bench
 C tests
 C web
@@ -226,6 +228,8 @@ C web
 c ~
 c .tum
 c .pyc
+c .gcda
+c .gcno
 C bench
 C tests
 C web
