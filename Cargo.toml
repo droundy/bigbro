@@ -1,7 +1,14 @@
 [package]
 name = "bigbro"
 version = "0.1.0"
-authors = ["daveroundy@gmail.com"]
+authors = ["David Roundy <daveroundy@gmail.com>"]
+
+description = "Library for tracking file accesses of processes"
+license = "GPLv2"
+repository = "https://github.com/droundy/bigbro"
+homepage = "https://facio.gitlab.io/bigbro"
+documentation = "http://facio.gitlab.io/bigbro/doc/bigbro/index.html"
+
 build = "build.rs"
 
 [lib]
