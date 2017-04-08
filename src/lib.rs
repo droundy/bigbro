@@ -23,7 +23,9 @@ use libc::{c_int, c_char};
 
 use std::os::unix::process::{ExitStatusExt};
 
+use std::io::{Seek};
 use std::os::unix::ffi::{ OsStrExt };
+use std::os::unix::io::{FromRawFd};
 
 fn cstr(x: &OsStr) -> CString {
     CString::new(x.as_bytes()).unwrap()
@@ -68,6 +70,7 @@ pub struct Status {
     read_from_files: std::collections::HashSet<OsString>,
     written_to_files: std::collections::HashSet<OsString>,
     mkdir_directories: std::collections::HashSet<OsString>,
+    stdout_fd: Option<std::os::unix::io::RawFd>,
 }
 
 impl Status {
@@ -166,6 +169,16 @@ impl Status {
     pub fn mkdir_directories(&self) -> std::collections::HashSet<OsString> {
         self.mkdir_directories.clone()
     }
+
+    /// This retuns the stdout, if it has been saved.
+    pub fn stdout(&self) -> std::io::Result<Option<Box<std::io::Read>>> {
+        if let Some(fd) = self.stdout_fd {
+            let mut f = unsafe { std::fs::File::from_raw_fd(fd) };
+            f.seek(std::io::SeekFrom::Start(0))?;
+            return Ok(Some(Box::new(f)));
+        }
+        Ok(None)
+    }
 }
 
 fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<OsString> {
@@ -228,6 +241,7 @@ pub struct Command {
     stdin: Std,
     stdout: Std,
     stderr: Std,
+    can_read_stdout: bool,
 }
 
 impl Command {
@@ -261,6 +275,7 @@ impl Command {
             stdin: Std::Inherit,
             stdout: Std::Inherit,
             stderr: Std::Inherit,
+            can_read_stdout: false,
         }
     }
 
@@ -295,6 +310,42 @@ impl Command {
     /// Set the stderr of the command.
     pub fn stderr(&mut self, cfg: Stdio) -> &mut Command {
         self.stderr = cfg.0;
+        self
+    }
+
+    /// Set the stderr and stdout of the command to go to a temp file,
+    /// from which they can be read.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let status = Command::new("echo")
+    ///                      .arg("-n")
+    ///                      .arg("hello")
+    ///                      .stdouterr_temp()
+    ///                      .status()
+    ///                      .expect("failed to execute echo");
+    ///
+    /// assert!(status.status().success() );
+    /// let mut f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut contents = String::new();
+    /// f.unwrap().read_to_string(&mut contents);
+    /// assert_eq!(contents, "hello");
+    pub fn stdouterr_temp(&mut self) -> &mut Command {
+        let namebuf = CString::new("/tmp/bigbro-XXXXXX").unwrap();
+        let fd = unsafe {
+            libc::mkstemp(namebuf.as_ptr() as *mut c_char)
+        };
+        unsafe {
+            libc::unlink(namebuf.as_ptr() as *const c_char);
+        }
+
+        self.stderr = Std::Fd(fd);
+        self.stdout = Std::Fd(fd);
+        self.can_read_stdout = true;
         self
     }
 
@@ -361,6 +412,7 @@ impl Command {
             read_from_files: null_c_array_to_osstr(rf as *const *const i8),
             written_to_files: null_c_array_to_osstr(wf as *const *const i8),
             mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
+            stdout_fd: if self.can_read_stdout { stdout } else { None },
         };
         unsafe {
             libc::free(rd as *mut libc::c_void);
