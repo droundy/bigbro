@@ -18,7 +18,6 @@
 extern crate libc;
 
 use std;
-use std::io::Seek;
 
 use std::ffi::{OsStr, OsString};
 use std::io;
@@ -34,7 +33,7 @@ pub struct Status {
     read_from_files: std::collections::HashSet<OsString>,
     written_to_files: std::collections::HashSet<OsString>,
     mkdir_directories: std::collections::HashSet<OsString>,
-    stdout_fd: Option<std::fs::File>,
+    stdout_fd: Option<Vec<u8>>,
 }
 
 impl Status {
@@ -54,91 +53,46 @@ impl Status {
         self.mkdir_directories.clone()
     }
     pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
-        if let Some(mut f) = self.stdout_fd.take() {
-            f.seek(std::io::SeekFrom::Start(0))?;
-            return Ok(Some(Box::new(f)));
+        if let Some(f) = self.stdout_fd.take() {
+            return Ok(Some(Box::new(std::io::Cursor::new(f))));
         }
         Ok(None)
     }
 }
 
 pub struct Command {
-    argv: Vec<OsString>,
-    envs: Option<std::collections::HashMap<OsString, OsString>>,
-    workingdir: Option<std::path::PathBuf>,
-    stdin: Std,
-    stdout: Std,
-    stderr: Std,
+    cmd: std::process::Command,
+    want_stdouterr: bool,
 }
 
 impl Command {
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
         Command {
-            argv: vec![program.as_ref().to_os_string()],
-            envs: None,
-            workingdir: None,
-            stdin: Std::Inherit,
-            stdout: Std::Inherit,
-            stderr: Std::Inherit,
+            cmd: std::process::Command::new(program),
+            want_stdouterr: false,
         }
     }
 
-    pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Command {
-        self.argv.push(arg.as_ref().to_os_string());
-        self
+    pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) {
+        self.cmd.arg(arg);
     }
-    pub fn current_dir<P: AsRef<std::path::Path>>(&mut self, dir: P) -> &mut Command {
-        self.workingdir = Some(std::path::PathBuf::from(dir.as_ref()));
-        self
+    pub fn current_dir<P: AsRef<std::path::Path>>(&mut self, dir: P) {
+        self.cmd.current_dir(dir);
     }
 
-    fn copy_environment_if_needed(&mut self)
-                                  -> &mut std::collections::HashMap<OsString, OsString> {
-        if self.envs.is_none() {
-            let mut e = std::collections::HashMap::new();
-            for (k,v) in std::env::vars_os() {
-                e.insert(k, v);
-            }
-            self.envs = Some(e);
-        }
-        self.envs.as_mut().unwrap()
+    pub fn stdin(&mut self, cfg: Stdio) {
+        self.cmd.stdin(to_io(cfg));
+    }
+    pub fn stdout(&mut self, cfg: Stdio) {
+        self.cmd.stdout(to_io(cfg));
+    }
+    pub fn stderr(&mut self, cfg: Stdio) {
+        self.cmd.stderr(to_io(cfg));
     }
 
-    pub fn env<K, V>(&mut self, key: K, val: V)
-        where K: AsRef<OsStr>, V: AsRef<OsStr>
-    {
-        self.copy_environment_if_needed()
-            .insert(key.as_ref().to_os_string(), val.as_ref().to_os_string());
-    }
-
-    pub fn env_remove<K>(&mut self, key: K)
-        where K: AsRef<OsStr>
-    {
-        self.copy_environment_if_needed().remove(key.as_ref());
-    }
-
-    pub fn env_clear(&mut self)
-    {
-        self.envs = Some(std::collections::HashMap::new());
-    }
-
-    pub fn stdin(&mut self, cfg: Stdio) -> &mut Command {
-        self.stdin = cfg.0;
-        self
-    }
-
-    pub fn stdout(&mut self, cfg: Stdio) -> &mut Command {
-        self.stdout = cfg.0;
-        self
-    }
-
-    pub fn stderr(&mut self, cfg: Stdio) -> &mut Command {
-        self.stderr = cfg.0;
-        self
-    }
-
-    pub fn save_stdouterr(&mut self) -> &mut Command {
-        self
+    pub fn save_stdouterr(&mut self) {
+        self.stdout(Stdio::piped());
+        self.want_stdouterr = true;
     }
 
     pub fn status(&mut self, envs_cleared: bool,
@@ -146,7 +100,36 @@ impl Command {
                   envs_set: &std::collections::HashMap<OsString,OsString>)
                   -> io::Result<Status>
     {
-        unimplemented!()
+        if envs_cleared {
+            self.cmd.env_clear();
+        }
+        for e in envs_removed {
+            self.cmd.env_remove(e);
+        }
+        for (k,v) in envs_set {
+            self.cmd.env(k,v);
+        }
+        if self.want_stdouterr {
+            let s = self.cmd.output()?;
+            Ok(Status {
+                status: s.status,
+                read_from_directories: std::collections::HashSet::new(),
+                read_from_files: std::collections::HashSet::new(),
+                written_to_files: std::collections::HashSet::new(),
+                mkdir_directories: std::collections::HashSet::new(),
+                stdout_fd: Some(s.stdout),
+            })
+        } else {
+            let s = self.cmd.status()?;
+            Ok(Status {
+                status: s,
+                read_from_directories: std::collections::HashSet::new(),
+                read_from_files: std::collections::HashSet::new(),
+                written_to_files: std::collections::HashSet::new(),
+                mkdir_directories: std::collections::HashSet::new(),
+                stdout_fd: None,
+            })
+        }
     }
 }
 
@@ -156,12 +139,25 @@ enum Std {
     Null,
 }
 
+fn to_io(i: Stdio) -> std::process::Stdio {
+    match i.0 {
+        Std::Inherit => std::process::Stdio::inherit(),
+        Std::MakePipe => std::process::Stdio::piped(),
+        Std::Null => std::process::Stdio::null(),
+    }
+}
+
+/// A description of what you want done with one of the standard streams.
 pub struct Stdio(Std);
 
 impl Stdio {
+    /// A new pipe should be arranged to connect the parent and child processes.
     pub fn piped() -> Stdio { Stdio(Std::MakePipe) }
 
+    /// The child inherits from the corresponding parent descriptor.
     pub fn inherit() -> Stdio { Stdio(Std::Inherit) }
 
+    /// This stream will be ignored. This is the equivalent of attaching the
+    /// stream to `/dev/null`
     pub fn null() -> Stdio { Stdio(Std::Null) }
 }
