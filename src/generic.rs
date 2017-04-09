@@ -20,7 +20,7 @@ extern crate libc;
 use std;
 use std::io::Seek;
 
-use std::ffi::{OsStr, OsString, CString};
+use std::ffi::{OsStr, OsString};
 use std::io;
 
 /// The result of running a command using bigbro.
@@ -92,6 +92,36 @@ impl Command {
         self
     }
 
+    fn copy_environment_if_needed(&mut self)
+                                  -> &mut std::collections::HashMap<OsString, OsString> {
+        if self.envs.is_none() {
+            let mut e = std::collections::HashMap::new();
+            for (k,v) in std::env::vars_os() {
+                e.insert(k, v);
+            }
+            self.envs = Some(e);
+        }
+        self.envs.as_mut().unwrap()
+    }
+
+    pub fn env<K, V>(&mut self, key: K, val: V)
+        where K: AsRef<OsStr>, V: AsRef<OsStr>
+    {
+        self.copy_environment_if_needed()
+            .insert(key.as_ref().to_os_string(), val.as_ref().to_os_string());
+    }
+
+    pub fn env_remove<K>(&mut self, key: K)
+        where K: AsRef<OsStr>
+    {
+        self.copy_environment_if_needed().remove(key.as_ref());
+    }
+
+    pub fn env_clear(&mut self)
+    {
+        self.envs = Some(std::collections::HashMap::new());
+    }
+
     pub fn stdin(&mut self, cfg: Stdio) -> &mut Command {
         self.stdin = cfg.0;
         self
@@ -111,7 +141,11 @@ impl Command {
         self
     }
 
-    pub fn status(&mut self) -> io::Result<Status> {
+    pub fn status(&mut self, envs_cleared: bool,
+                  envs_removed: &std::collections::HashSet<OsString>,
+                  envs_set: &std::collections::HashMap<OsString,OsString>)
+                  -> io::Result<Status>
+    {
         unimplemented!()
     }
 }

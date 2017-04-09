@@ -17,23 +17,18 @@
 //! ```
 extern crate libc;
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 mod linux;
+#[cfg(not(target_os = "linux"))]
+mod generic;
 
-#[cfg(unix)]
-pub use linux::{Stdio};
-
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use linux as imp;
 
-#[cfg(windows)]
-mod winbro;
+#[cfg(not(target_os = "linux"))]
+use generic as imp;
 
-#[cfg(windows)]
-pub use winbro::{Stdio};
-
-#[cfg(windows)]
-use winbro as imp;
+pub use imp::{Stdio};
 
 use std::ffi::{OsString, OsStr};
 
@@ -65,6 +60,9 @@ use std::ffi::{OsString, OsStr};
 /// assert!(status.status().success());
 /// ```
 pub struct Command {
+    envs_set: std::collections::HashMap<OsString,OsString>,
+    envs_removed: std::collections::HashSet<OsString>,
+    envs_cleared: bool,
     inner: imp::Command,
 }
 
@@ -92,7 +90,12 @@ impl Command {
     ///         .expect("sh command failed to run");
     /// ```
     pub fn new<S: AsRef<OsStr>>(program: S) -> Command {
-        Command { inner: imp::Command::new(program) }
+        Command {
+            envs_set: std::collections::HashMap::new(),
+            envs_removed: std::collections::HashSet::new(),
+            envs_cleared: false,
+            inner: imp::Command::new(program),
+        }
     }
 
     /// Add a single argument to the command.
@@ -114,6 +117,84 @@ impl Command {
     /// Set the working directory for the command.
     pub fn current_dir<P: AsRef<std::path::Path>>(&mut self, dir: P) -> &mut Command {
         self.inner.current_dir(dir);
+        self
+    }
+
+    /// Update an environment variable mapping
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let mut status = Command::new("sh")
+    ///                          .arg("-c")
+    ///                          .arg("echo -n $CFLAGS")
+    ///                          .env("CFLAGS", "--coverage")
+    ///                          .save_stdouterr()
+    ///                          .status()
+    ///                          .expect("failed to execute sh");
+    ///
+    /// println!("status: {:?}", status.status());
+    /// assert!(status.status().success() );
+    /// let f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut contents = String::new();
+    /// f.unwrap().read_to_string(&mut contents).unwrap();
+    /// assert_eq!(contents, "--coverage");
+    /// ```
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let mut status = Command::new("env")
+    ///                          .env_clear()
+    ///                          .env("FOO", "foo")
+    ///                          .save_stdouterr()
+    ///                          .status()
+    ///                          .expect("failed to execute env");
+    ///
+    /// println!("status: {:?}", status.status());
+    /// assert!(status.status().success() );
+    /// let f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut contents = String::new();
+    /// f.unwrap().read_to_string(&mut contents).unwrap();
+    /// assert_eq!(contents, "FOO=foo\n");
+    /// ```
+    pub fn env<K, V>(&mut self, key: K, val: V) -> &mut Command
+        where K: AsRef<OsStr>, V: AsRef<OsStr>
+    {
+        self.envs_removed.remove(key.as_ref());
+        self.envs_set.insert(key.as_ref().to_os_string(), val.as_ref().to_os_string());
+        self
+    }
+
+    /// Add or update multiple environment variable mappings.
+    pub fn envs<I, K, V>(&mut self, vars: I) -> &mut Command
+        where I: IntoIterator<Item=(K, V)>, K: AsRef<OsStr>, V: AsRef<OsStr>
+    {
+        for (k,v) in vars {
+            self.env(k,v);
+        }
+        self
+    }
+
+    /// Remove an environment variable mapping
+    pub fn env_remove<K>(&mut self, key: K) -> &mut Command
+        where K: AsRef<OsStr>
+    {
+        self.envs_set.remove(key.as_ref());
+        self.envs_removed.insert(key.as_ref().to_os_string());
+        self
+    }
+
+    /// Clear the environment for the child
+    pub fn env_clear(&mut self) -> &mut Command
+    {
+        self.envs_cleared = true;
+        self.envs_set.clear();
+        self.envs_removed.clear();
         self
     }
 
@@ -164,7 +245,8 @@ impl Command {
 
     /// Run the Command, wait for it to complete, and return its results.
     pub fn status(&mut self) -> std::io::Result<Status> {
-        self.inner.status().map(|s| Status { inner: s })
+        self.inner.status(self.envs_cleared, &self.envs_removed, &self.envs_set)
+            .map(|s| Status { inner: s })
     }
 }
 

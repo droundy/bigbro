@@ -40,9 +40,6 @@ mod private {
                               written_to_files: *mut *mut *mut c_char) -> c_int;
 
         pub fn setpgid(pid: c_int, pgid: c_int) -> c_int;
-        pub fn execvpe(path: *const c_char, argv: *const *const c_char,
-                       envp: *const *const c_char) -> c_int;
-        pub static environ: *const *const c_char;
     }
 }
 
@@ -109,7 +106,6 @@ fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<O
 
 pub struct Command {
     argv: Vec<CString>,
-    envs: Option<std::collections::HashMap<CString, CString>>,
     workingdir: Option<std::path::PathBuf>,
     stdin: Std,
     stdout: Std,
@@ -122,7 +118,6 @@ impl Command {
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
         Command {
             argv: vec![cstr(program.as_ref())],
-            envs: None,
             workingdir: None,
             stdin: Std::Inherit,
             stdout: Std::Inherit,
@@ -147,9 +142,8 @@ impl Command {
         self.argv.push(cstr(arg.as_ref()));
         self
     }
-    pub fn current_dir<P: AsRef<std::path::Path>>(&mut self, dir: P) -> &mut Command {
+    pub fn current_dir<P: AsRef<std::path::Path>>(&mut self, dir: P) {
         self.workingdir = Some(std::path::PathBuf::from(dir.as_ref()));
-        self
     }
 
     /// Set the stdin of the command.
@@ -195,7 +189,9 @@ impl Command {
     }
 
     /// Run the Command, wait for it to complete, and return its results.
-    pub fn status(&mut self) -> io::Result<Status> {
+    pub fn status(&mut self, envs_cleared: bool,
+                  envs_removed: &std::collections::HashSet<OsString>,
+                  envs_set: &std::collections::HashMap<OsString,OsString>) -> io::Result<Status> {
         self.assert_no_error()?;
         let mut args_raw: Vec<*const c_char> =
             self.argv.iter().map(|arg| arg.as_ptr()).collect();
@@ -203,24 +199,6 @@ impl Command {
         let stdin = self.stdin.to_child_fd()?;
         let stdout = self.stdout.to_child_fd()?;
         let stderr = self.stderr.to_child_fd()?;
-
-        let mut envptr = unsafe { private::environ };
-        // the following needs to live beyond execvpe to keep string data alive
-        let mut env: Vec<CString>;
-        // the following needs to live beyond execvpe to keep string pointers alive
-        let envps: Vec<*const c_char>;
-        if let Some(ref e) = self.envs {
-            env = vec![];
-            for (k,v) in e {
-                let mut newv: Vec<u8> = vec![];
-                newv.extend(k.as_bytes());
-                newv.extend(b"=");
-                newv.extend(v.as_bytes());
-                env.push(unsafe { CString::from_vec_unchecked(newv) });
-            }
-            envps = env.iter().map(|arg| arg.as_ptr() as *const c_char).collect();
-            envptr = envps.as_ptr();
-        }
 
         let mut rd = std::ptr::null_mut();
         let mut rf = std::ptr::null_mut();
@@ -230,6 +208,18 @@ impl Command {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
             if pid == 0 {
+                if envs_cleared {
+                    for (k, _) in std::env::vars_os() {
+                        std::env::remove_var(k)
+                    }
+                }
+                for k in envs_removed {
+                    std::env::remove_var(k);
+                }
+                for (k,v) in envs_set {
+                    std::env::set_var(k, v);
+                }
+
                 if let Some(ref p) = self.workingdir {
                     std::env::set_current_dir(p)?;
                 }
@@ -243,7 +233,7 @@ impl Command {
                         libc::dup2(fd, libc::STDERR_FILENO);
                 }
                 private::bigbro_before_exec();
-                private::execvpe(args_raw[0], args_raw.as_ptr(), envptr);
+                libc::execvp(args_raw[0], args_raw.as_ptr());
                 libc::exit(137)
             }
             pid
