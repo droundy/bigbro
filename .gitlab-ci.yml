@@ -16,6 +16,8 @@ build:
 test:
   stage: test
   script:
+    - mkdir -p ~/.cargo
+    - cat .cargo/config >> ~/.cargo/config
     - cargo build --features strict
     - cargo build --features strict --release
     - python3 run-tests.py
