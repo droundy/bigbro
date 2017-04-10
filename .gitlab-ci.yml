@@ -23,8 +23,8 @@ test:
     - python3 run-tests.py
     - echo Checking for rust warnings...
     - cargo test --features strict
-    - cargo build --features strict --target i686-pc-windows-gnu
-    - cargo build --features strict --target x86_64-pc-windows-gnu
+    - echo skip cargo build --features strict --target i686-pc-windows-gnu
+    - echo skip cargo build --features strict --target x86_64-pc-windows-gnu
   after_script:
     - bash <(curl -s https://codecov.io/bash) -t ef88c866-d33f-45e5-b994-617ef7861f50
   artifacts:
