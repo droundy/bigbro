@@ -69,9 +69,24 @@ if platform == 'linux2':
 for f in glob.glob('tests/*.test') + glob.glob('*.gcno') + glob.glob('*.gcda'):
     os.remove(f)
 
+def is_in_path(program):
+    """ Does the program exist in the PATH? """
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        return is_exe(program)
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return True
+    return False
+
 # we always run with test coverage if lcov is present!
-have_lcov = not benchmark and os.system('lcov -h') == 0
-have_gcovr = not benchmark and os.system('gcovr -h') == 0
+have_lcov = not benchmark and is_in_path('lcov')
+have_gcovr = not benchmark and is_in_path('gcovr')
 
 print('creating build/%s.sh...' % platform)
 print('==========================')
@@ -186,7 +201,9 @@ for testc in glob.glob('tests/*.c'):
                 continue
         ctest_executables.append((base,test))
 
-bigbro_binaries = ['./bigbro', 'target/debug/test-bigbro', 'target/release/test-bigbro']
+bigbro_binaries = ['./bigbro']
+if is_in_path('cargo'):
+    bigbro_binaries += ['target/debug/test-bigbro', 'target/release/test-bigbro']
 
 for bigbro in bigbro_binaries:
     print('running C tests with %s:' % bigbro)
