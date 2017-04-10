@@ -16,9 +16,10 @@ build:
 test:
   stage: test
   script:
+    - cargo build --features strict
+    - cargo build --features strict --release
     - python3 run-tests.py
     - echo Checking for rust warnings...
-    - cargo build --features strict
     - cargo test --features strict
     - cargo build --features strict --target i686-pc-windows-gnu
     - cargo build --features strict --target x86_64-pc-windows-gnu
