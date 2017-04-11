@@ -203,6 +203,10 @@ for testc in glob.glob('tests/*.c'):
 
 bigbro_binaries = ['./bigbro']
 if is_in_path('cargo'):
+    assert not os.system('cargo build --features strict')
+    assert not os.system('cargo build --features strict --release')
+    assert not os.system('cargo build --features strict --target i686-pc-windows-gnu')
+    assert not os.system('cargo build --features strict --target x86_64-pc-windows-gnu')
     bigbro_binaries += ['target/debug/test-bigbro', 'target/release/test-bigbro']
 
 for bigbro in bigbro_binaries:
