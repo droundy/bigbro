@@ -208,12 +208,14 @@ if is_in_path('doxygen'):
 
 | cp web/doxy/bigbro_8h.html web/documentation.html
 < web/doxy/bigbro_8h.html
+> web/documentation.html
 ''')
 
 if is_in_path('cargo'):
         print('''
 | cargo build && cargo doc
 < syscalls/linux.h
+> target/doc/bigbro/index.html
 c ~
 c .tum
 c .pyc
