@@ -1,6 +1,6 @@
 [package]
 name = "bigbro"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["David Roundy <daveroundy@gmail.com>"]
 
 description = "Library for tracking file accesses of processes"
