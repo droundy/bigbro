@@ -232,7 +232,7 @@ impl Command {
     ///                          .expect("failed to execute echo");
     ///
     /// assert!(status.status().success() );
-    /// let mut f = status.stdout().unwrap();
+    /// let f = status.stdout().unwrap();
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents);
@@ -371,7 +371,7 @@ impl Status {
     ///                          .expect("failed to execute ls");
     ///
     /// assert!(status.status().success() );
-    /// let mut f = status.stdout().unwrap();
+    /// let f = status.stdout().unwrap();
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents);
