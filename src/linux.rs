@@ -5,6 +5,7 @@ extern crate libc;
 
 use std;
 use std::ffi::{OsStr, OsString, CString};
+use std::path::PathBuf;
 use std::io;
 use libc::{c_int, c_char};
 
@@ -45,10 +46,10 @@ mod private {
 
 pub struct Status {
     status: std::process::ExitStatus,
-    read_from_directories: std::collections::HashSet<OsString>,
-    read_from_files: std::collections::HashSet<OsString>,
-    written_to_files: std::collections::HashSet<OsString>,
-    mkdir_directories: std::collections::HashSet<OsString>,
+    read_from_directories: std::collections::HashSet<PathBuf>,
+    read_from_files: std::collections::HashSet<PathBuf>,
+    written_to_files: std::collections::HashSet<PathBuf>,
+    mkdir_directories: std::collections::HashSet<PathBuf>,
     stdout_fd: Option<std::fs::File>,
 }
 
@@ -56,16 +57,16 @@ impl Status {
     pub fn status(&self) -> std::process::ExitStatus {
         self.status
     }
-    pub fn read_from_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_directories(&self) -> std::collections::HashSet<PathBuf> {
        self.read_from_directories.clone()
     }
-    pub fn read_from_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_files(&self) -> std::collections::HashSet<PathBuf> {
         self.read_from_files.clone()
     }
-    pub fn written_to_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn written_to_files(&self) -> std::collections::HashSet<PathBuf> {
         self.written_to_files.clone()
     }
-    pub fn mkdir_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn mkdir_directories(&self) -> std::collections::HashSet<PathBuf> {
         self.mkdir_directories.clone()
     }
 
@@ -78,7 +79,7 @@ impl Status {
     }
 }
 
-fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<OsString> {
+fn null_c_array_to_pathbuf(a: *const *const c_char) -> std::collections::HashSet<PathBuf> {
     if a == std::ptr::null() {
         return vec![].into_iter().collect(); // surely there is a nicer way to get empty set?
     }
@@ -99,7 +100,7 @@ fn null_c_array_to_osstr(a: *const *const c_char) -> std::collections::HashSet<O
         }
         let osstr = std::ffi::OsStr::from_bytes(unsafe {
             std::slice::from_raw_parts(*s as *const u8, strlen) });
-        v.push(osstr.to_owned());
+        v.push(PathBuf::from(osstr));
     }
     v.into_iter().collect()
 }
@@ -243,10 +244,10 @@ impl Command {
         };
         let status = Status {
             status: std::process::ExitStatus::from_raw(exitcode),
-            read_from_directories: null_c_array_to_osstr(rd as *const *const i8),
-            read_from_files: null_c_array_to_osstr(rf as *const *const i8),
-            written_to_files: null_c_array_to_osstr(wf as *const *const i8),
-            mkdir_directories: null_c_array_to_osstr(md as *const *const i8),
+            read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
+            read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
+            written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
+            mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
             stdout_fd: if self.can_read_stdout {
                 if let Some(ref fd) = stdout {
                     Some (unsafe { std::fs::File::from_raw_fd(*fd) })

@@ -31,6 +31,7 @@ use generic as imp;
 pub use imp::{Stdio};
 
 use std::ffi::{OsString, OsStr};
+use std::path::PathBuf;
 
 /// A process builder, providing fine-grained control over how a new
 /// process should be spawned.
@@ -300,7 +301,7 @@ impl Status {
     /// assert!(status.status().success() );
     /// assert!(status.read_from_directories().contains(&dir) );
     /// ```
-    pub fn read_from_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_directories(&self) -> std::collections::HashSet<PathBuf> {
        self.inner.read_from_directories()
     }
     /// This retuns the set of files that the process read.  For
@@ -323,7 +324,7 @@ impl Status {
     ///    println!("read file {:#?}", f);
     /// }
     /// assert!(status.read_from_files().contains(&p) );
-    pub fn read_from_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_files(&self) -> std::collections::HashSet<PathBuf> {
         self.inner.read_from_files()
     }
     /// This retuns the set of files that the process wrote to.  For
@@ -347,13 +348,13 @@ impl Status {
     /// }
     /// assert!(status.written_to_files().contains(&p) );
     /// assert!(status.written_to_files().len() == 1 );
-    pub fn written_to_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn written_to_files(&self) -> std::collections::HashSet<PathBuf> {
         self.inner.written_to_files()
     }
     /// This retuns the set of directories that the process created.
     /// For details of what is meant by a process having "read from a
     /// directory", see [semantics](semantics.html).
-    pub fn mkdir_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn mkdir_directories(&self) -> std::collections::HashSet<PathBuf> {
         self.inner.mkdir_directories()
     }
 

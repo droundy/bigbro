@@ -20,6 +20,7 @@ extern crate libc;
 use std;
 
 use std::ffi::{OsStr, OsString};
+use std::path::PathBuf;
 use std::io;
 
 /// The result of running a command using bigbro.
@@ -29,10 +30,10 @@ use std::io;
 /// accessed by the command.
 pub struct Status {
     status: std::process::ExitStatus,
-    read_from_directories: std::collections::HashSet<OsString>,
-    read_from_files: std::collections::HashSet<OsString>,
-    written_to_files: std::collections::HashSet<OsString>,
-    mkdir_directories: std::collections::HashSet<OsString>,
+    read_from_directories: std::collections::HashSet<PathBuf>,
+    read_from_files: std::collections::HashSet<PathBuf>,
+    written_to_files: std::collections::HashSet<PathBuf>,
+    mkdir_directories: std::collections::HashSet<PathBuf>,
     stdout_fd: Option<Vec<u8>>,
 }
 
@@ -40,16 +41,16 @@ impl Status {
     pub fn status(&self) -> std::process::ExitStatus {
         self.status
     }
-    pub fn read_from_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_directories(&self) -> std::collections::HashSet<PathBuf> {
        self.read_from_directories.clone()
     }
-    pub fn read_from_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn read_from_files(&self) -> std::collections::HashSet<PathBuf> {
         self.read_from_files.clone()
     }
-    pub fn written_to_files(&self) -> std::collections::HashSet<OsString> {
+    pub fn written_to_files(&self) -> std::collections::HashSet<PathBuf> {
         self.written_to_files.clone()
     }
-    pub fn mkdir_directories(&self) -> std::collections::HashSet<OsString> {
+    pub fn mkdir_directories(&self) -> std::collections::HashSet<PathBuf> {
         self.mkdir_directories.clone()
     }
     pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
