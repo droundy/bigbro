@@ -103,6 +103,7 @@ if not os.system('fac --help'):
 
 if is_in_path('cargo'):
     assert not os.system('cargo build --features strict')
+    assert not os.system('cargo test --features strict')
     assert not os.system('cargo build --features strict --release')
     # assert not os.system('cargo build --features strict --target i686-pc-windows-gnu')
     assert not os.system('cargo build --features strict --target x86_64-pc-windows-gnu')
