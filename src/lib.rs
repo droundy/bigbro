@@ -292,7 +292,7 @@ impl Status {
     /// ```
     /// use bigbro::Command;
     ///
-    /// let dir = std::ffi::OsString::from("/tmp");
+    /// let dir = std::path::PathBuf::from("/tmp");
     /// let status = Command::new("ls")
     ///                      .arg(&dir)
     ///                      .status()
@@ -313,9 +313,10 @@ impl Status {
     /// ```
     /// use bigbro::Command;
     ///
-    /// let p = std::ffi::OsString::from("/usr/bin/python");
+    /// let e = std::ffi::OsString::from("/usr/bin/python");
+    /// let p = std::path::PathBuf::from("/usr/bin/python");
     /// let status = Command::new("sha1sum")
-    ///                      .arg(&p)
+    ///                      .arg(&e)
     ///                      .status()
     ///                      .expect("failed to execute sha1sum");
     ///
@@ -336,7 +337,7 @@ impl Status {
     /// ```
     /// use bigbro::Command;
     ///
-    /// let p = std::ffi::OsString::from("/tmp/hello");
+    /// let p = std::path::PathBuf::from("/tmp/hello");
     /// let status = Command::new("sh")
     ///                      .args(&["-c", "echo hello > /tmp/hello"])
     ///                      .status()
