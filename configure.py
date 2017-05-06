@@ -221,6 +221,7 @@ c .tum
 c .pyc
 c .gcda
 c .gcno
+c .gcov
 C bench
 C tests
 C web
@@ -232,6 +233,7 @@ c .tum
 c .pyc
 c .gcda
 c .gcno
+c .gcov
 C bench
 C tests
 C web
