@@ -262,6 +262,76 @@ impl Command {
         }
         Ok(status)
     }
+
+
+    /// Run the Command blind, wait for it to complete, and return its results.
+    pub fn blind(&mut self, envs_cleared: bool,
+                 envs_removed: &std::collections::HashSet<OsString>,
+                 envs_set: &std::collections::HashMap<OsString,OsString>) -> io::Result<Status> {
+        self.assert_no_error()?;
+        let mut args_raw: Vec<*const c_char> =
+            self.argv.iter().map(|arg| arg.as_ptr()).collect();
+        args_raw.push(std::ptr::null());
+        let stdin = self.stdin.to_child_fd()?;
+        let stdout = self.stdout.to_child_fd()?;
+        let stderr = self.stderr.to_child_fd()?;
+
+        let pid = unsafe {
+            let pid = cvt(libc::fork())?;
+            private::setpgid(pid, pid);
+            if pid == 0 {
+                if envs_cleared {
+                    for (k, _) in std::env::vars_os() {
+                        std::env::remove_var(k)
+                    }
+                }
+                for k in envs_removed {
+                    std::env::remove_var(k);
+                }
+                for (k,v) in envs_set {
+                    std::env::set_var(k, v);
+                }
+
+                if let Some(ref p) = self.workingdir {
+                    std::env::set_current_dir(p)?;
+                }
+                if let Some(fd) = stdin {
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                }
+                if let Some(fd) = stdout {
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                }
+                if let Some(fd) = stderr {
+                        libc::dup2(fd, libc::STDERR_FILENO);
+                }
+                libc::execvp(args_raw[0], args_raw.as_ptr());
+                libc::exit(137)
+            }
+            pid
+        };
+        let exitcode = unsafe {
+            let mut st: c_int = 0;
+            libc::waitpid(pid, &mut st, 0);
+            if libc::WIFEXITED(st) {
+                libc::WEXITSTATUS(st)
+            } else {
+                -1
+            }
+        };
+        let status = Status {
+            status: std::process::ExitStatus::from_raw(exitcode),
+            read_from_directories: std::collections::HashSet::new(),
+            read_from_files: std::collections::HashSet::new(),
+            written_to_files: std::collections::HashSet::new(),
+            mkdir_directories: std::collections::HashSet::new(),
+            stdout_fd: if self.can_read_stdout {
+                if let Some(ref fd) = stdout {
+                    Some (unsafe { std::fs::File::from_raw_fd(*fd) })
+                } else { None }
+            } else { None },
+        };
+        Ok(status)
+    }
 }
 
 enum Std {

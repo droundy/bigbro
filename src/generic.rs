@@ -96,6 +96,12 @@ impl Command {
         self.want_stdouterr = true;
     }
 
+    /// Run the Command blind, wait for it to complete, and return its results.
+    pub fn blind(&mut self, envs_cleared: bool,
+                 envs_removed: &std::collections::HashSet<OsString>,
+                 envs_set: &std::collections::HashMap<OsString,OsString>) -> io::Result<Status> {
+        self.status(envs_cleared, envs_removed, envs_set)
+    }
     pub fn status(&mut self, envs_cleared: bool,
                   envs_removed: &std::collections::HashSet<OsString>,
                   envs_set: &std::collections::HashMap<OsString,OsString>)

@@ -249,6 +249,13 @@ impl Command {
         self.inner.status(self.envs_cleared, &self.envs_removed, &self.envs_set)
             .map(|s| Status { inner: s })
     }
+
+    /// Run the Command without tracking accesses, wait for it to
+    /// complete, and return its results.
+    pub fn blind(&mut self) -> std::io::Result<Status> {
+        self.inner.blind(self.envs_cleared, &self.envs_removed, &self.envs_set)
+            .map(|s| Status { inner: s })
+    }
 }
 
 /// The result of running a command using bigbro.
