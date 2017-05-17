@@ -213,7 +213,7 @@ if is_in_path('doxygen'):
 
 if is_in_path('cargo'):
         print('''
-| cargo build && cargo doc
+| cargo build && cargo doc --no-deps
 < syscalls/linux.h
 > target/doc/bigbro/index.html
 c ~
