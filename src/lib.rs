@@ -244,7 +244,28 @@ impl Command {
         self
     }
 
-    /// Save stderr and stdout to a file.
+    /// Set the stderr and stdout of the command to go to a file,
+    /// from which they can be read after the command is run.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let mut status = Command::new("echo")
+    ///                          .arg("-n")
+    ///                          .arg("hello")
+    ///                          .log_stdouterr(&std::path::Path::new("/tmp/test-file"))
+    ///                          .status()
+    ///                          .expect("failed to execute echo");
+    ///
+    /// assert!(status.status().success() );
+    /// let f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut contents = String::new();
+    /// f.unwrap().read_to_string(&mut contents).unwrap();
+    /// assert_eq!(contents, "hello");
+    /// ```
     pub fn log_stdouterr(&mut self, path: &std::path::Path) -> &mut Command {
         self.inner.log_stdouterr(path);
         self

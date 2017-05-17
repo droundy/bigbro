@@ -168,7 +168,9 @@ impl Command {
     pub fn log_stdouterr(&mut self, path: &std::path::Path) -> &mut Command {
         if ! self.errored() {
             let namebuf = cstr(path.as_os_str());
-            let fd = unsafe { libc::creat(namebuf.as_ptr(), 0777) };
+            let fd = unsafe { libc::open(namebuf.as_ptr(),
+                                         libc::O_RDWR|libc::O_CREAT|libc::O_TRUNC,
+                                         libc::S_IRWXU|libc::S_IRWXG|libc::S_IRWXO) };
             if fd == -1 {
                 self.have_error = Some(io::Error::last_os_error());
                 return self;
