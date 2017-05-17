@@ -244,6 +244,12 @@ impl Command {
         self
     }
 
+    /// Save stderr and stdout to a file.
+    pub fn log_stdouterr(&mut self, path: &std::path::Path) -> &mut Command {
+        self.inner.log_stdouterr(path);
+        self
+    }
+
     /// Run the Command, wait for it to complete, and return its results.
     pub fn status(&mut self) -> std::io::Result<Status> {
         self.inner.status(self.envs_cleared, &self.envs_removed, &self.envs_set)

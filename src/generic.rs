@@ -22,6 +22,7 @@ use std;
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 use std::io;
+use std::io::Write;
 
 /// The result of running a command using bigbro.
 ///
@@ -64,6 +65,7 @@ impl Status {
 pub struct Command {
     cmd: std::process::Command,
     want_stdouterr: bool,
+    log_stdouterr: Option<std::path::PathBuf>,
 }
 
 impl Command {
@@ -71,6 +73,7 @@ impl Command {
         Command {
             cmd: std::process::Command::new(program),
             want_stdouterr: false,
+            log_stdouterr: None,
         }
     }
 
@@ -96,6 +99,12 @@ impl Command {
         self.want_stdouterr = true;
     }
 
+    pub fn log_stdouterr(&mut self, path: &std::path::Path) {
+        self.stdout(Stdio::piped());
+        self.want_stdouterr = true;
+        self.log_stdouterr = Some(PathBuf::from(path));
+    }
+
     /// Run the Command blind, wait for it to complete, and return its results.
     pub fn blind(&mut self, envs_cleared: bool,
                  envs_removed: &std::collections::HashSet<OsString>,
@@ -118,6 +127,10 @@ impl Command {
         }
         if self.want_stdouterr {
             let s = self.cmd.output()?;
+            if let Some(ref p) = self.log_stdouterr {
+                let mut f = std::fs::File::open(p)?;
+                f.write(&s.stdout)?;
+            }
             Ok(Status {
                 status: s.status,
                 read_from_directories: std::collections::HashSet::new(),

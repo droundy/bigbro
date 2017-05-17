@@ -165,6 +165,22 @@ impl Command {
         self
     }
 
+    pub fn log_stdouterr(&mut self, path: &std::path::Path) -> &mut Command {
+        if ! self.errored() {
+            let namebuf = cstr(path.as_os_str());
+            let fd = unsafe { libc::creat(namebuf.as_ptr(), 0777) };
+            if fd == -1 {
+                self.have_error = Some(io::Error::last_os_error());
+                return self;
+            }
+
+            self.stderr = Std::Fd(fd);
+            self.stdout = Std::Fd(fd);
+            self.can_read_stdout = true;
+        }
+        self
+    }
+
     pub fn save_stdouterr(&mut self) -> &mut Command {
         if ! self.errored() {
             let namebuf = CString::new("/tmp/bigbro-XXXXXX").unwrap();
