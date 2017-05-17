@@ -31,4 +31,5 @@ else:
 for f in sorted(glob.glob('*.c')):
     if f != 'bigbro-windows.c':
         print('| sparse -Ibigbro -Wsparse-error %s > %s.sparse' % (f, f[:-2]))
+        print('< syscalls/linux.h')
         print('> %s.sparse' % (f[:-2]))
