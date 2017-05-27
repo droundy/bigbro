@@ -290,6 +290,7 @@ impl Command {
 /// It contains the
 /// ExitStatus as well as the information about files and directories
 /// accessed by the command.
+#[derive(Debug)]
 pub struct Status {
     inner: imp::Status,
 }
@@ -417,4 +418,72 @@ impl Status {
     pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
         self.inner.stdout()
     }
+}
+
+#[cfg(target_os = "linux")]
+#[cfg(test)]
+fn count_file_descriptors() -> usize {
+    let mut count = 0;
+    for _ in std::fs::read_dir("/proc/self/fd").unwrap() {
+        count += 1;
+    }
+    println!("open file descriptors: {}", count);
+    count
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn test_have_closed_fds() {
+    let fds = count_file_descriptors();
+    {
+        let status = Command::new("echo")
+            .arg("-n")
+            .arg("hello")
+            .save_stdouterr()
+            .status()
+            .expect("failed to execute echo");
+        assert!(count_file_descriptors() > fds,
+                "save_stdouterr should open a file descriptor?");
+        println!("status: {:?}", status);
+    }
+    assert_eq!(count_file_descriptors(), fds);
+    {
+        Command::new("ls")
+            .status()
+            .expect("failed to execute ls");
+        assert_eq!(count_file_descriptors(), fds);
+    }
+    assert_eq!(count_file_descriptors(), fds);
+    {
+        Command::new("ls")
+            .stdin(Stdio::null())
+            .status()
+            .expect("failed to execute ls");
+        assert_eq!(count_file_descriptors(), fds);
+    }
+    assert_eq!(count_file_descriptors(), fds);
+    {
+        let status = Command::new("echo")
+            .arg("-n")
+            .arg("hello")
+            .stdin(Stdio::null())
+            .save_stdouterr()
+            .status()
+            .expect("failed to execute echo");
+        assert!(count_file_descriptors() > fds);
+        println!("status: {:?}", status);
+    }
+    assert_eq!(count_file_descriptors(), fds);
+    {
+        let status = Command::new("echo")
+            .arg("-n")
+            .arg("hello")
+            .stdin(Stdio::null())
+            .log_stdouterr(&std::path::Path::new("/tmp/test-file"))
+            .status()
+            .expect("failed to execute echo");
+        assert!(count_file_descriptors() > fds);
+        println!("status: {:?}", status);
+    }
+    assert_eq!(count_file_descriptors(), fds);
 }

@@ -44,6 +44,7 @@ mod private {
     }
 }
 
+#[derive(Debug)]
 pub struct Status {
     status: std::process::ExitStatus,
     read_from_directories: std::collections::HashSet<PathBuf>,
@@ -260,6 +261,16 @@ impl Command {
         let exitcode = unsafe {
             private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
         };
+        // Before we do anything else, let us clean up any file
+        // descriptors we might have hanging around to avoid any
+        // leaks:
+        self.stdin.close_fd_if_appropriate(stdin);
+        if !self.can_read_stdout {
+            self.stdout.close_fd_if_appropriate(stdout);
+        }
+        if stderr != stdout {
+            self.stderr.close_fd_if_appropriate(stderr);
+        }
         let status = Status {
             status: std::process::ExitStatus::from_raw(exitcode),
             read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
@@ -327,6 +338,16 @@ impl Command {
             }
             pid
         };
+        // Before we do anything else, let us clean up any file
+        // descriptors we might have hanging around to avoid any
+        // leaks:
+        self.stdin.close_fd_if_appropriate(stdin);
+        if !self.can_read_stdout {
+            self.stdout.close_fd_if_appropriate(stdout);
+        }
+        if stderr != stdout {
+            self.stderr.close_fd_if_appropriate(stderr);
+        }
         let exitcode = unsafe {
             let mut st: c_int = 0;
             libc::waitpid(pid, &mut st, 0);
@@ -396,6 +417,16 @@ impl Std {
             } else {
                 Ok(Some(fd))
             },
+        }
+    }
+    fn close_fd_if_appropriate(&self, fd: Option<std::os::unix::io::RawFd>) {
+        if let Some(fd) = fd {
+            match *self {
+                Std::MakePipe => unimplemented!(),
+                Std::Null => unsafe { libc::close(fd); },
+                Std::Inherit => (),
+                Std::Fd(_) => unsafe { libc::close(fd); },
+            }
         }
     }
 }

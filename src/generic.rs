@@ -29,6 +29,7 @@ use std::io::Write;
 /// It contains the
 /// ExitStatus as well as the information about files and directories
 /// accessed by the command.
+#[derive(Debug)]
 pub struct Status {
     status: std::process::ExitStatus,
     read_from_directories: std::collections::HashSet<PathBuf>,
