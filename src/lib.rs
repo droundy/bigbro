@@ -285,8 +285,8 @@ impl Command {
     }
 
     /// Start running the Command and return without waiting for it to complete.
-    pub fn spawn(&mut self) -> std::io::Result<Child> {
-        self.inner.spawn(self.envs_cleared, &self.envs_removed, &self.envs_set)
+    pub fn spawn(self) -> std::io::Result<Child> {
+        self.inner.spawn(self.envs_cleared, self.envs_removed, self.envs_set)
             .map(|s| Child { inner: s })
     }
 }

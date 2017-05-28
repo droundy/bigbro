@@ -167,7 +167,7 @@ impl Command {
     pub fn blind(&mut self, envs_cleared: bool,
                  envs_removed: &std::collections::HashSet<OsString>,
                  envs_set: &std::collections::HashMap<OsString,OsString>) -> io::Result<Status> {
-        self.status(envs_cleared, envs_removed, envs_set)
+        self.status(envs_cleared, &envs_removed, &envs_set)
     }
     pub fn status(&mut self, envs_cleared: bool,
                   envs_removed: &std::collections::HashSet<OsString>,
@@ -209,9 +209,9 @@ impl Command {
             })
         }
     }
-    pub fn spawn(&mut self, envs_cleared: bool,
-                 envs_removed: &std::collections::HashSet<OsString>,
-                 envs_set: &std::collections::HashMap<OsString,OsString>)
+    pub fn spawn(mut self, envs_cleared: bool,
+                 envs_removed: std::collections::HashSet<OsString>,
+                 envs_set: std::collections::HashMap<OsString,OsString>)
                  -> io::Result<Child>
     {
         if envs_cleared {

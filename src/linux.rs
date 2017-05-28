@@ -340,31 +340,23 @@ impl Command {
 
 
     /// Start running the Command and return without waiting for it to complete.
-    pub fn spawn(&mut self, envs_cleared: bool,
-                 envs_removed: &std::collections::HashSet<OsString>,
-                 envs_set: &std::collections::HashMap<OsString,OsString>)
+    pub fn spawn(mut self, envs_cleared: bool,
+                 envs_removed: std::collections::HashSet<OsString>,
+                 envs_set: std::collections::HashMap<OsString,OsString>)
                  -> io::Result<Child>
     {
         self.assert_no_error()?;
-        let envs_set = envs_set.clone();
-        let envs_removed = envs_removed.clone();
-        let argv = self.argv.clone();
-        let stdin = self.stdin.clone();
-        let stdout = self.stdout.clone();
-        let stderr = self.stderr.clone();
-        let workingdir = self.workingdir.clone();
 
-        let can_read_stdout = self.can_read_stdout;
         let have_completed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let have_completed_two = have_completed.clone();
         let (tx, rx) = std::sync::mpsc::channel();
         let status_thread = Some(std::thread::spawn(move || {
             let mut args_raw: Vec<*const c_char> =
-                argv.iter().map(|arg| arg.as_ptr()).collect();
+                self.argv.iter().map(|arg| arg.as_ptr()).collect();
             args_raw.push(std::ptr::null());
-            let stdinfd = stdin.to_child_fd()?;
-            let stdoutfd = stdout.to_child_fd()?;
-            let stderrfd = stderr.to_child_fd()?;
+            let stdinfd = self.stdin.to_child_fd()?;
+            let stdoutfd = self.stdout.to_child_fd()?;
+            let stderrfd = self.stderr.to_child_fd()?;
             let pid = unsafe {
                 let pid = cvt(libc::fork())?;
                 private::setpgid(pid, pid);
@@ -380,7 +372,7 @@ impl Command {
                     for (k,v) in envs_set {
                         std::env::set_var(k, v);
                     }
-                    if let Some(ref p) = workingdir {
+                    if let Some(ref p) = self.workingdir {
                         std::env::set_current_dir(p)?;
                     }
                     if let Some(fd) = stdinfd {
@@ -402,12 +394,12 @@ impl Command {
             // Before we do anything else, let us clean up any file
             // descriptors we might have hanging around to avoid any
             // leaks:
-            stdin.close_fd_if_appropriate(stdinfd);
-            if !can_read_stdout {
-                stdout.close_fd_if_appropriate(stdoutfd);
+            self.stdin.close_fd_if_appropriate(stdinfd);
+            if !self.can_read_stdout {
+                self.stdout.close_fd_if_appropriate(stdoutfd);
             }
             if stderrfd != stdoutfd {
-                stderr.close_fd_if_appropriate(stderrfd);
+                self.stderr.close_fd_if_appropriate(stderrfd);
             }
             let mut rd = std::ptr::null_mut();
             let mut rf = std::ptr::null_mut();
@@ -422,7 +414,7 @@ impl Command {
                 read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
                 written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
                 mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
-                stdout_fd: if can_read_stdout {
+                stdout_fd: if self.can_read_stdout {
                     if let Some(ref fd) = stdoutfd {
                         Some (unsafe { std::fs::File::from_raw_fd(*fd) })
                     } else { None }
