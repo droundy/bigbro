@@ -35,12 +35,58 @@ mod private {
         //           written_to_files: *mut *mut *mut c_char) -> c_int;
         pub fn bigbro_before_exec();
         pub fn bigbro_process(child: c_int,
-                          read_from_directories: *mut *mut *mut c_char,
-                          mkdir_directories: *mut *mut *mut c_char,
-                          read_from_files: *mut *mut *mut c_char,
+                              read_from_directories: *mut *mut *mut c_char,
+                              mkdir_directories: *mut *mut *mut c_char,
+                              read_from_files: *mut *mut *mut c_char,
                               written_to_files: *mut *mut *mut c_char) -> c_int;
 
         pub fn setpgid(pid: c_int, pgid: c_int) -> c_int;
+    }
+}
+
+#[derive(Debug)]
+pub struct Child {
+    pid: c_int,
+    have_completed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    status_thread: Option<std::thread::JoinHandle<std::io::Result<Status>>>,
+}
+
+impl Child {
+    /// Force the child process to exit
+    pub fn kill(&self) -> std::io::Result<()> {
+        let code = unsafe { libc::kill(self.pid, libc::SIGKILL) };
+        if code < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&self) -> std::io::Result<()> {
+        let code = unsafe { libc::kill(self.pid, libc::SIGTERM) };
+        if code < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+    /// Wait for child to finish
+    pub fn wait(&mut self) -> std::io::Result<Status> {
+        let x = self.status_thread.take();
+        if let Some(jh) = x {
+            match jh.join() {
+                Ok(v) => v,
+                Err(_) => Err(io::Error::new(io::ErrorKind::Other,"error joining")),
+            }
+        } else {
+            Err(io::Error::new(io::ErrorKind::Other,"already used up child"))
+        }
+    }
+    /// Check if the child has finished
+    pub fn try_wait(&mut self) -> std::io::Result<Option<Status>> {
+        if self.have_completed.load(std::sync::atomic::Ordering::Relaxed) {
+            self.wait().map(|s| Some(s))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -258,9 +304,6 @@ impl Command {
             }
             pid
         };
-        let exitcode = unsafe {
-            private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
-        };
         // Before we do anything else, let us clean up any file
         // descriptors we might have hanging around to avoid any
         // leaks:
@@ -271,6 +314,9 @@ impl Command {
         if stderr != stdout {
             self.stderr.close_fd_if_appropriate(stderr);
         }
+        let exitcode = unsafe {
+            private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
+        };
         let status = Status {
             status: std::process::ExitStatus::from_raw(exitcode),
             read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
@@ -290,6 +336,113 @@ impl Command {
             libc::free(wf as *mut libc::c_void);
         }
         Ok(status)
+    }
+
+
+    /// Start running the Command and return without waiting for it to complete.
+    pub fn spawn(&mut self, envs_cleared: bool,
+                 envs_removed: &std::collections::HashSet<OsString>,
+                 envs_set: &std::collections::HashMap<OsString,OsString>)
+                 -> io::Result<Child>
+    {
+        self.assert_no_error()?;
+        let envs_set = envs_set.clone();
+        let envs_removed = envs_removed.clone();
+        let argv = self.argv.clone();
+        let stdin = self.stdin.clone();
+        let stdout = self.stdout.clone();
+        let stderr = self.stderr.clone();
+        let workingdir = self.workingdir.clone();
+
+        let can_read_stdout = self.can_read_stdout;
+        let have_completed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let have_completed_two = have_completed.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let status_thread = Some(std::thread::spawn(move || {
+            let mut args_raw: Vec<*const c_char> =
+                argv.iter().map(|arg| arg.as_ptr()).collect();
+            args_raw.push(std::ptr::null());
+            let stdinfd = stdin.to_child_fd()?;
+            let stdoutfd = stdout.to_child_fd()?;
+            let stderrfd = stderr.to_child_fd()?;
+            let pid = unsafe {
+                let pid = cvt(libc::fork())?;
+                private::setpgid(pid, pid);
+                if pid == 0 {
+                    if envs_cleared {
+                        for (k, _) in std::env::vars_os() {
+                            std::env::remove_var(k)
+                        }
+                    }
+                    for k in envs_removed {
+                        std::env::remove_var(k);
+                    }
+                    for (k,v) in envs_set {
+                        std::env::set_var(k, v);
+                    }
+                    if let Some(ref p) = workingdir {
+                        std::env::set_current_dir(p)?;
+                    }
+                    if let Some(fd) = stdinfd {
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                    }
+                    if let Some(fd) = stdoutfd {
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                    }
+                    if let Some(fd) = stderrfd {
+                        libc::dup2(fd, libc::STDERR_FILENO);
+                    }
+                    private::bigbro_before_exec();
+                    libc::execvp(args_raw[0], args_raw.as_ptr());
+                    libc::exit(137)
+                }
+                pid
+            };
+            tx.send(pid).expect("Error reporting pid");
+            // Before we do anything else, let us clean up any file
+            // descriptors we might have hanging around to avoid any
+            // leaks:
+            stdin.close_fd_if_appropriate(stdinfd);
+            if !can_read_stdout {
+                stdout.close_fd_if_appropriate(stdoutfd);
+            }
+            if stderrfd != stdoutfd {
+                stderr.close_fd_if_appropriate(stderrfd);
+            }
+            let mut rd = std::ptr::null_mut();
+            let mut rf = std::ptr::null_mut();
+            let mut wf = std::ptr::null_mut();
+            let mut md = std::ptr::null_mut();
+            let exitcode = unsafe {
+                private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
+            };
+            let status = Status {
+                status: std::process::ExitStatus::from_raw(exitcode),
+                read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
+                read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
+                written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
+                mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
+                stdout_fd: if can_read_stdout {
+                    if let Some(ref fd) = stdoutfd {
+                        Some (unsafe { std::fs::File::from_raw_fd(*fd) })
+                    } else { None }
+                } else { None },
+            };
+            unsafe {
+                libc::free(rd as *mut libc::c_void);
+                libc::free(md as *mut libc::c_void);
+                libc::free(rf as *mut libc::c_void);
+                libc::free(wf as *mut libc::c_void);
+            }
+            have_completed_two.store(true, std::sync::atomic::Ordering::Relaxed);
+            Ok(status)
+        }));
+        let pid = rx.recv().expect("Error learning pid");
+        Ok(Child {
+            pid: pid,
+            have_completed: have_completed,
+            status_thread: status_thread,
+        })
     }
 
 
@@ -373,6 +526,7 @@ impl Command {
     }
 }
 
+#[derive(Clone,Debug)]
 enum Std {
     Inherit,
     MakePipe,

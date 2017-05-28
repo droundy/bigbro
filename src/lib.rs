@@ -283,6 +283,37 @@ impl Command {
         self.inner.blind(self.envs_cleared, &self.envs_removed, &self.envs_set)
             .map(|s| Status { inner: s })
     }
+
+    /// Start running the Command and return without waiting for it to complete.
+    pub fn spawn(&mut self) -> std::io::Result<Child> {
+        self.inner.spawn(self.envs_cleared, &self.envs_removed, &self.envs_set)
+            .map(|s| Child { inner: s })
+    }
+}
+
+/// A currently running (or possibly already completed) child process.
+#[derive(Debug)]
+pub struct Child {
+    inner: imp::Child,
+}
+
+impl Child {
+    /// Force the child process to exit
+    pub fn kill(&mut self) -> std::io::Result<()> {
+        self.inner.kill()
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&mut self) -> std::io::Result<()> {
+        self.inner.terminate()
+    }
+    /// Wait for child to finish
+    pub fn wait(&mut self) -> std::io::Result<Status> {
+        self.inner.wait().map(|s| Status { inner: s })
+    }
+    /// Check if the child has finished
+    pub fn try_wait(&mut self) -> std::io::Result<Option<Status>> {
+        self.inner.try_wait().map(|s| s.map(|s| Status { inner: s}))
+    }
 }
 
 /// The result of running a command using bigbro.

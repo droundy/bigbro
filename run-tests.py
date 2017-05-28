@@ -210,7 +210,9 @@ for testc in glob.glob('tests/*.c'):
 
 bigbro_binaries = ['./bigbro']
 if is_in_path('cargo'):
-    bigbro_binaries += ['target/debug/test-bigbro', 'target/release/test-bigbro']
+    bigbro_binaries += ['target/debug/test-bigbro', 'target/release/test-bigbro',
+                        'target/debug/test-bigbro-twostep',
+                        'target/release/test-bigbro-twostep']
 
 for bigbro in bigbro_binaries:
     print('running C tests with %s:' % bigbro)

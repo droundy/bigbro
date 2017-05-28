@@ -24,6 +24,63 @@ use std::path::PathBuf;
 use std::io;
 use std::io::Write;
 
+#[derive(Debug)]
+pub struct Child {
+    inner: Option<std::process::Child>,
+    want_stdouterr: bool,
+    log_stdouterr: Option<PathBuf>,
+}
+
+impl Child {
+    pub fn kill(&mut self) -> std::io::Result<()> {
+        if let Some(mut c) = self.inner.take() {
+            c.kill()
+        } else {
+            Ok(())
+        }
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&mut self) -> std::io::Result<()> {
+        self.kill()
+    }
+    /// Wait for child to finish
+    pub fn wait(&mut self) -> std::io::Result<Status> {
+        if let Some(mut child) = self.inner.take() {
+            if self.want_stdouterr {
+                let s = child.wait_with_output()?;
+                if let Some(ref p) = self.log_stdouterr {
+                    let mut f = std::fs::File::open(p)?;
+                    f.write(&s.stdout)?;
+                }
+                Ok(Status {
+                    status: s.status,
+                    read_from_directories: std::collections::HashSet::new(),
+                    read_from_files: std::collections::HashSet::new(),
+                    written_to_files: std::collections::HashSet::new(),
+                    mkdir_directories: std::collections::HashSet::new(),
+                    stdout_fd: Some(s.stdout),
+                })
+            } else {
+                let s = child.wait()?;
+                Ok(Status {
+                    status: s,
+                    read_from_directories: std::collections::HashSet::new(),
+                    read_from_files: std::collections::HashSet::new(),
+                    written_to_files: std::collections::HashSet::new(),
+                    mkdir_directories: std::collections::HashSet::new(),
+                    stdout_fd: None,
+                })
+            }
+        } else {
+            Err(io::Error::new(io::ErrorKind::Other,"already used up child"))
+        }
+    }
+    /// Check if the child has finished
+    pub fn try_wait(&mut self) -> std::io::Result<Option<Status>> {
+        unimplemented!()
+    }
+}
+
 /// The result of running a command using bigbro.
 ///
 /// It contains the
@@ -151,6 +208,28 @@ impl Command {
                 stdout_fd: None,
             })
         }
+    }
+    pub fn spawn(&mut self, envs_cleared: bool,
+                 envs_removed: &std::collections::HashSet<OsString>,
+                 envs_set: &std::collections::HashMap<OsString,OsString>)
+                 -> io::Result<Child>
+    {
+        if envs_cleared {
+            self.cmd.env_clear();
+        }
+        for e in envs_removed {
+            self.cmd.env_remove(e);
+        }
+        for (k,v) in envs_set {
+            self.cmd.env(k,v);
+        }
+        self.cmd.spawn().map(|c| {
+            Child {
+                inner: Some(c),
+                want_stdouterr: self.want_stdouterr,
+                log_stdouterr: self.log_stdouterr.clone(),
+            }
+        })
     }
 }
 
