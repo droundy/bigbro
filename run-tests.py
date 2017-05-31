@@ -28,18 +28,21 @@ if sys.version_info < (3,2):
     print('Please run this script with python 3.2 or newer.', sys.version_info)
     exit(1)
 
-# The following code disables caching on stdout.  It's a bit hacky,
-# but really pays of when the tests are taking a long time running
-# under docker, and you can't tell whether it is frozen.
-class Unbuffered(object):
-   def __init__(self, stream):
-       self.stream = stream
-   def write(self, data):
-       self.stream.write(data)
-       self.stream.flush()
-   def __getattr__(self, attr):
-       return getattr(self.stream, attr)
-sys.stdout = Unbuffered(sys.stdout)
+# # The following code disables caching on stdout.  It's a bit hacky,
+# # but really pays of when the tests are taking a long time running
+# # under docker, and you can't tell whether it is frozen.
+# class Unbuffered(object):
+#    def __init__(self, stream):
+#        self.stream = stream
+#    def write(self, data):
+#        self.stream.write(data)
+#        self.stream.flush()
+#    def writelines(self, datas):
+#        self.stream.writelines(datas)
+#        self.stream.flush()
+#    def __getattr__(self, attr):
+#        return getattr(self.stream, attr)
+# sys.stdout = Unbuffered(sys.stdout)
 
 if 'perf_counter' in dir(time):
     perf_counter = time.perf_counter
@@ -212,7 +215,9 @@ bigbro_binaries = ['./bigbro']
 if is_in_path('cargo'):
     bigbro_binaries += ['target/debug/test-bigbro', 'target/release/test-bigbro',
                         'target/debug/test-bigbro-twostep',
-                        'target/release/test-bigbro-twostep']
+                        'target/release/test-bigbro-twostep',
+                        'target/debug/test-bigbro-chan',
+                        'target/release/test-bigbro-chan']
 
 for bigbro in bigbro_binaries:
     print('running C tests with %s:' % bigbro)

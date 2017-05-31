@@ -26,6 +26,10 @@ path = "src/bin.rs"
 name = "test-bigbro-twostep"
 path = "src/twostep.rs"
 
+[[bin]]
+name = "test-bigbro-chan"
+path = "src/test-chan.rs"
+
 [dependencies]
 
 libc = "^0.2"
