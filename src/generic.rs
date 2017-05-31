@@ -81,6 +81,20 @@ impl Child {
     }
 }
 
+#[derive(Debug)]
+pub struct Killer {
+}
+
+impl Killer {
+    pub fn kill(&mut self) -> std::io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Other,"Killer not implemented generically"))
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&mut self) -> std::io::Result<()> {
+        self.kill()
+    }
+}
+
 /// The result of running a command using bigbro.
 ///
 /// It contains the
@@ -230,6 +244,33 @@ impl Command {
                 log_stdouterr: self.log_stdouterr.clone(),
             }
         })
+    }
+    pub fn spawn_to_chans(mut self, envs_cleared: bool,
+                          envs_removed: std::collections::HashSet<OsString>,
+                          envs_set: std::collections::HashMap<OsString,OsString>,
+                          pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                          status_sender: std::sync::mpsc::Sender<io::Result<::Status>>,)
+                          -> io::Result<()> {
+        if envs_cleared {
+            self.cmd.env_clear();
+        }
+        for e in envs_removed {
+            self.cmd.env_remove(e);
+        }
+        for (k,v) in envs_set {
+            self.cmd.env(k,v);
+        }
+        let c = self.cmd.spawn()?;
+        let mut myc = Child {
+            inner: Some(c),
+            want_stdouterr: self.want_stdouterr,
+            log_stdouterr: self.log_stdouterr.clone(),
+        };
+        pid_sender.send(Some(::Killer { inner: Killer {}})).ok();
+        std::thread::spawn(move || {
+            status_sender.send(myc.wait().map(|c| ::Status { inner: c })).ok();
+        });
+        Ok(())
     }
 }
 

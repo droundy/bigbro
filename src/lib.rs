@@ -289,6 +289,15 @@ impl Command {
         self.inner.spawn(self.envs_cleared, self.envs_removed, self.envs_set)
             .map(|s| Child { inner: s })
     }
+
+    /// Start running the Command and return without waiting for it to complete.
+    pub fn spawn_to_chans(self,
+                          pid_sender: std::sync::mpsc::Sender<Option<Killer>>,
+                          status_sender: std::sync::mpsc::Sender<std::io::Result<Status>>)
+                          -> std::io::Result<()> {
+        self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
+                                  pid_sender, status_sender)
+    }
 }
 
 /// A currently running (or possibly already completed) child process.
@@ -313,6 +322,23 @@ impl Child {
     /// Check if the child has finished
     pub fn try_wait(&mut self) -> std::io::Result<Option<Status>> {
         self.inner.try_wait().map(|s| s.map(|s| Status { inner: s}))
+    }
+}
+
+/// A currently running (or possibly already completed) child process.
+#[derive(Debug)]
+pub struct Killer {
+    inner: imp::Killer,
+}
+
+impl Killer {
+    /// Force the child process to exit
+    pub fn kill(&mut self) -> std::io::Result<()> {
+        self.inner.kill()
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&mut self) -> std::io::Result<()> {
+        self.inner.terminate()
     }
 }
 

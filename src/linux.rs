@@ -91,6 +91,30 @@ impl Child {
 }
 
 #[derive(Debug)]
+pub struct Killer {
+    pid: c_int,
+}
+
+impl Killer {
+    /// Force the child process to exit
+    pub fn kill(&self) -> std::io::Result<()> {
+        let code = unsafe { libc::kill(self.pid, libc::SIGKILL) };
+        if code < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+    /// Ask the child process to exit
+    pub fn terminate(&self) -> std::io::Result<()> {
+        let code = unsafe { libc::kill(self.pid, libc::SIGTERM) };
+        if code < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
 pub struct Status {
     status: std::process::ExitStatus,
     read_from_directories: std::collections::HashSet<PathBuf>,
@@ -437,6 +461,111 @@ impl Command {
         })
     }
 
+
+    /// Start running the Command and return without waiting for it to complete.
+    pub fn spawn_to_chans(mut self, envs_cleared: bool,
+                          envs_removed: std::collections::HashSet<OsString>,
+                          envs_set: std::collections::HashMap<OsString,OsString>,
+                          pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                          status_sender: std::sync::mpsc::Sender<io::Result<::Status>>,)
+                 -> io::Result<()>
+    {
+        if let Err(e) = self.assert_no_error() {
+            pid_sender.send(None).ok();
+            return Err(e);
+        }
+
+        std::thread::spawn(move || -> () {
+            let mut args_raw: Vec<*const c_char> =
+                self.argv.iter().map(|arg| arg.as_ptr()).collect();
+            args_raw.push(std::ptr::null());
+            macro_rules! mytry {
+                ($e:expr) => {{ match $e { Ok(v) => v,
+                                           Err(e) => {
+                                               pid_sender.send(None).ok();
+                                               status_sender.send(Err(e)).ok();
+                                               return;
+                                           },
+                }}}};
+            let stdinfd = mytry!(self.stdin.to_child_fd());
+            let stdoutfd = mytry!(self.stdout.to_child_fd());
+            let stderrfd = mytry!(self.stderr.to_child_fd());
+            let pid = unsafe {
+                let pid = mytry!(cvt(libc::fork()));
+                private::setpgid(pid, pid);
+                if pid == 0 {
+                    if envs_cleared {
+                        for (k, _) in std::env::vars_os() {
+                            std::env::remove_var(k)
+                        }
+                    }
+                    for k in envs_removed {
+                        std::env::remove_var(k);
+                    }
+                    for (k,v) in envs_set {
+                        std::env::set_var(k, v);
+                    }
+                    if let Some(ref p) = self.workingdir {
+                        mytry!(std::env::set_current_dir(p));
+                    }
+                    if let Some(fd) = stdinfd {
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                    }
+                    if let Some(fd) = stdoutfd {
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                    }
+                    if let Some(fd) = stderrfd {
+                        libc::dup2(fd, libc::STDERR_FILENO);
+                    }
+                    private::bigbro_before_exec();
+                    libc::execvp(args_raw[0], args_raw.as_ptr());
+                    libc::exit(137)
+                }
+                pid
+            };
+            pid_sender.send(Some(::Killer {
+                inner: Killer {
+                    pid: pid,
+                }})).ok();
+            // Before we do anything else, let us clean up any file
+            // descriptors we might have hanging around to avoid any
+            // leaks:
+            self.stdin.close_fd_if_appropriate(stdinfd);
+            if !self.can_read_stdout {
+                self.stdout.close_fd_if_appropriate(stdoutfd);
+            }
+            if stderrfd != stdoutfd {
+                self.stderr.close_fd_if_appropriate(stderrfd);
+            }
+            let mut rd = std::ptr::null_mut();
+            let mut rf = std::ptr::null_mut();
+            let mut wf = std::ptr::null_mut();
+            let mut md = std::ptr::null_mut();
+            let exitcode = unsafe {
+                private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
+            };
+            let status = Status {
+                status: std::process::ExitStatus::from_raw(exitcode),
+                read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
+                read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
+                written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
+                mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
+                stdout_fd: if self.can_read_stdout {
+                    if let Some(ref fd) = stdoutfd {
+                        Some (unsafe { std::fs::File::from_raw_fd(*fd) })
+                    } else { None }
+                } else { None },
+            };
+            unsafe {
+                libc::free(rd as *mut libc::c_void);
+                libc::free(md as *mut libc::c_void);
+                libc::free(rf as *mut libc::c_void);
+                libc::free(wf as *mut libc::c_void);
+            }
+            status_sender.send(Ok(::Status { inner: status })).unwrap();
+        });
+        Ok(())
+    }
 
     /// Run the Command blind, wait for it to complete, and return its results.
     pub fn blind(&mut self, envs_cleared: bool,
