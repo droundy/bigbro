@@ -14,7 +14,7 @@ pub fn main() {
         cmd.arg(a);
     }
     let (tx,rx) = channel();
-    let _killer = cmd.spawn_to_chan(tx).unwrap();
+    let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); }).unwrap();
     println!("I am about to wait..");
     let status = rx.recv().unwrap().unwrap();
     println!("status is {:?}", &status);

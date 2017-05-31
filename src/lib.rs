@@ -291,18 +291,7 @@ impl Command {
     }
 
     /// Start running the Command and return without waiting for it to
-    /// complete.  Return the final status via a chan, as well as the
-    /// pid information with which to kill the child.
-    pub fn spawn_to_chans(self,
-                          pid_sender: std::sync::mpsc::Sender<Option<Killer>>,
-                          status_sender: std::sync::mpsc::Sender<std::io::Result<Status>>)
-                          -> std::io::Result<()> {
-        self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
-                                  pid_sender, status_sender)
-    }
-
-    /// Start running the Command and return without waiting for it to
-    /// complete.  Return the final status via a chan, but return the
+    /// complete.  Return the final status via a callback, but return the
     /// pid information with which to kill the child synchronously.
     ///
     /// # Examples
@@ -313,7 +302,8 @@ impl Command {
     /// let (tx,rx) = std::sync::mpsc::channel();
     /// let mut cmd = Command::new("echo");
     /// cmd.arg("-n").arg("hello").log_stdouterr(&std::path::Path::new("/tmp/test-file"));
-    /// let _killer = cmd.spawn_to_chan(tx).expect("failed to execute echo");
+    /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
+    ///                  .expect("failed to execute echo");
     /// let mut status = rx.recv().unwrap().unwrap();
     /// assert!(status.status().success() );
     /// let f = status.stdout().unwrap();
@@ -322,12 +312,12 @@ impl Command {
     /// f.unwrap().read_to_string(&mut contents).unwrap();
     /// assert_eq!(contents, "hello");
     /// ```
-    pub fn spawn_to_chan(self,
-                         status_sender: std::sync::mpsc::Sender<std::io::Result<Status>>)
-                         -> std::io::Result<Killer> {
+    pub fn spawn_and_hook<F>(self, status_hook: F) -> std::io::Result<Killer>
+        where F: FnOnce(std::io::Result<Status>) + Send + 'static
+    {
         let (tx,rx) = std::sync::mpsc::channel();
         self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
-                                  tx, status_sender)?;
+                                  tx, status_hook)?;
         match rx.recv() {
             Ok(Some(k)) => Ok(k),
             Ok(None) => unreachable!(),

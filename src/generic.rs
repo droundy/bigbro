@@ -245,12 +245,14 @@ impl Command {
             }
         })
     }
-    pub fn spawn_to_chans(mut self, envs_cleared: bool,
-                          envs_removed: std::collections::HashSet<OsString>,
-                          envs_set: std::collections::HashMap<OsString,OsString>,
-                          pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                          status_sender: std::sync::mpsc::Sender<io::Result<::Status>>,)
-                          -> io::Result<()> {
+    pub fn spawn_to_chans<F>(mut self, envs_cleared: bool,
+                             envs_removed: std::collections::HashSet<OsString>,
+                             envs_set: std::collections::HashMap<OsString,OsString>,
+                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                             status_hook: F,)
+                             -> io::Result<()>
+        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+    {
         if envs_cleared {
             self.cmd.env_clear();
         }
@@ -268,7 +270,7 @@ impl Command {
         };
         pid_sender.send(Some(::Killer { inner: Killer {}})).ok();
         std::thread::spawn(move || {
-            status_sender.send(myc.wait().map(|c| ::Status { inner: c })).ok();
+            status_hook(myc.wait().map(|c| ::Status { inner: c }));
         });
         Ok(())
     }

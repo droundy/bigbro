@@ -463,12 +463,13 @@ impl Command {
 
 
     /// Start running the Command and return without waiting for it to complete.
-    pub fn spawn_to_chans(mut self, envs_cleared: bool,
-                          envs_removed: std::collections::HashSet<OsString>,
-                          envs_set: std::collections::HashMap<OsString,OsString>,
-                          pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                          status_sender: std::sync::mpsc::Sender<io::Result<::Status>>,)
-                 -> io::Result<()>
+    pub fn spawn_to_chans<F>(mut self, envs_cleared: bool,
+                             envs_removed: std::collections::HashSet<OsString>,
+                             envs_set: std::collections::HashMap<OsString,OsString>,
+                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                             status_hook: F,)
+                             -> io::Result<()>
+        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
     {
         if let Err(e) = self.assert_no_error() {
             pid_sender.send(None).ok();
@@ -483,7 +484,7 @@ impl Command {
                 ($e:expr) => {{ match $e { Ok(v) => v,
                                            Err(e) => {
                                                pid_sender.send(None).ok();
-                                               status_sender.send(Err(e)).ok();
+                                               status_hook(Err(e));
                                                return;
                                            },
                 }}}};
@@ -562,7 +563,7 @@ impl Command {
                 libc::free(rf as *mut libc::c_void);
                 libc::free(wf as *mut libc::c_void);
             }
-            status_sender.send(Ok(::Status { inner: status })).unwrap();
+            status_hook(Ok(::Status { inner: status }));
         });
         Ok(())
     }
