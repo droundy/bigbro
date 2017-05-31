@@ -352,7 +352,7 @@ impl Child {
 }
 
 /// A currently running (or possibly already completed) child process.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Killer {
     inner: imp::Killer,
 }

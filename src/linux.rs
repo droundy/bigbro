@@ -90,7 +90,7 @@ impl Child {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Killer {
     pid: c_int,
 }
