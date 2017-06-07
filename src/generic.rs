@@ -245,6 +245,16 @@ impl Command {
             }
         })
     }
+    pub fn spawn_to_chans_blind<F>(self, envs_cleared: bool,
+                                   envs_removed: std::collections::HashSet<OsString>,
+                             envs_set: std::collections::HashMap<OsString,OsString>,
+                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                             status_hook: F,)
+                             -> io::Result<()>
+        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+    {
+        self.spawn_to_chans(envs_cleared, envs_removed, envs_set, pid_sender, status_hook)
+    }
     pub fn spawn_to_chans<F>(mut self, envs_cleared: bool,
                              envs_removed: std::collections::HashSet<OsString>,
                              envs_set: std::collections::HashMap<OsString,OsString>,

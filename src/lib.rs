@@ -285,8 +285,30 @@ impl Command {
     }
 
     /// Do not actually track accesses.
-    pub fn blind(&mut self) -> &mut Command {
-        self.am_blind = true;
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bigbro::Command;
+    ///
+    /// let (tx,rx) = std::sync::mpsc::channel();
+    /// let mut cmd = Command::new("echo");
+    /// cmd.arg("-n").arg("hello").save_stdouterr().blind(true);
+    /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
+    ///                  .expect("failed to execute echo");
+    /// let mut status = rx.recv().unwrap().unwrap();
+    /// assert!(status.status().success() );
+    /// let f = status.stdout().unwrap();
+    /// assert!(f.is_some());
+    /// let mut f = f.unwrap();
+    /// let mut contents = String::new();
+    /// f.read_to_string(&mut contents).unwrap();
+    /// assert_eq!(contents, "hello");
+    /// assert_eq!(status.read_from_files().len(), 0); // not tracking means no files listed
+    /// ```
+
+    pub fn blind(&mut self, am_blind: bool) -> &mut Command {
+        self.am_blind = am_blind;
         self
     }
 
