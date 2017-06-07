@@ -64,6 +64,7 @@ pub struct Command {
     envs_set: std::collections::HashMap<OsString,OsString>,
     envs_removed: std::collections::HashSet<OsString>,
     envs_cleared: bool,
+    am_blind: bool,
     inner: imp::Command,
 }
 
@@ -95,6 +96,7 @@ impl Command {
             envs_set: std::collections::HashMap::new(),
             envs_removed: std::collections::HashSet::new(),
             envs_cleared: false,
+            am_blind: false,
             inner: imp::Command::new(program),
         }
     }
@@ -273,21 +275,29 @@ impl Command {
 
     /// Run the Command, wait for it to complete, and return its results.
     pub fn status(&mut self) -> std::io::Result<Status> {
-        self.inner.status(self.envs_cleared, &self.envs_removed, &self.envs_set)
-            .map(|s| Status { inner: s })
+        if self.am_blind {
+            self.inner.blind(self.envs_cleared, &self.envs_removed, &self.envs_set)
+                .map(|s| Status { inner: s })
+        } else {
+            self.inner.status(self.envs_cleared, &self.envs_removed, &self.envs_set)
+                .map(|s| Status { inner: s })
+        }
     }
 
-    /// Run the Command without tracking accesses, wait for it to
-    /// complete, and return its results.
-    pub fn blind(&mut self) -> std::io::Result<Status> {
-        self.inner.blind(self.envs_cleared, &self.envs_removed, &self.envs_set)
-            .map(|s| Status { inner: s })
+    /// Do not actually track accesses.
+    pub fn blind(&mut self) -> &mut Command {
+        self.am_blind = true;
+        self
     }
 
     /// Start running the Command and return without waiting for it to complete.
     pub fn spawn(self) -> std::io::Result<Child> {
-        self.inner.spawn(self.envs_cleared, self.envs_removed, self.envs_set)
-            .map(|s| Child { inner: s })
+        if self.am_blind {
+            unimplemented!()
+        } else {
+            self.inner.spawn(self.envs_cleared, self.envs_removed, self.envs_set)
+                .map(|s| Child { inner: s })
+        }
     }
 
     /// Start running the Command and return without waiting for it to
@@ -316,8 +326,13 @@ impl Command {
         where F: FnOnce(std::io::Result<Status>) + Send + 'static
     {
         let (tx,rx) = std::sync::mpsc::channel();
-        self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
-                                  tx, status_hook)?;
+        if self.am_blind {
+            self.inner.spawn_to_chans_blind(self.envs_cleared, self.envs_removed,
+                                            self.envs_set, tx, status_hook)?;
+        } else {
+            self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
+                                      tx, status_hook)?;
+        }
         match rx.recv() {
             Ok(Some(k)) => Ok(k),
             Ok(None) => unreachable!(),

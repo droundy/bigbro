@@ -568,6 +568,107 @@ impl Command {
         Ok(())
     }
 
+    /// Start running the Command and return without waiting for it to complete.
+    pub fn spawn_to_chans_blind<F>(mut self, envs_cleared: bool,
+                                   envs_removed: std::collections::HashSet<OsString>,
+                                   envs_set: std::collections::HashMap<OsString,OsString>,
+                                   pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
+                                   status_hook: F,)
+                                   -> io::Result<()>
+        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+    {
+        if let Err(e) = self.assert_no_error() {
+            pid_sender.send(None).ok();
+            return Err(e);
+        }
+
+        std::thread::spawn(move || -> () {
+            let mut args_raw: Vec<*const c_char> =
+                self.argv.iter().map(|arg| arg.as_ptr()).collect();
+            args_raw.push(std::ptr::null());
+            macro_rules! mytry {
+                ($e:expr) => {{ match $e { Ok(v) => v,
+                                           Err(e) => {
+                                               pid_sender.send(None).ok();
+                                               status_hook(Err(e));
+                                               return;
+                                           },
+                }}}};
+            let stdinfd = mytry!(self.stdin.to_child_fd());
+            let stdoutfd = mytry!(self.stdout.to_child_fd());
+            let stderrfd = mytry!(self.stderr.to_child_fd());
+            let pid = unsafe {
+                let pid = mytry!(cvt(libc::fork()));
+                private::setpgid(pid, pid);
+                if pid == 0 {
+                    if envs_cleared {
+                        for (k, _) in std::env::vars_os() {
+                            std::env::remove_var(k)
+                        }
+                    }
+                    for k in envs_removed {
+                        std::env::remove_var(k);
+                    }
+                    for (k,v) in envs_set {
+                        std::env::set_var(k, v);
+                    }
+                    if let Some(ref p) = self.workingdir {
+                        mytry!(std::env::set_current_dir(p));
+                    }
+                    if let Some(fd) = stdinfd {
+                        libc::dup2(fd, libc::STDIN_FILENO);
+                    }
+                    if let Some(fd) = stdoutfd {
+                        libc::dup2(fd, libc::STDOUT_FILENO);
+                    }
+                    if let Some(fd) = stderrfd {
+                        libc::dup2(fd, libc::STDERR_FILENO);
+                    }
+                    libc::execvp(args_raw[0], args_raw.as_ptr());
+                    libc::exit(137)
+                }
+                pid
+            };
+            pid_sender.send(Some(::Killer {
+                inner: Killer {
+                    pid: pid,
+                }})).ok();
+            // Before we do anything else, let us clean up any file
+            // descriptors we might have hanging around to avoid any
+            // leaks:
+            self.stdin.close_fd_if_appropriate(stdinfd);
+            if !self.can_read_stdout {
+                self.stdout.close_fd_if_appropriate(stdoutfd);
+            }
+            if stderrfd != stdoutfd {
+                self.stderr.close_fd_if_appropriate(stderrfd);
+            }
+            let exitcode = unsafe {
+                let mut st: c_int = 0;
+                libc::waitpid(pid, &mut st, 0);
+                if libc::WIFEXITED(st) {
+                    libc::WEXITSTATUS(st)
+                } else {
+                    -1
+                }
+            };
+            let status = Status {
+                status: std::process::ExitStatus::from_raw(exitcode),
+                read_from_directories: std::collections::HashSet::new(),
+                read_from_files: std::collections::HashSet::new(),
+                written_to_files: std::collections::HashSet::new(),
+                mkdir_directories: std::collections::HashSet::new(),
+                stdout_fd: if self.can_read_stdout {
+                    if let Some(ref fd) = stdoutfd {
+                        Some (unsafe { std::fs::File::from_raw_fd(*fd) })
+                    } else { None }
+                } else { None },
+            };
+            status_hook(Ok(::Status { inner: status }));
+        });
+        Ok(())
+    }
+
     /// Run the Command blind, wait for it to complete, and return its results.
     pub fn blind(&mut self, envs_cleared: bool,
                  envs_removed: &std::collections::HashSet<OsString>,
