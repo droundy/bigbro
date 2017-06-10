@@ -15,6 +15,17 @@ use std::io::{Seek};
 use std::os::unix::ffi::{ OsStrExt };
 use std::os::unix::io::{FromRawFd};
 
+#[cfg(feature="noprofile")]
+use cpuprofiler::PROFILER;
+
+#[cfg(feature="noprofile")]
+fn stop_profiling() {
+    PROFILER.lock().unwrap().stop().unwrap();
+}
+#[cfg(not(feature="noprofile"))]
+fn stop_profiling() {
+}
+
 fn cstr(x: &OsStr) -> CString {
     CString::new(x.as_bytes()).unwrap()
 }
@@ -298,6 +309,11 @@ impl Command {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
             if pid == 0 {
+                // Avoid profiling the forked commands.  This
+                // simplifies the profiling process for users of our
+                // library.  Of course, it also means they can't
+                // profile bigbro itself.
+                stop_profiling();
                 if envs_cleared {
                     for (k, _) in std::env::vars_os() {
                         std::env::remove_var(k)
@@ -385,6 +401,11 @@ impl Command {
                 let pid = cvt(libc::fork())?;
                 private::setpgid(pid, pid);
                 if pid == 0 {
+                    // Avoid profiling the forked commands.  This
+                    // simplifies the profiling process for users of
+                    // our library.  Of course, it also means they
+                    // can't profile bigbro itself.
+                    stop_profiling();
                     if envs_cleared {
                         for (k, _) in std::env::vars_os() {
                             std::env::remove_var(k)
@@ -495,6 +516,11 @@ impl Command {
                 let pid = mytry!(cvt(libc::fork()));
                 private::setpgid(pid, pid);
                 if pid == 0 {
+                    // Avoid profiling the forked commands.  This
+                    // simplifies the profiling process for users of
+                    // our library.  Of course, it also means they
+                    // can't profile bigbro itself.
+                    stop_profiling();
                     if envs_cleared {
                         for (k, _) in std::env::vars_os() {
                             std::env::remove_var(k)
@@ -601,6 +627,11 @@ impl Command {
                 let pid = mytry!(cvt(libc::fork()));
                 private::setpgid(pid, pid);
                 if pid == 0 {
+                    // Avoid profiling the forked commands.  This
+                    // simplifies the profiling process for users of
+                    // our library.  Of course, it also means they
+                    // can't profile bigbro itself.
+                    stop_profiling();
                     if envs_cleared {
                         for (k, _) in std::env::vars_os() {
                             std::env::remove_var(k)
@@ -685,6 +716,11 @@ impl Command {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
             if pid == 0 {
+                // Avoid profiling the forked commands.  This
+                // simplifies the profiling process for users of our
+                // library.  Of course, it also means they can't
+                // profile bigbro itself.
+                stop_profiling();
                 if envs_cleared {
                     for (k, _) in std::env::vars_os() {
                         std::env::remove_var(k)
