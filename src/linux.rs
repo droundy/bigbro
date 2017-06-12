@@ -391,6 +391,10 @@ impl Command {
         let have_completed_two = have_completed.clone();
         let (tx, rx) = std::sync::mpsc::channel();
         let status_thread = Some(std::thread::spawn(move || {
+            // Avoid profiling the helper threads.  This simplifies
+            // the profiling process for users of our library.  Of
+            // course, it also means they can't profile bigbro itself.
+            stop_profiling();
             let mut args_raw: Vec<*const c_char> =
                 self.argv.iter().map(|arg| arg.as_ptr()).collect();
             args_raw.push(std::ptr::null());
@@ -401,11 +405,6 @@ impl Command {
                 let pid = cvt(libc::fork())?;
                 private::setpgid(pid, pid);
                 if pid == 0 {
-                    // Avoid profiling the forked commands.  This
-                    // simplifies the profiling process for users of
-                    // our library.  Of course, it also means they
-                    // can't profile bigbro itself.
-                    stop_profiling();
                     if envs_cleared {
                         for (k, _) in std::env::vars_os() {
                             std::env::remove_var(k)
@@ -609,6 +608,10 @@ impl Command {
         }
 
         std::thread::spawn(move || -> () {
+            // Avoid profiling the helper threads.  This simplifies
+            // the profiling process for users of our library.  Of
+            // course, it also means they can't profile bigbro itself.
+            stop_profiling();
             let mut args_raw: Vec<*const c_char> =
                 self.argv.iter().map(|arg| arg.as_ptr()).collect();
             args_raw.push(std::ptr::null());
@@ -627,11 +630,6 @@ impl Command {
                 let pid = mytry!(cvt(libc::fork()));
                 private::setpgid(pid, pid);
                 if pid == 0 {
-                    // Avoid profiling the forked commands.  This
-                    // simplifies the profiling process for users of
-                    // our library.  Of course, it also means they
-                    // can't profile bigbro itself.
-                    stop_profiling();
                     if envs_cleared {
                         for (k, _) in std::env::vars_os() {
                             std::env::remove_var(k)
