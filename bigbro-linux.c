@@ -402,19 +402,11 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       free(abspath);
       free(arg);
     }
-  } else if (sc == sc_rmdir || sc == sc_rmdirat) {
-    int retval = wait_for_return_value(child, h);
-    if (retval == 0) {
-      char *arg;
-      int dirfd = -1;
-      if (sc != sc_mkdirat) {
-        arg = read_a_string(child, get_syscall_arg(regs, 0));
-      } else {
-        dirfd = get_syscall_arg(regs, 0);
-        arg = read_a_string(child, get_syscall_arg(regs, 1));
-      }
-      debugprintf("%d: %s('%s') -> %d\n", child, name, arg, retval);
-      char *abspath = flexible_realpath_at(child, dirfd, arg, h, look_for_file_or_directory);
+  } else if (sc == sc_rmdir) {
+    if (wait_for_return_value(child, h) == 0) {
+      char *arg = read_a_string(child, get_syscall_arg(regs, 0));
+      debugprintf("%d: %s('%s') -> 0\n", child, name, arg);
+      char *abspath = flexible_realpath_at(child, -1, arg, h, look_for_file_or_directory);
       delete_from_hashset(&h->mkdir, abspath);
       free(abspath);
       free(arg);
