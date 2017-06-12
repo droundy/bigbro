@@ -8,6 +8,11 @@
 
 int main() {
   mkdir("tmp/subdirnew.temporary", 0777);
+
+  mkdir("tmp/subdirnew.temporary/subsub", 0777);
+  int subd = open("tmp/subdirnew.temporary", O_RDONLY | O_DIRECTORY);
+  unlinkat(subd, "subsub", AT_REMOVEDIR);
+
   rmdir("tmp/subdirnew.temporary");
   return 0;
 }

@@ -307,6 +307,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   } else if (sc == sc_unlink || sc == sc_unlinkat) {
     char *arg;
     int retval = wait_for_return_value(child, h);
+    bool removedir = false;
     if (retval == 0) {
       int dirfd = -1;
       if (sc == sc_unlink) {
@@ -315,6 +316,8 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       } else {
         arg = read_a_string(child, get_syscall_arg(regs, 1));
         dirfd = get_syscall_arg(regs, 0);
+        int flags = get_syscall_arg(regs, 2);
+        if (flags & AT_REMOVEDIR) removedir = true;
         debugprintf("%d: %s(%d, '%s') -> %d\n", child, name,
                     dirfd, arg, retval);
       }
@@ -323,6 +326,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
       delete_from_hashset(&h->read, abspath);
       delete_from_hashset(&h->readdir, abspath);
       delete_from_hashset(&h->written, abspath);
+      if (removedir) delete_from_hashset(&h->mkdir, abspath);
       free(abspath);
     }
   } else if (sc == sc_creat || sc == sc_truncate ||
