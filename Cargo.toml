@@ -1,6 +1,6 @@
 [package]
 name = "bigbro"
-version = "0.3.13"
+version = "0.3.14"
 authors = ["David Roundy <daveroundy@gmail.com>"]
 
 description = "Library for tracking file accesses of processes"
@@ -29,6 +29,10 @@ path = "src/twostep.rs"
 [[bin]]
 name = "test-bigbro-chan"
 path = "src/test-chan.rs"
+
+[[bin]]
+name = "test-bigbro-scaling"
+path = "src/test-scaling.rs"
 
 [dependencies]
 

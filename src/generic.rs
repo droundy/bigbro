@@ -245,22 +245,20 @@ impl Command {
             }
         })
     }
-    pub fn spawn_to_chans_blind<F>(self, envs_cleared: bool,
-                                   envs_removed: std::collections::HashSet<OsString>,
-                             envs_set: std::collections::HashMap<OsString,OsString>,
-                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                             status_hook: F,)
-                             -> io::Result<()>
+    pub fn spawn_hook_blind<F>(self, envs_cleared: bool,
+                               envs_removed: std::collections::HashSet<OsString>,
+                               envs_set: std::collections::HashMap<OsString,OsString>,
+                               status_hook: F,)
+                               -> io::Result<::Killer>
         where F: FnOnce(std::io::Result<::Status>) + Send + 'static
     {
-        self.spawn_to_chans(envs_cleared, envs_removed, envs_set, pid_sender, status_hook)
+        self.spawn_hook(envs_cleared, envs_removed, envs_set, status_hook)
     }
-    pub fn spawn_to_chans<F>(mut self, envs_cleared: bool,
-                             envs_removed: std::collections::HashSet<OsString>,
-                             envs_set: std::collections::HashMap<OsString,OsString>,
-                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                             status_hook: F,)
-                             -> io::Result<()>
+    pub fn spawn_hook<F>(mut self, envs_cleared: bool,
+                         envs_removed: std::collections::HashSet<OsString>,
+                         envs_set: std::collections::HashMap<OsString,OsString>,
+                         status_hook: F,)
+                         -> io::Result<::Killer>
         where F: FnOnce(std::io::Result<::Status>) + Send + 'static
     {
         if envs_cleared {
@@ -278,11 +276,10 @@ impl Command {
             want_stdouterr: self.want_stdouterr,
             log_stdouterr: self.log_stdouterr.clone(),
         };
-        pid_sender.send(Some(::Killer { inner: Killer {}})).ok();
         std::thread::spawn(move || {
             status_hook(myc.wait().map(|c| ::Status { inner: c }));
         });
-        Ok(())
+        Ok(::Killer { inner: Killer {}})
     }
 }
 

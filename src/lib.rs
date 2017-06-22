@@ -350,18 +350,12 @@ impl Command {
     pub fn spawn_and_hook<F>(self, status_hook: F) -> std::io::Result<Killer>
         where F: FnOnce(std::io::Result<Status>) + Send + 'static
     {
-        let (tx,rx) = std::sync::mpsc::channel();
         if self.am_blind {
-            self.inner.spawn_to_chans_blind(self.envs_cleared, self.envs_removed,
-                                            self.envs_set, tx, status_hook)?;
+            self.inner.spawn_hook_blind(self.envs_cleared, self.envs_removed,
+                                        self.envs_set, status_hook)
         } else {
-            self.inner.spawn_to_chans(self.envs_cleared, self.envs_removed, self.envs_set,
-                                      tx, status_hook)?;
-        }
-        match rx.recv() {
-            Ok(Some(k)) => Ok(k),
-            Ok(None) => unreachable!(),
-            Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
+            self.inner.spawn_hook(self.envs_cleared, self.envs_removed, self.envs_set,
+                                  status_hook)
         }
     }
 }

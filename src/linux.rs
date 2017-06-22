@@ -483,36 +483,31 @@ impl Command {
 
 
     /// Start running the Command and return without waiting for it to complete.
-    pub fn spawn_to_chans<F>(mut self, envs_cleared: bool,
-                             envs_removed: std::collections::HashSet<OsString>,
-                             envs_set: std::collections::HashMap<OsString,OsString>,
-                             pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                             status_hook: F,)
-                             -> io::Result<()>
+    pub fn spawn_hook<F>(mut self, envs_cleared: bool,
+                         envs_removed: std::collections::HashSet<OsString>,
+                         envs_set: std::collections::HashMap<OsString,OsString>,
+                         status_hook: F,)
+                         -> io::Result<::Killer>
         where F: FnOnce(std::io::Result<::Status>) + Send + 'static
     {
-        if let Err(e) = self.assert_no_error() {
-            pid_sender.send(None).ok();
-            return Err(e);
-        }
+        self.assert_no_error()?;
 
+        let stdinfd = self.stdin.to_child_fd()?;
+        let stdoutfd = self.stdout.to_child_fd()?;
+        let stderrfd = self.stderr.to_child_fd()?;
+        let (tx,rx) = std::sync::mpsc::sync_channel(1);
         std::thread::spawn(move || -> () {
             let mut args_raw: Vec<*const c_char> =
                 self.argv.iter().map(|arg| arg.as_ptr()).collect();
             args_raw.push(std::ptr::null());
-            macro_rules! mytry {
-                ($e:expr) => {{ match $e { Ok(v) => v,
-                                           Err(e) => {
-                                               pid_sender.send(None).ok();
-                                               status_hook(Err(e));
-                                               return;
-                                           },
-                }}}};
-            let stdinfd = mytry!(self.stdin.to_child_fd());
-            let stdoutfd = mytry!(self.stdout.to_child_fd());
-            let stderrfd = mytry!(self.stderr.to_child_fd());
             let pid = unsafe {
-                let pid = mytry!(cvt(libc::fork()));
+                let pid = match cvt(libc::fork()) {
+                    Ok(pid) => pid,
+                    Err(e) => {
+                        status_hook(Err(e));
+                        return;
+                    },
+                };
                 private::setpgid(pid, pid);
                 if pid == 0 {
                     // Avoid profiling the forked commands.  This
@@ -532,7 +527,10 @@ impl Command {
                         std::env::set_var(k, v);
                     }
                     if let Some(ref p) = self.workingdir {
-                        mytry!(std::env::set_current_dir(p));
+                        if let Err(e) = std::env::set_current_dir(p) {
+                            status_hook(Err(e));
+                            return;
+                        }
                     }
                     if let Some(fd) = stdinfd {
                         libc::dup2(fd, libc::STDIN_FILENO);
@@ -549,10 +547,7 @@ impl Command {
                 }
                 pid
             };
-            pid_sender.send(Some(::Killer {
-                inner: Killer {
-                    pid: pid,
-                }})).ok();
+            tx.send(pid).ok();
             // Before we do anything else, let us clean up any file
             // descriptors we might have hanging around to avoid any
             // leaks:
@@ -590,78 +585,68 @@ impl Command {
             }
             status_hook(Ok(::Status { inner: status }));
         });
-        Ok(())
+        match rx.recv() {
+            Ok(pid) => Ok(::Killer { inner: Killer { pid: pid }}),
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
+        }
     }
 
     /// Start running the Command and return without waiting for it to complete.
-    pub fn spawn_to_chans_blind<F>(mut self, envs_cleared: bool,
-                                   envs_removed: std::collections::HashSet<OsString>,
-                                   envs_set: std::collections::HashMap<OsString,OsString>,
-                                   pid_sender: std::sync::mpsc::Sender<Option<::Killer>>,
-                                   status_hook: F,)
-                                   -> io::Result<()>
+    pub fn spawn_hook_blind<F>(mut self, envs_cleared: bool,
+                               envs_removed: std::collections::HashSet<OsString>,
+                               envs_set: std::collections::HashMap<OsString,OsString>,
+                               status_hook: F,)
+                               -> io::Result<::Killer>
         where F: FnOnce(std::io::Result<::Status>) + Send + 'static
     {
-        if let Err(e) = self.assert_no_error() {
-            pid_sender.send(None).ok();
-            return Err(e);
-        }
+        self.assert_no_error()?;
 
-        std::thread::spawn(move || -> () {
-            // Avoid profiling the helper threads.  This simplifies
-            // the profiling process for users of our library.  Of
-            // course, it also means they can't profile bigbro itself.
-            stop_profiling();
-            let mut args_raw: Vec<*const c_char> =
-                self.argv.iter().map(|arg| arg.as_ptr()).collect();
-            args_raw.push(std::ptr::null());
-            macro_rules! mytry {
-                ($e:expr) => {{ match $e { Ok(v) => v,
-                                           Err(e) => {
-                                               pid_sender.send(None).ok();
-                                               status_hook(Err(e));
-                                               return;
-                                           },
-                }}}};
-            let stdinfd = mytry!(self.stdin.to_child_fd());
-            let stdoutfd = mytry!(self.stdout.to_child_fd());
-            let stderrfd = mytry!(self.stderr.to_child_fd());
-            let pid = unsafe {
-                let pid = mytry!(cvt(libc::fork()));
-                private::setpgid(pid, pid);
-                if pid == 0 {
-                    if envs_cleared {
-                        for (k, _) in std::env::vars_os() {
-                            std::env::remove_var(k)
-                        }
+        // Avoid profiling the helper threads.  This simplifies the
+        // profiling process for users of our library.  Of course, it
+        // also means they can't profile bigbro itself.
+        stop_profiling();
+        let mut args_raw: Vec<*const c_char> =
+            self.argv.iter().map(|arg| arg.as_ptr()).collect();
+        args_raw.push(std::ptr::null());
+        let stdinfd = self.stdin.to_child_fd()?;
+        let stdoutfd = self.stdout.to_child_fd()?;
+        let stderrfd = self.stderr.to_child_fd()?;
+        let pid = unsafe {
+            let pid = cvt(libc::fork())?;
+            private::setpgid(pid, pid);
+            if pid == 0 {
+                if envs_cleared {
+                    for (k, _) in std::env::vars_os() {
+                        std::env::remove_var(k)
                     }
-                    for k in envs_removed {
-                        std::env::remove_var(k);
-                    }
-                    for (k,v) in envs_set {
-                        std::env::set_var(k, v);
-                    }
-                    if let Some(ref p) = self.workingdir {
-                        mytry!(std::env::set_current_dir(p));
-                    }
-                    if let Some(fd) = stdinfd {
-                        libc::dup2(fd, libc::STDIN_FILENO);
-                    }
-                    if let Some(fd) = stdoutfd {
-                        libc::dup2(fd, libc::STDOUT_FILENO);
-                    }
-                    if let Some(fd) = stderrfd {
-                        libc::dup2(fd, libc::STDERR_FILENO);
-                    }
-                    libc::execvp(args_raw[0], args_raw.as_ptr());
-                    libc::exit(137)
                 }
-                pid
-            };
-            pid_sender.send(Some(::Killer {
-                inner: Killer {
-                    pid: pid,
-                }})).ok();
+                for k in envs_removed {
+                    std::env::remove_var(k);
+                }
+                for (k,v) in envs_set {
+                    std::env::set_var(k, v);
+                }
+                if let Some(ref p) = self.workingdir {
+                    if let Err(e) = std::env::set_current_dir(p) {
+                        status_hook(Err(e));
+                        libc::exit(137);
+                    }
+                }
+                if let Some(fd) = stdinfd {
+                    libc::dup2(fd, libc::STDIN_FILENO);
+                }
+                if let Some(fd) = stdoutfd {
+                    libc::dup2(fd, libc::STDOUT_FILENO);
+                }
+                if let Some(fd) = stderrfd {
+                    libc::dup2(fd, libc::STDERR_FILENO);
+                }
+                libc::execvp(args_raw[0], args_raw.as_ptr());
+                libc::exit(137)
+            }
+            pid
+        };
+        std::thread::spawn(move || -> () {
             // Before we do anything else, let us clean up any file
             // descriptors we might have hanging around to avoid any
             // leaks:
@@ -695,7 +680,7 @@ impl Command {
             };
             status_hook(Ok(::Status { inner: status }));
         });
-        Ok(())
+        Ok(::Killer { inner: Killer { pid: pid, }})
     }
 
     /// Run the Command blind, wait for it to complete, and return its results.
