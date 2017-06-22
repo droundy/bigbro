@@ -211,37 +211,35 @@ if is_in_path('doxygen'):
 > web/documentation.html
 ''')
 
+def cargo_cmd(cmd, inps, outs):
+        print('\n| {}'.format(cmd))
+        for i in inps:
+            print("< {}".format(i))
+        for o in outs:
+            print("> {}".format(o))
+        print('''c ~
+c #
+c .tum
+c .pyc
+c .gcda
+c .gcno
+c .gcov
+c -bigbro
+c Cargo.lock
+C bench
+C tests
+C target
+C web''')
+
 if is_in_path('cargo'):
-        print('''
-| cargo build && cargo doc --no-deps
-< syscalls/linux.h
-> target/doc/bigbro/index.html
-c ~
-c .tum
-c .pyc
-c .gcda
-c .gcno
-c .gcov
-C bench
-C tests
-C web
-
-| cargo build --release
-< target/debug/test-bigbro
-c ~
-c .tum
-c .pyc
-c .gcda
-c .gcno
-c .gcov
-C bench
-C tests
-C web
-
-| cp -a target/doc web/
-> web/doc/bigbro/index.html
-< target/doc/bigbro/index.html
-''')
+    cargo_cmd("cargo build && cp target/debug/test-bigbro .",
+              ["syscalls/linux.h"],
+              ["test-bigbro"])
+    cargo_cmd("cargo doc --no-deps && cp -a target/doc web/", [],
+              ["web/doc/bigbro/index.html"])
+    cargo_cmd("cargo build --release && cp target/release/test-bigbro release-bigbro",
+              ["syscalls/linux.h"],
+              ["release-bigbro"])
 else:
     print('# no cargo, so cannot build using rust')
 
