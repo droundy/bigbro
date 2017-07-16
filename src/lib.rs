@@ -257,10 +257,12 @@ impl Command {
     /// ```
     /// use bigbro::Command;
     ///
+    /// let mut logfile = std::env::temp_dir();
+    /// logfile.push("test-file");
     /// let mut status = Command::new("echo")
     ///                          .arg("hello")
     ///                          .arg("world")
-    ///                          .log_stdouterr(&std::path::Path::new("/tmp/test-file"))
+    ///                          .log_stdouterr(&logfile)
     ///                          .status()
     ///                          .expect("failed to execute echo");
     ///
@@ -334,9 +336,11 @@ impl Command {
     /// ```
     /// use bigbro::Command;
     ///
+    /// let mut logfile = std::env::temp_dir();
+    /// logfile.push("test-file");
     /// let (tx,rx) = std::sync::mpsc::channel();
     /// let mut cmd = Command::new("echo");
-    /// cmd.arg("hello").arg("world").log_stdouterr(&std::path::Path::new("/tmp/test-file"));
+    /// cmd.arg("hello").arg("world").log_stdouterr(&logfile);
     /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
     ///                  .expect("failed to execute echo");
     /// let mut status = rx.recv().unwrap().unwrap();
@@ -444,7 +448,7 @@ impl Status {
     /// ```
     /// use bigbro::Command;
     ///
-    /// let dir = std::path::PathBuf::from("/tmp");
+    /// let dir = std::env::temp_dir();
     /// let status = Command::new("ls")
     ///                      .arg(&dir)
     ///                      .status()
@@ -489,9 +493,11 @@ impl Status {
     /// ```
     /// use bigbro::Command;
     ///
-    /// let p = std::path::PathBuf::from("/tmp/hello");
+    /// let mut p = std::env::temp_dir();
+    /// p.push("hello");
+    /// let cmd = format!("echo hello > {:?}", &p);
     /// let status = Command::new("sh")
-    ///                      .args(&["-c", "echo hello > /tmp/hello"])
+    ///                      .args(&["-c", &cmd])
     ///                      .status()
     ///                      .expect("failed to execute sh");
     ///
@@ -592,11 +598,13 @@ fn test_have_closed_fds() {
     }
     assert_eq!(count_file_descriptors(), fds);
     {
+        let mut logfile = std::env::temp_dir();
+        logfile.push("test-file");
         let status = Command::new("echo")
             .arg("-n")
             .arg("hello")
             .stdin(Stdio::null())
-            .log_stdouterr(&std::path::Path::new("/tmp/test-file"))
+            .log_stdouterr(&logfile)
             .status()
             .expect("failed to execute echo");
         assert!(count_file_descriptors() > fds);
