@@ -34,7 +34,6 @@ web/style.css
 web/style.css.map
 *.sparse
 sparse.fac
-syscalls/linux.h
 web/doxy/
 web/doc/
 *-bigbro
