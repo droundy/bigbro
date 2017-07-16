@@ -42,7 +42,7 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/syscall.h>
-#include <linux/limits.h>
+// #include <linux/limits.h>
 #include <errno.h>
 
 #include <stdint.h>
