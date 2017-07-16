@@ -258,8 +258,8 @@ impl Command {
     /// use bigbro::Command;
     ///
     /// let mut status = Command::new("echo")
-    ///                          .arg("-n")
     ///                          .arg("hello")
+    ///                          .arg("world")
     ///                          .log_stdouterr(&std::path::Path::new("/tmp/test-file"))
     ///                          .status()
     ///                          .expect("failed to execute echo");
@@ -269,7 +269,7 @@ impl Command {
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents).unwrap();
-    /// assert_eq!(contents, "hello");
+    /// assert_eq!(contents, "hello world\n");
     /// ```
     pub fn log_stdouterr(&mut self, path: &std::path::Path) -> &mut Command {
         self.inner.log_stdouterr(path);
@@ -296,7 +296,7 @@ impl Command {
     ///
     /// let (tx,rx) = std::sync::mpsc::channel();
     /// let mut cmd = Command::new("echo");
-    /// cmd.arg("-n").arg("hello").save_stdouterr().blind(true);
+    /// cmd.arg("hello").arg("world").save_stdouterr().blind(true);
     /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
     ///                  .expect("failed to execute echo");
     /// let mut status = rx.recv().unwrap().unwrap();
@@ -306,7 +306,7 @@ impl Command {
     /// let mut f = f.unwrap();
     /// let mut contents = String::new();
     /// f.read_to_string(&mut contents).unwrap();
-    /// assert_eq!(contents, "hello");
+    /// assert_eq!(contents, "hello world\n");
     /// assert_eq!(status.read_from_files().len(), 0); // not tracking means no files listed
     /// ```
 
@@ -336,7 +336,7 @@ impl Command {
     ///
     /// let (tx,rx) = std::sync::mpsc::channel();
     /// let mut cmd = Command::new("echo");
-    /// cmd.arg("-n").arg("hello").log_stdouterr(&std::path::Path::new("/tmp/test-file"));
+    /// cmd.arg("hello").arg("world").log_stdouterr(&std::path::Path::new("/tmp/test-file"));
     /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
     ///                  .expect("failed to execute echo");
     /// let mut status = rx.recv().unwrap().unwrap();
@@ -345,7 +345,7 @@ impl Command {
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents).unwrap();
-    /// assert_eq!(contents, "hello");
+    /// assert_eq!(contents, "hello world\n");
     /// ```
     pub fn spawn_and_hook<F>(self, status_hook: F) -> std::io::Result<Killer>
         where F: FnOnce(std::io::Result<Status>) + Send + 'static
