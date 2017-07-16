@@ -24,6 +24,8 @@ use std::path::PathBuf;
 use std::io;
 use std::io::Write;
 
+pub const WORKS: bool = false;
+
 #[derive(Debug)]
 pub struct Child {
     inner: Option<std::process::Child>,

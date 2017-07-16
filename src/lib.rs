@@ -36,6 +36,11 @@ pub use imp::{Stdio};
 use std::ffi::{OsString, OsStr};
 use std::path::PathBuf;
 
+/// A boolean to identify whether bigbro is actually able to track
+/// filesystem accesses.  On platforms where it cannot track changes,
+/// it will still enable you to use its API to execute programs.
+pub const TRACKS_CHANGES: bool = imp::WORKS;
+
 /// A process builder, providing fine-grained control over how a new
 /// process should be spawned.
 ///
@@ -457,7 +462,9 @@ impl Status {
     ///                      .expect("failed to execute ls");
     ///
     /// assert!(status.status().success() );
-    /// assert!(status.read_from_directories().contains(&dir) );
+    /// if bigbro::TRACKS_CHANGES {
+    ///   assert!(status.read_from_directories().contains(&dir) );
+    /// }
     /// ```
     pub fn read_from_directories(&self) -> std::collections::HashSet<PathBuf> {
        self.inner.read_from_directories()
@@ -482,7 +489,9 @@ impl Status {
     /// for f in status.read_from_files() {
     ///    println!("read file {:#?}", f);
     /// }
-    /// assert!(status.read_from_files().contains(&p) );
+    /// if bigbro::TRACKS_CHANGES {
+    ///   assert!(status.read_from_files().contains(&p) );
+    /// }
     pub fn read_from_files(&self) -> std::collections::HashSet<PathBuf> {
         self.inner.read_from_files()
     }
@@ -507,8 +516,10 @@ impl Status {
     /// for f in status.written_to_files() {
     ///    println!("wrote file {:#?}", f);
     /// }
-    /// assert!(status.written_to_files().contains(&p) );
-    /// assert!(status.written_to_files().len() == 1 );
+    /// if bigbro::TRACKS_CHANGES {
+    ///   assert!(status.written_to_files().contains(&p) );
+    ///   assert!(status.written_to_files().len() == 1 );
+    /// }
     pub fn written_to_files(&self) -> std::collections::HashSet<PathBuf> {
         self.inner.written_to_files()
     }

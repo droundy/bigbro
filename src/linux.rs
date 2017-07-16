@@ -26,6 +26,8 @@ fn stop_profiling() {
 fn stop_profiling() {
 }
 
+pub const WORKS: bool = true;
+
 fn cstr(x: &OsStr) -> CString {
     CString::new(x.as_bytes()).unwrap()
 }
