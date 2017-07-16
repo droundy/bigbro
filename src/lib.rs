@@ -338,6 +338,7 @@ impl Command {
     ///
     /// let mut logfile = std::env::temp_dir();
     /// logfile.push("test-file");
+    /// println!("saving output in file {:?}", &logfile);
     /// let (tx,rx) = std::sync::mpsc::channel();
     /// let mut cmd = Command::new("echo");
     /// cmd.arg("hello").arg("world").log_stdouterr(&logfile);
