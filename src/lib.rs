@@ -135,7 +135,7 @@ impl Command {
     ///
     /// let mut status = Command::new("sh")
     ///                          .arg("-c")
-    ///                          .arg("echo -n $CFLAGS")
+    ///                          .arg("echo $CFLAGS")
     ///                          .env("CFLAGS", "--coverage")
     ///                          .save_stdouterr()
     ///                          .status()
@@ -147,7 +147,7 @@ impl Command {
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents).unwrap();
-    /// assert_eq!(contents, "--coverage");
+    /// assert_eq!(contents, "--coverage\n");
     /// ```
     ///
     /// ```
