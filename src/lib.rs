@@ -344,12 +344,13 @@ impl Command {
     /// cmd.arg("hello").arg("world").log_stdouterr(&logfile);
     /// let _killer = cmd.spawn_and_hook(move |s| { tx.send(s).ok(); })
     ///                  .expect("failed to execute echo");
-    /// let mut status = rx.recv().unwrap().unwrap();
+    /// let mut status = rx.recv().expect("should have gotten *something*!")
+    ///                    .expect("the echo command failed to run?");
     /// assert!(status.status().success() );
-    /// let f = status.stdout().unwrap();
+    /// let f = status.stdout().expect("unable to look at stdout?");
     /// assert!(f.is_some());
     /// let mut contents = String::new();
-    /// f.unwrap().read_to_string(&mut contents).unwrap();
+    /// f.unwrap().read_to_string(&mut contents).expect("unable to read from logfile");
     /// assert_eq!(contents, "hello world\n");
     /// ```
     pub fn spawn_and_hook<F>(self, status_hook: F) -> std::io::Result<Killer>
