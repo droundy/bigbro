@@ -51,6 +51,15 @@ pub const TRACKS_CHANGES: bool = imp::WORKS;
 /// example, by adding arguments) prior to running:
 ///
 /// ```
+/// # use std::env;
+/// # if let Some(path) = env::var_os("PATH") {
+/// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+/// #     let mut debug = env::current_dir().unwrap();
+/// #     debug.push("target/debug");
+/// #     paths.push(debug);
+/// #     let new_path = env::join_paths(paths).unwrap();
+/// #     env::set_var("PATH", &new_path);
+/// # }
 /// use bigbro::Command;
 ///
 /// let status = if cfg!(target_os = "windows") {
@@ -136,6 +145,16 @@ impl Command {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
+    /// # if cfg!(target_os = "linux") {
     /// use bigbro::Command;
     ///
     /// let mut status = Command::new("sh")
@@ -153,6 +172,7 @@ impl Command {
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents).unwrap();
     /// assert_eq!(contents, "--coverage\n");
+    /// # }
     /// ```
     ///
     /// ```
@@ -433,13 +453,20 @@ impl Status {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
     /// use bigbro::Command;
     ///
-    /// let status = Command::new("sh")
-    ///                      .arg("-c")
-    ///                      .arg("false")
+    /// let status = Command::new("false")
     ///                      .status()
-    ///                      .expect("failed to execute sh");
+    ///                      .expect("failed to execute false");
     ///
     /// assert!(! status.status().success() ); // should fail because "false" always fails
     /// ```
@@ -453,6 +480,15 @@ impl Status {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
     /// use bigbro::Command;
     ///
     /// let dir = std::env::temp_dir();
@@ -476,10 +512,20 @@ impl Status {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
     /// use bigbro::Command;
     ///
-    /// let e = std::ffi::OsString::from("/usr/bin/python");
-    /// let p = std::path::PathBuf::from("/usr/bin/python");
+    /// let mut p = env::current_dir().unwrap();
+    /// p.push("target/debug/test-bigbro");
+    /// let e = std::ffi::OsString::from(&p);
     /// let status = Command::new("sha1sum")
     ///                      .arg(&e)
     ///                      .status()
@@ -502,13 +548,21 @@ impl Status {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
     /// use bigbro::Command;
     ///
     /// let mut p = std::env::temp_dir();
     /// p.push("hello");
-    /// let cmd = format!("echo hello > {:?}", &p);
-    /// let status = Command::new("sh")
-    ///                      .args(&["-c", &cmd])
+    /// let status = Command::new("touch")
+    ///                      .arg(&p)
     ///                      .status()
     ///                      .expect("failed to execute sh");
     ///
@@ -535,10 +589,18 @@ impl Status {
     /// # Examples
     ///
     /// ```
+    /// # use std::env;
+    /// # if let Some(path) = env::var_os("PATH") {
+    /// #     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
+    /// #     let mut debug = env::current_dir().unwrap();
+    /// #     debug.push("target/debug");
+    /// #     paths.push(debug);
+    /// #     let new_path = env::join_paths(paths).unwrap();
+    /// #     env::set_var("PATH", &new_path);
+    /// # }
     /// use bigbro::Command;
     ///
     /// let mut status = Command::new("ls")
-    ///                          .arg("-l")
     ///                          .save_stdouterr()
     ///                          .status()
     ///                          .expect("failed to execute ls");

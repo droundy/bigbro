@@ -34,10 +34,22 @@ path = "src/test-chan.rs"
 name = "test-bigbro-scaling"
 path = "src/test-scaling.rs"
 
+[[bin]]
+name = "echo"
+path = "src/bin/echo.rs"
+[[bin]]
+name = "false"
+path = "src/bin/false.rs"
+[[bin]]
+name = "ls"
+path = "src/bin/ls.rs"
+[[bin]]
+name = "touch"
+path = "src/bin/touch.rs"
+
 [dependencies]
 
 libc = "^0.2"
-
 cpuprofiler = { version = "^0.0.3", optional = true}
 
 [build-dependencies]
