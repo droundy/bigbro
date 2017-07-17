@@ -528,10 +528,10 @@ impl Status {
     /// let mut p = env::current_dir().unwrap();
     /// p.push("Cargo.toml");
     /// let e = std::ffi::OsString::from(&p);
-    /// let status = Command::new("sha1summ")
+    /// let status = Command::new("cat")
     ///                      .arg(&e)
     ///                      .status()
-    ///                      .expect("failed to execute sha1sum");
+    ///                      .expect("failed to execute cat");
     ///
     /// assert!(status.status().success() );
     /// for f in status.read_from_files() {
