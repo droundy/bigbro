@@ -191,7 +191,10 @@ impl Command {
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents).unwrap();
-    /// assert_eq!(contents, "FOO=foo\n");
+    /// // for some reason windows doesn't allow to clear HOME or TERM?
+    /// if ! cfg!(target_os = "windows") {
+    ///   assert_eq!(contents, "FOO=foo\n");
+    /// }
     /// ```
     pub fn env<K, V>(&mut self, key: K, val: V) -> &mut Command
         where K: AsRef<OsStr>, V: AsRef<OsStr>
@@ -256,7 +259,6 @@ impl Command {
     /// use bigbro::Command;
     ///
     /// let mut status = Command::new("echo")
-    ///                          .arg("-n")
     ///                          .arg("hello")
     ///                          .save_stdouterr()
     ///                          .status()
@@ -267,7 +269,7 @@ impl Command {
     /// assert!(f.is_some());
     /// let mut contents = String::new();
     /// f.unwrap().read_to_string(&mut contents);
-    /// assert_eq!(contents, "hello");
+    /// assert_eq!(contents, "hello\n");
     /// ```
     pub fn save_stdouterr(&mut self) -> &mut Command {
         self.inner.save_stdouterr();
