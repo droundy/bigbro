@@ -51,7 +51,7 @@ impl Child {
             if self.want_stdouterr {
                 let s = child.wait_with_output()?;
                 if let Some(ref p) = self.log_stdouterr {
-                    let mut f = std::fs::File::open(p)?;
+                    let mut f = std::fs::File::create(p)?;
                     f.write(&s.stdout)?;
                 }
                 Ok(Status {
@@ -202,7 +202,7 @@ impl Command {
         if self.want_stdouterr {
             let s = self.cmd.output()?;
             if let Some(ref p) = self.log_stdouterr {
-                let mut f = std::fs::File::open(p)?;
+                let mut f = std::fs::File::create(p)?;
                 f.write(&s.stdout)?;
             }
             Ok(Status {
