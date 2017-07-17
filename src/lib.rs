@@ -524,7 +524,7 @@ impl Status {
     /// use bigbro::Command;
     ///
     /// let mut p = env::current_dir().unwrap();
-    /// p.push("target/debug/test-bigbro");
+    /// p.push("Cargo.toml");
     /// let e = std::ffi::OsString::from(&p);
     /// let status = Command::new("sha1sum")
     ///                      .arg(&e)
