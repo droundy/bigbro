@@ -47,7 +47,7 @@ path = "src/bin/ls.rs"
 name = "touch"
 path = "src/bin/touch.rs"
 [[bin]]
-name = "sha1sum"
+name = "sha1summ"
 path = "src/bin/sha1sum.rs"
 
 [dependencies]

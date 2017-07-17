@@ -528,7 +528,7 @@ impl Status {
     /// let mut p = env::current_dir().unwrap();
     /// p.push("Cargo.toml");
     /// let e = std::ffi::OsString::from(&p);
-    /// let status = Command::new("sha1sum")
+    /// let status = Command::new("sha1summ")
     ///                      .arg(&e)
     ///                      .status()
     ///                      .expect("failed to execute sha1sum");
