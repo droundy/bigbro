@@ -2,6 +2,8 @@ fn main() {
     let mut it = std::env::args();
     it.next();
     for arg in it {
-        std::fs::OpenOptions::new().append(true).open(arg).unwrap();
+        println!("touching {:?}", &arg);
+        std::fs::OpenOptions::new().create(true).append(true).open(arg)
+            .expect("trouble touching file");
     }
 }
