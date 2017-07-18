@@ -31,7 +31,6 @@ pages:
     - git clone https://gitlab.com/facio/fac.git tests/fac
     - cd tests/fac
     - sh build/linux.sh
-    - ./fac
     - cd ../..
     - cargo --version
     - tests/fac/fac web/style.css web/documentation.html web/doc/bigbro/index.html web/index.html
