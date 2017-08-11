@@ -329,7 +329,9 @@ impl Command {
                 }
 
                 if let Some(ref p) = self.workingdir {
-                    std::env::set_current_dir(p)?;
+                    if let Err(_) = std::env::set_current_dir(p) {
+                        libc::_exit(137)
+                    }
                 }
                 if let Some(fd) = stdin {
                         libc::dup2(fd, libc::STDIN_FILENO);
@@ -342,7 +344,7 @@ impl Command {
                 }
                 private::bigbro_before_exec();
                 libc::execvp(args_raw[0], args_raw.as_ptr());
-                libc::exit(137)
+                libc::_exit(137)
             }
             pid
         };

@@ -593,6 +593,7 @@ static int save_syscall_access(pid_t child, rw_status *h) {
   return 0;
 }
 
+
 void bigbro_before_exec(void) {
   if (ptrace(PTRACE_TRACEME)) {
     // UNABLE TO USE ptrace! This probably means seccomp is in use
@@ -600,8 +601,9 @@ void bigbro_before_exec(void) {
     // all.  Currently, bigbro ignores this situation, but avoid
     // stopping here, since if we stop we won't be able to restart
     // using ptrace.  Perhaps we should return with an error?
-    fprintf(stderr,
-            "Unable to trace child process, perhaps seccomp too strict?!\n");
+    static const char *seccomp_warning =
+      "Unable to trace child process, perhaps seccomp too strict?!\n";
+    write(2, seccomp_warning, strlen(seccomp_warning));
   } else {
     kill(getpid(), SIGSTOP);
   }
@@ -689,19 +691,15 @@ int bigbro(const char *workingdir, pid_t *child_ptr,
         dup2(stderrfd, 2);
       }
     }
-    if (workingdir && chdir(workingdir) != 0) return -1;
+    if (workingdir && chdir(workingdir) != 0) _exit(-1);
 
     // The following enables ptrace and stops the process so we can
     // start it below from our own process.
     bigbro_before_exec();
 
-    char **args = (char **)malloc(4*sizeof(char *));
-    args[0] = "/bin/sh";
-    args[1] = "-c";
-    args[2] = (char *)cmdline;
-    args[3] = NULL;
     // when envp == 0, we are supposed to inherit our environment.
     if (!envp) envp = environ;
+    char *args[] = {"/bin/sh", "-c", (char *)cmdline, NULL };
     return execve(args[0], args, envp);
   }
   *child_ptr = firstborn;
