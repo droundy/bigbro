@@ -603,7 +603,7 @@ void bigbro_before_exec(void) {
     // using ptrace.  Perhaps we should return with an error?
     static const char *seccomp_warning =
       "Unable to trace child process, perhaps seccomp too strict?!\n";
-    write(2, seccomp_warning, strlen(seccomp_warning));
+    (void) write(2, seccomp_warning, strlen(seccomp_warning));
   } else {
     kill(getpid(), SIGSTOP);
   }
