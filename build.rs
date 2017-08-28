@@ -7,7 +7,7 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     if target.contains("linux") {
-        gcc::Config::new()
+        gcc::Build::new()
             .flag("-std=c99")
             .file("bigbro-linux.c")
             .include(".")
