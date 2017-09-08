@@ -218,6 +218,10 @@ if is_in_path('cargo'):
                         'target/release/test-bigbro-twostep',
                         'target/debug/test-bigbro-chan',
                         'target/release/test-bigbro-chan']
+bigbro_binaries_args = list(filter(lambda a: 'bigbro' in a, sys.argv[1:]))
+if len(bigbro_binaries_args) > 0:
+    bigbro_binaries = bigbro_binaries_args
+    print(bigbro_binaries)
 
 for bigbro in bigbro_binaries:
     print('running C tests with %s:' % bigbro)

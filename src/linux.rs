@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "strict", deny(missing_docs))]
 
 extern crate libc;
+extern crate seccomp;
 
 use std;
 use std::ffi::{OsStr, OsString, CString};
@@ -10,6 +11,8 @@ use std::io;
 use libc::{c_int, c_char};
 
 use std::os::unix::process::{ExitStatusExt};
+use std::os::unix::ffi::{OsStringExt};
+use std::collections::HashSet;
 
 use std::io::{Seek};
 use std::os::unix::ffi::{ OsStrExt };
@@ -161,6 +164,521 @@ impl Status {
         }
         Ok(None)
     }
+
+    fn realpath(&mut self, path: PathBuf, lasth: LastSymlink) -> PathBuf {
+        // FIXME allocating lots of tiny OsStrings is definitely not
+        // optimal here.  It seems worth trying to change "elements"
+        // to a PathBuf, so our temporaries will always be stored
+        // continguously with minimum heap allocation.  However,
+        // PathBuf is not ideal for storing a path "in reverse".
+        let mut result = PathBuf::from("/");
+        let mut elements = Vec::new();
+        for c in path.components().rev().filter(|c| *c != std::path::Component::RootDir) {
+            elements.push(std::ffi::OsString::from(c.as_os_str()));
+        }
+        while let Some(next) = elements.pop() {
+            if next == std::ffi::OsStr::new("..") {
+                result.pop();
+            } else {
+                result.push(next.as_os_str());
+                if elements.len() > 0 || lasth == LastSymlink::Followed {
+                    if let Ok(linkval) = result.read_link() {
+                        self.read_from_files.insert(result.clone());
+                        result.pop();
+                        for c in linkval.components().rev() {
+                            elements.push(std::ffi::OsString::from(c.as_os_str()));
+                        }
+                    }
+                } else {
+                    return result;
+                }
+            }
+        }
+        result
+    }
+    fn realpath_at(&mut self, pid: i32, dirfd: i32, path: PathBuf,
+                   lasth: LastSymlink) -> PathBuf {
+        if path == std::path::Path::new("") {
+            return path;
+        }
+
+        if let Ok(procstuff) = path.strip_prefix("/proc/self") {
+            return self.realpath(PathBuf::from(format!("/proc/{}", pid)).join(procstuff), lasth);
+        }
+        if path.is_absolute() {
+            return self.realpath(path, lasth);
+        }
+
+        let proc_fd = if dirfd == libc::AT_FDCWD {
+            PathBuf::from(format!("/proc/{}/cwd", pid))
+        } else {
+            PathBuf::from(format!("/proc/{}/fd/{}", pid, dirfd))
+        };
+        if let Ok(cwd) = proc_fd.read_link() {
+            self.realpath(cwd.join(path), lasth)
+        } else {
+            println!("Unable to determine cwd from {:?}", proc_fd);
+            PathBuf::from("")
+        }
+    }
+
+    fn bigbro_process(&mut self, pid: i32) {
+        let mut status = 0;
+        unsafe {
+            libc::waitpid(pid, &mut status, 0);
+            if libc::WIFEXITED(status) {
+                // This probably means that tracing with PTRACE_TRACEME didn't
+                // work, since the child should have stopped before exiting.  At
+                // this point there isn't much to do other than return the exit
+                // code.  Presumably we are running under seccomp?
+                self.status = std::process::ExitStatus::from_raw(libc::WEXITSTATUS(status));
+                return;
+            }
+            assert!(libc::WIFSTOPPED(status));
+            //println!("signal is {}", libc::WSTOPSIG(status));
+            assert_eq!(libc::WSTOPSIG(status), libc::SIGSTOP);
+            let extra_ptrace_flags = libc::PTRACE_O_TRACEFORK |
+                                     libc::PTRACE_O_TRACEVFORK |
+                                     libc::PTRACE_O_TRACEVFORKDONE |
+                                     libc::PTRACE_O_TRACECLONE |
+                                     libc::PTRACE_O_TRACEEXEC;
+
+            if libc::ptrace(libc::PTRACE_SETOPTIONS, pid, 0,
+                            libc::PTRACE_O_TRACESECCOMP | extra_ptrace_flags) != 0 {
+                println!("error tracing with seccomp?!");
+                if libc::ptrace(libc::PTRACE_SETOPTIONS, pid, 0,
+                                libc::PTRACE_O_TRACESYSGOOD | extra_ptrace_flags) != 0 {
+                    println!("error tracing with tracesysgood?!");
+                }
+            }
+        }
+        // ptrace(PTRACE_SETOPTIONS, child, 0, my_ptrace_options);
+        // if (ptrace(PTRACE_SYSCALL, child, 0, 0)) {
+        //   // I'm not sure what this error is, but if we can't resume the
+        //   // process probably we should exit.
+        //   return -1;
+        // }
+        unsafe {
+            libc::ptrace(libc::PTRACE_CONT, pid, 0, 0);
+        }
+        while self.wait_for_syscall(pid) {
+        }
+    }
+    fn wait_for_syscall(&mut self, pid: i32) -> bool {
+        let mut status = 0;
+        let mut signal_to_send_back = 0;
+        let child = unsafe { libc::waitpid(-pid, &mut status, 0) };
+        let keep_going: bool = unsafe {
+            const PTRACE_EVENT_FORK: i32 = 1;
+            const PTRACE_EVENT_VFORK: i32 = 2;
+            const PTRACE_EVENT_CLONE: i32 = 3;
+            const PTRACE_EVENT_EXEC: i32 = 4;
+            const PTRACE_EVENT_SECCOMP: i32 = 7;
+            if status>>8 == (libc::SIGTRAP | (PTRACE_EVENT_SECCOMP<<8)) {
+                // it is a seccomp stop
+                let mut syscall_num = 0;
+                libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut syscall_num);
+                match SYSCALLS[syscall_num] {
+                    Syscall::Open | Syscall::OpenAt => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        let flag;
+                        let dirfd;
+                        let path;
+                        if SYSCALLS[syscall_num] == Syscall::Open {
+                            path = read_a_string(child, args[0]);
+                            dirfd = libc::AT_FDCWD;
+                            flag = args[1] as i32;
+                        } else {
+                            path = read_a_string(child, args[1]);
+                            dirfd = args[0] as i32;
+                            flag = args[2] as i32;
+                        }
+                        let path = self.realpath_at(child, dirfd, path,
+                                                    LastSymlink::Followed);
+                        println!("{}({:?},{}) -> {}", SYSCALLS[syscall_num].tostr(),
+                                 path, flag, retval);
+                        if path.is_file() {
+                            if retval >= 0 {
+                                if flag & libc::O_WRONLY != 0 || flag & libc::O_RDWR != 0 {
+                                    self.read_from_files.remove(&path);
+                                    self.written_to_files.insert(path);
+                                } else {
+                                    self.read_from_files.insert(path);
+                                }
+                            }
+                        }
+                    },
+                    Syscall::Mkdir | Syscall::Mkdirat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let dirfd;
+                            let path;
+                            if SYSCALLS[syscall_num] == Syscall::Mkdir {
+                                path = read_a_string(child, args[0]);
+                                dirfd = libc::AT_FDCWD;
+                            } else {
+                                path = read_a_string(child, args[1]);
+                                dirfd = args[0] as i32;
+                            }
+                            let path = self.realpath_at(child, dirfd, path,
+                                                        LastSymlink::Followed);
+                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     path);
+                            self.mkdir_directories.insert(path);
+                        } else {
+                            println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
+                        }
+                    },
+                    Syscall::Link | Syscall::Linkat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let tofd;
+                            let fromfd;
+                            let to;
+                            let from;
+                            let follow;
+                            if SYSCALLS[syscall_num] == Syscall::Link {
+                                from = read_a_string(child, args[0]);
+                                to = read_a_string(child, args[1]);
+                                tofd = libc::AT_FDCWD;
+                                fromfd = libc::AT_FDCWD;
+                                follow = LastSymlink::Returned;
+                            } else {
+                                fromfd = args[0] as i32;
+                                from = read_a_string(child, args[1]);
+                                tofd = args[2] as i32;
+                                to = read_a_string(child, args[3]);
+                                follow = if args[4] as i32 & libc::AT_SYMLINK_FOLLOW != 0 {
+                                    LastSymlink::Followed
+                                } else {
+                                    LastSymlink::Returned
+                                };
+                            }
+                            let to = self.realpath_at(child, tofd, to, follow);
+                            let from = self.realpath_at(child, fromfd, from, follow);
+                            println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     &from, &to);
+                            self.read_from_files.insert(from);
+                            self.written_to_files.insert(to);
+                        }
+                    },
+                    Syscall::Symlink | Syscall::Symlinkat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let dirfd;
+                            let path;
+                            if SYSCALLS[syscall_num] == Syscall::Symlink {
+                                path = read_a_string(child, args[1]);
+                                dirfd = libc::AT_FDCWD;
+                            } else {
+                                path = read_a_string(child, args[2]);
+                                dirfd = args[1] as i32;
+                            }
+                            let path = self.realpath_at(child, dirfd, path,
+                                                        LastSymlink::Returned);
+                            println!("{}({:?} -> ?) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     &path);
+                            self.written_to_files.insert(path);
+                        }
+                    },
+                    Syscall::Unlink | Syscall::Unlinkat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let dirfd;
+                            let path;
+                            if SYSCALLS[syscall_num] == Syscall::Unlink {
+                                path = read_a_string(child, args[0]);
+                                dirfd = libc::AT_FDCWD;
+                            } else {
+                                path = read_a_string(child, args[1]);
+                                dirfd = args[0] as i32;
+                            }
+                            let path = self.realpath_at(child, dirfd, path,
+                                                        LastSymlink::Followed);
+                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     path);
+                            self.read_from_files.remove(&path);
+                            self.written_to_files.remove(&path);
+                        } else {
+                            println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
+                        }
+                    },
+                    Syscall::Getdents => {
+                        let args = get_args(child);
+                        let dirfd = args[0] as i32;
+                        let path = self.realpath_at(child, dirfd, PathBuf::from("."),
+                                                    LastSymlink::Followed);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            println!("{}({}) -> {}", SYSCALLS[syscall_num].tostr(),
+                                     dirfd, retval);
+                            self.read_from_directories.insert(path);
+                        }
+                    },
+                    Syscall::Chdir => {
+                        let args = get_args(child);
+                        let path = read_a_string(child, args[0]);
+                        let path = self.realpath_at(child, libc::AT_FDCWD, path,
+                                                    LastSymlink::Followed);
+                        println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
+                    },
+                    Syscall::Lstat => {
+                        let args = get_args(child);
+                        let path = read_a_string(child, args[0]);
+                        let path = self.realpath(path, LastSymlink::Returned);
+                        if let Ok(md) = path.symlink_metadata() {
+                            if md.file_type().is_symlink() || md.file_type().is_file() {
+                                println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
+                                self.read_from_files.insert(path);
+                            }
+                        }
+                    },
+                    Syscall::Readlinkat => {
+                        let args = get_args(child);
+                        let dirfd = args[0] as i32;
+                        let path = read_a_string(child, args[1]);
+                        let path = self.realpath_at(child, dirfd, path,
+                                                    LastSymlink::Returned);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
+                                     path, retval);
+                            println!("readdir path is {:?}", path);
+                            self.read_from_files.insert(path);
+                        }
+                    },
+                    Syscall::Stat => {
+                        let args = get_args(child);
+                        let path = read_a_string(child, args[0]);
+                        let path = self.realpath_at(child, libc::AT_FDCWD,
+                                                    path, LastSymlink::Followed);
+                        if let Ok(md) = path.metadata() {
+                            if md.file_type().is_symlink() || md.file_type().is_file() {
+                                println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
+                                         path);
+                                self.read_from_files.insert(path);
+                            }
+                        }
+                    },
+                }
+                true
+            } else if libc::WIFEXITED(status) {
+                // This probably means that tracing with PTRACE_TRACEME didn't
+                // work, since the child should have stopped before exiting.  At
+                // this point there isn't much to do other than return the exit
+                // code.  Presumably we are running under seccomp?
+                if child == pid {
+                    self.status = std::process::ExitStatus::from_raw(libc::WEXITSTATUS(status));
+                    false
+                } else {
+                    true
+                }
+            } else if libc::WIFSIGNALED(status) {
+                println!("process {} died of a signal!\n", child);
+                if child == pid {
+                    self.status = std::process::ExitStatus::from_raw(-libc::WTERMSIG(status));
+                    println!("child died of signal");
+                    false
+                } else {
+                    true  /* no need to do anything more for this guy */
+                }
+            } else if libc::WIFSTOPPED(status) && (status>>8) == (libc::SIGTRAP | PTRACE_EVENT_FORK << 8) {
+                let mut newpid = 0;
+                libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut newpid);
+                //println!("{}: forked from {}\n", newpid, child);
+                true
+            } else if libc::WIFSTOPPED(status) && (status>>8) == (libc::SIGTRAP | PTRACE_EVENT_VFORK << 8) {
+                let mut newpid = 0;
+                libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut newpid);
+                //println!("{}: vforked from {}\n", newpid, child);
+                true
+            } else if libc::WIFSTOPPED(status) && (status>>8) == (libc::SIGTRAP | PTRACE_EVENT_CLONE << 8) {
+                let mut newpid = 0;
+                libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut newpid);
+                //println!("{}: cloned from {}\n", newpid, child);
+                true
+            } else if libc::WIFSTOPPED(status) && (status>>8) == (libc::SIGTRAP | PTRACE_EVENT_EXEC << 8) {
+                let mut newpid = 0;
+                libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut newpid);
+                //println!("{}: execed from {}\n", newpid, child);
+                true
+            } else if libc::WIFSTOPPED(status) {
+                // ensure that the signal we interrupted is actually delivered.
+                match libc::WSTOPSIG(status) {
+                    libc::SIGCHLD | libc::SIGTRAP | libc::SIGVTALRM => {
+                        // I don't know why forwarding SIGCHLD along
+                        // causes trouble.  :( SIGTRAP is what we get
+                        // from ptrace.  For some reason SIGVTALRM
+                        // causes trouble with ghc.
+                        // println!("{}: ignoring signal {}\n", child, libc::WSTOPSIG(status));
+                    },
+                    _ => {
+                        signal_to_send_back = libc::WSTOPSIG(status);
+                        // println!("{}: sending signal {}\n", child, signal_to_send_back);
+                    }
+                };
+                true
+            } else {
+                println!("Saw someting else?");
+                true
+            }
+        };
+        // tell the child to keep going!
+        unsafe {
+            if libc::ptrace(libc::PTRACE_CONT, child, 0, signal_to_send_back) == -1 {
+                // Assume child died and that we will get a WIFEXITED
+                // shortly.
+            }
+        }
+        keep_going
+    }
+}
+
+
+#[derive(Debug,Clone,Copy,Eq,PartialEq)]
+enum LastSymlink {
+    Followed,
+    Returned,
+}
+
+#[derive(Debug,Clone,Copy,Eq,PartialEq)]
+enum Syscall {
+    Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat,
+    Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
+}
+impl Syscall {
+    fn seccomp(&self) -> Vec<seccomp::Syscall> {
+        match *self {
+            Syscall::Open => vec![seccomp::Syscall::open],
+            Syscall::OpenAt => vec![seccomp::Syscall::openat],
+            Syscall::Getdents => vec![seccomp::Syscall::getdents,
+                                      seccomp::Syscall::getdents64],
+            Syscall::Lstat => vec![seccomp::Syscall::lstat,
+                                   seccomp::Syscall::lstat64,
+                                   seccomp::Syscall::readlink,],
+            Syscall::Stat => vec![seccomp::Syscall::stat,
+                                  seccomp::Syscall::stat64],
+            Syscall::Readlinkat => vec![seccomp::Syscall::readlinkat],
+            Syscall::Mkdir => vec![seccomp::Syscall::mkdir],
+            Syscall::Mkdirat => vec![seccomp::Syscall::mkdirat],
+            Syscall::Link => vec![seccomp::Syscall::link],
+            Syscall::Linkat => vec![seccomp::Syscall::linkat],
+            Syscall::Symlink => vec![seccomp::Syscall::symlink],
+            Syscall::Symlinkat => vec![seccomp::Syscall::symlinkat],
+            Syscall::Unlink => vec![seccomp::Syscall::unlink],
+            Syscall::Unlinkat => vec![seccomp::Syscall::unlinkat],
+            Syscall::Chdir => vec![seccomp::Syscall::chdir],
+        }
+    }
+    fn tostr(&self) -> &'static str {
+        match *self {
+            Syscall::Open => "open",
+            Syscall::OpenAt => "openat",
+            Syscall::Getdents => "getdents",
+            Syscall::Lstat => "lstat/readlink",
+            Syscall::Stat => "stat",
+            Syscall::Readlinkat => "readlinkat",
+            Syscall::Mkdir => "mkdir",
+            Syscall::Mkdirat => "mkdirat",
+            Syscall::Link => "link",
+            Syscall::Linkat => "linkat",
+            Syscall::Symlink => "symlink",
+            Syscall::Symlinkat => "symlinkat",
+            Syscall::Unlink => "unlink",
+            Syscall::Unlinkat => "unlinkat",
+            Syscall::Chdir => "Chdir",
+        }
+    }
+}
+
+const SYSCALLS: &[Syscall] = &[
+    Syscall::Open, Syscall::OpenAt, Syscall::Getdents, Syscall::Lstat, Syscall::Stat,
+    Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat,
+    Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
+    Syscall::Symlink, Syscall::Symlinkat,
+];
+
+fn seccomp_context() -> std::io::Result<seccomp::Context> {
+    let mut ctx = seccomp::Context::default(seccomp::Action::Allow).unwrap();
+    ctx.add_arch(seccomp::ARCH_X86_64).ok();
+    ctx.add_arch(seccomp::ARCH_X86).ok();
+    ctx.add_arch(seccomp::ARCH_X32).ok();
+    for (i,sc) in SYSCALLS.iter().cloned().enumerate() {
+        for secc in sc.seccomp() {
+            ctx.add_rule(seccomp::Rule::trace(secc, i as u32)).unwrap();
+        }
+    }
+    Ok(ctx)
+}
+
+fn get_args(child: i32) -> [usize;6] {
+    let mut regs: libc::user_regs_struct = unsafe { std::mem::zeroed() };
+    if unsafe { libc::ptrace(libc::PTRACE_GETREGS, child, 0, &mut regs) } == -1 {
+        println!("error getting registers for {}!\n", child);
+        unsafe { std::mem::zeroed() }
+    } else {
+        if regs.cs == 0x23 {
+            // child is actually x86 not x86_64..
+            [regs.rbx as usize,
+             regs.rcx as usize,
+             regs.rdx as usize,
+             regs.rsi as usize,
+             regs.rdi as usize,
+             regs.rbp as usize]
+        } else {
+            [regs.rdi as usize,
+             regs.rsi as usize,
+             regs.rdx as usize,
+             regs.r10 as usize,
+             regs.r8 as usize,
+             regs.r9 as usize]
+        }
+    }
+}
+
+fn wait_for_return(child: i32) -> i32 {
+    let mut status = 0;
+    unsafe {
+        libc::ptrace(libc::PTRACE_SYSCALL, child, 0, 0); // ignore return value
+        libc::waitpid(child, &mut status, 0);
+        let mut regs: libc::user_regs_struct = std::mem::zeroed();
+        if libc::ptrace(libc::PTRACE_GETREGS, child, 0, &mut regs) == -1 {
+            println!("error getting registers for {}!\n", child);
+        }
+        regs.rax as i32
+    }
+}
+
+fn read_a_string(child: i32, addr: usize) -> std::path::PathBuf {
+    if addr == 0 {
+        return std::path::PathBuf::from("");
+    };
+
+    // There is a tradeoff here between allocating something too large
+    // and wasting memory vs the cost of reallocing repeatedly.
+    let mut val = Vec::with_capacity(1024);
+    let mut read = 0;
+    loop {
+        let tmp = unsafe { libc::ptrace(libc::PTRACE_PEEKDATA, child, addr + read) };
+        if std::io::Error::last_os_error().raw_os_error().is_some() && std::io::Error::last_os_error().raw_os_error() != Some(0) {
+            break;
+        }
+        let ip: *const _ = &tmp;
+        let bp: *const u8 = ip as *const _;
+        let sz = std::mem::size_of_val(&tmp);
+        let bs: &[u8] = unsafe { std::slice::from_raw_parts(bp, sz) };
+        val.extend(bs.iter().cloned().take_while(|&c| c != 0));
+        if bs.contains(&0) {
+            break;
+        }
+        read += sz;
+    }
+    std::ffi::OsString::from_vec(val).into()
 }
 
 fn null_c_array_to_pathbuf(a: *const *const c_char) -> std::collections::HashSet<PathBuf> {
@@ -303,10 +821,7 @@ impl Command {
         let stdout = self.stdout.to_child_fd()?;
         let stderr = self.stderr.to_child_fd()?;
 
-        let mut rd = std::ptr::null_mut();
-        let mut rf = std::ptr::null_mut();
-        let mut wf = std::ptr::null_mut();
-        let mut md = std::ptr::null_mut();
+        let ctx = seccomp_context()?;
         let pid = unsafe {
             let pid = cvt(libc::fork())?;
             private::setpgid(pid, pid);
@@ -342,7 +857,22 @@ impl Command {
                 if let Some(fd) = stderr {
                         libc::dup2(fd, libc::STDERR_FILENO);
                 }
-                private::bigbro_before_exec();
+                match ctx.load() {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
+                }?;
+                if libc::ptrace(libc::PTRACE_TRACEME,0,0,0) != 0 {
+                    // UNABLE TO USE ptrace! This probably means
+                    // seccomp is in use through docker or the like,
+                    // and means bigbro won't work at all.  Currently,
+                    // bigbro ignores this situation, but avoid
+                    // stopping here, since if we stop we won't be
+                    // able to restart using ptrace.  Perhaps we
+                    // should return with an error?
+                    eprint!("Unable to trace child, perhaps seccomp too strict?!\n");
+                } else {
+                    libc::kill(libc::getpid(), libc::SIGSTOP);
+                }
                 libc::execvp(args_raw[0], args_raw.as_ptr());
                 libc::_exit(137)
             }
@@ -358,27 +888,19 @@ impl Command {
         if stderr != stdout {
             self.stderr.close_fd_if_appropriate(stderr);
         }
-        let exitcode = unsafe {
-            private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
-        };
-        let status = Status {
-            status: std::process::ExitStatus::from_raw(exitcode),
-            read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
-            read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
-            written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
-            mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
+        let mut status = Status {
+            status: std::process::ExitStatus::from_raw(137),
+            read_from_directories: HashSet::new(),
+            read_from_files: HashSet::new(),
+            written_to_files: HashSet::new(),
+            mkdir_directories: HashSet::new(),
             stdout_fd: if self.can_read_stdout {
                 if let Some(ref fd) = stdout {
                     Some (unsafe { std::fs::File::from_raw_fd(*fd) })
                 } else { None }
             } else { None },
         };
-        unsafe {
-            libc::free(rd as *mut libc::c_void);
-            libc::free(md as *mut libc::c_void);
-            libc::free(rf as *mut libc::c_void);
-            libc::free(wf as *mut libc::c_void);
-        }
+        status.bigbro_process(pid);
         Ok(status)
     }
 

@@ -17,6 +17,9 @@
 //! ```
 extern crate libc;
 
+#[cfg(target_os = "linux")]
+extern crate seccomp;
+
 #[cfg(feature="noprofile")]
 extern crate cpuprofiler;
 
