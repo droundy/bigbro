@@ -448,8 +448,21 @@ impl Status {
                                      path);
                             self.read_from_files.remove(&path);
                             self.written_to_files.remove(&path);
+                            self.mkdir_directories.remove(&path);
                         } else {
                             println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
+                        }
+                    },
+                    Syscall::Rmdir => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let path = read_a_string(child, args[0]);
+                            let path = self.realpath_at(child, libc::AT_FDCWD, path,
+                                                        LastSymlink::Followed);
+                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     path);
+                            self.mkdir_directories.remove(&path);
                         }
                     },
                     Syscall::Getdents => {
@@ -592,7 +605,7 @@ enum LastSymlink {
 
 #[derive(Debug,Clone,Copy,Eq,PartialEq)]
 enum Syscall {
-    Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat,
+    Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat, Rmdir,
     Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
     Execve, Execveat, Futimesat, Utimensat,
 }
@@ -611,6 +624,7 @@ impl Syscall {
             Syscall::Readlinkat => vec![seccomp::Syscall::readlinkat],
             Syscall::Mkdir => vec![seccomp::Syscall::mkdir],
             Syscall::Mkdirat => vec![seccomp::Syscall::mkdirat],
+            Syscall::Rmdir => vec![seccomp::Syscall::rmdir],
             Syscall::Link => vec![seccomp::Syscall::link],
             Syscall::Linkat => vec![seccomp::Syscall::linkat],
             Syscall::Symlink => vec![seccomp::Syscall::symlink],
@@ -634,6 +648,7 @@ impl Syscall {
             Syscall::Readlinkat => "readlinkat",
             Syscall::Mkdir => "mkdir",
             Syscall::Mkdirat => "mkdirat",
+            Syscall::Rmdir => "rmdir",
             Syscall::Link => "link",
             Syscall::Linkat => "linkat",
             Syscall::Symlink => "symlink",
@@ -651,7 +666,7 @@ impl Syscall {
 
 const SYSCALLS: &[Syscall] = &[
     Syscall::Open, Syscall::OpenAt, Syscall::Getdents, Syscall::Lstat, Syscall::Stat,
-    Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat,
+    Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat, Syscall::Rmdir,
     Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
     Syscall::Symlink, Syscall::Symlinkat, Syscall::Execve, Syscall::Execveat,
     Syscall::Futimesat, Syscall::Utimensat,
