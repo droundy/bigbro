@@ -603,7 +603,10 @@ void bigbro_before_exec(void) {
     // using ptrace.  Perhaps we should return with an error?
     static const char *seccomp_warning =
       "Unable to trace child process, perhaps seccomp too strict?!\n";
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     write(2, seccomp_warning, strlen(seccomp_warning));
+#pragma GCC diagnostic pop
   } else {
     kill(getpid(), SIGSTOP);
   }
