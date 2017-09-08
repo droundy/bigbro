@@ -331,6 +331,32 @@ impl Status {
                             println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
                         }
                     },
+                    Syscall::Futimesat | Syscall::Utimensat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        // I don't understand why the args[1] != 0
+                        // check below is needed.  The function should
+                        // not succeed with a null pointer for the
+                        // path, but somehow it seems to sometimes do
+                        // so.  :(
+                        if retval == 0 && args[1] != 0 {
+                            let dirfd = args[0] as i32;
+                            let path = read_a_string(child, args[1]);
+                            let follow = if SYSCALLS[syscall_num] == Syscall::Futimesat {
+                                LastSymlink::Followed
+                            } else {
+                                if args[3] as i32 & libc::AT_SYMLINK_FOLLOW != 0 {
+                                    LastSymlink::Followed
+                                } else {
+                                    LastSymlink::Returned
+                                }
+                            };
+                            let path = self.realpath_at(child, dirfd, path, follow);
+                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     path);
+                            self.written_to_files.insert(path);
+                        }
+                    },
                     Syscall::Link | Syscall::Linkat => {
                         let args = get_args(child);
                         let retval = wait_for_return(child);
@@ -383,6 +409,24 @@ impl Status {
                             println!("{}({:?} -> ?) -> 0", SYSCALLS[syscall_num].tostr(),
                                      &path);
                             self.written_to_files.insert(path);
+                        }
+                    },
+                    Syscall::Execve | Syscall::Execveat => {
+                        let args = get_args(child);
+                        let dirfd;
+                        let path;
+                        if SYSCALLS[syscall_num] == Syscall::Execve {
+                            path = read_a_string(child, args[0]);
+                            dirfd = libc::AT_FDCWD;
+                        } else {
+                            path = read_a_string(child, args[1]);
+                            dirfd = args[0] as i32;
+                        }
+                        let path = self.realpath_at(child, dirfd, path,
+                                                    LastSymlink::Followed);
+                        if path != std::path::Path::new("") {
+                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(), path);
+                            self.read_from_files.insert(path);
                         }
                     },
                     Syscall::Unlink | Syscall::Unlinkat => {
@@ -550,6 +594,7 @@ enum LastSymlink {
 enum Syscall {
     Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat,
     Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
+    Execve, Execveat, Futimesat, Utimensat,
 }
 impl Syscall {
     fn seccomp(&self) -> Vec<seccomp::Syscall> {
@@ -572,7 +617,11 @@ impl Syscall {
             Syscall::Symlinkat => vec![seccomp::Syscall::symlinkat],
             Syscall::Unlink => vec![seccomp::Syscall::unlink],
             Syscall::Unlinkat => vec![seccomp::Syscall::unlinkat],
+            Syscall::Execve => vec![seccomp::Syscall::execve],
+            Syscall::Execveat => vec![seccomp::Syscall::execveat],
             Syscall::Chdir => vec![seccomp::Syscall::chdir],
+            Syscall::Futimesat => vec![seccomp::Syscall::futimesat],
+            Syscall::Utimensat => vec![seccomp::Syscall::utimensat],
         }
     }
     fn tostr(&self) -> &'static str {
@@ -591,7 +640,11 @@ impl Syscall {
             Syscall::Symlinkat => "symlinkat",
             Syscall::Unlink => "unlink",
             Syscall::Unlinkat => "unlinkat",
-            Syscall::Chdir => "Chdir",
+            Syscall::Execve => "execve",
+            Syscall::Execveat => "execveat",
+            Syscall::Chdir => "chdir",
+            Syscall::Futimesat => "futimesat",
+            Syscall::Utimensat => "utimensat",
         }
     }
 }
@@ -600,7 +653,8 @@ const SYSCALLS: &[Syscall] = &[
     Syscall::Open, Syscall::OpenAt, Syscall::Getdents, Syscall::Lstat, Syscall::Stat,
     Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat,
     Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
-    Syscall::Symlink, Syscall::Symlinkat,
+    Syscall::Symlink, Syscall::Symlinkat, Syscall::Execve, Syscall::Execveat,
+    Syscall::Futimesat, Syscall::Utimensat,
 ];
 
 fn seccomp_context() -> std::io::Result<seccomp::Context> {
