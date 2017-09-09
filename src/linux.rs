@@ -357,10 +357,10 @@ impl Status {
                             let follow = if SYSCALLS[syscall_num] == Syscall::Futimesat {
                                 LastSymlink::Followed
                             } else {
-                                if args[3] as i32 & libc::AT_SYMLINK_FOLLOW != 0 {
-                                    LastSymlink::Followed
-                                } else {
+                                if args[3] as i32 & libc::AT_SYMLINK_NOFOLLOW != 0 {
                                     LastSymlink::Returned
+                                } else {
+                                    LastSymlink::Followed
                                 }
                             };
                             let path = self.realpath_at(child, dirfd, path, follow);
