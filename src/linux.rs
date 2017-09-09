@@ -391,6 +391,77 @@ impl Status {
                             self.written_to_files.insert(to);
                         }
                     },
+                    Syscall::Rename | Syscall::Renameat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval == 0 {
+                            let tofd;
+                            let fromfd;
+                            let to;
+                            let from;
+                            let follow;
+                            if SYSCALLS[syscall_num] == Syscall::Rename {
+                                from = read_a_string(child, args[0]);
+                                to = read_a_string(child, args[1]);
+                                tofd = libc::AT_FDCWD;
+                                fromfd = libc::AT_FDCWD;
+                                follow = LastSymlink::Returned;
+                            } else {
+                                fromfd = args[0] as i32;
+                                from = read_a_string(child, args[1]);
+                                tofd = args[2] as i32;
+                                to = read_a_string(child, args[3]);
+                                follow = if args[4] as i32 & libc::AT_SYMLINK_FOLLOW != 0 {
+                                    LastSymlink::Followed
+                                } else {
+                                    LastSymlink::Returned
+                                };
+                            }
+                            let to = self.realpath_at(child, tofd, to, follow);
+                            let from = self.realpath_at(child, fromfd, from, follow);
+                            println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                                     &from, &to);
+                            if to.is_dir() {
+                                self.mkdir_directories.remove(&from);
+
+                                let mkdir_directories =
+                                    self.mkdir_directories.drain().map(|d| {
+                                        if let Ok(x) = d.strip_prefix(&from) {
+                                            return to.join(x)
+                                        }
+                                        d
+                                    }).collect();
+                                self.mkdir_directories = mkdir_directories;
+
+                                let written_to_files =
+                                    self.written_to_files.drain().map(|d| {
+                                        if let Ok(x) = d.strip_prefix(&from) {
+                                            return to.join(x)
+                                        }
+                                        d
+                                    }).collect();
+                                self.written_to_files = written_to_files;
+
+                                let read_from_files =
+                                    self.read_from_files.drain().filter(|d| {
+                                        d.strip_prefix(&from).is_err()
+                                    }).collect();
+                                self.read_from_files = read_from_files;
+
+                                let read_from_directories =
+                                    self.read_from_directories.drain().filter(|d| {
+                                        d.strip_prefix(&from).is_err()
+                                    }).collect();
+                                self.read_from_directories = read_from_directories;
+
+                                self.mkdir_directories.insert(to);
+                            } else {
+                                self.read_from_files.remove(&from);
+                                self.written_to_files.remove(&from);
+                                self.written_to_files.insert(to);
+                            }
+                        }
+                    },
                     Syscall::Symlink | Syscall::Symlinkat => {
                         let args = get_args(child);
                         let retval = wait_for_return(child);
@@ -607,7 +678,7 @@ enum LastSymlink {
 enum Syscall {
     Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat, Rmdir,
     Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
-    Execve, Execveat, Futimesat, Utimensat,
+    Execve, Execveat, Futimesat, Utimensat, Rename, Renameat,
 }
 impl Syscall {
     fn seccomp(&self) -> Vec<seccomp::Syscall> {
@@ -627,6 +698,9 @@ impl Syscall {
             Syscall::Rmdir => vec![seccomp::Syscall::rmdir],
             Syscall::Link => vec![seccomp::Syscall::link],
             Syscall::Linkat => vec![seccomp::Syscall::linkat],
+            Syscall::Rename => vec![seccomp::Syscall::rename],
+            Syscall::Renameat => vec![seccomp::Syscall::renameat,
+                                      seccomp::Syscall::renameat2],
             Syscall::Symlink => vec![seccomp::Syscall::symlink],
             Syscall::Symlinkat => vec![seccomp::Syscall::symlinkat],
             Syscall::Unlink => vec![seccomp::Syscall::unlink],
@@ -651,6 +725,8 @@ impl Syscall {
             Syscall::Rmdir => "rmdir",
             Syscall::Link => "link",
             Syscall::Linkat => "linkat",
+            Syscall::Rename => "rename",
+            Syscall::Renameat => "renameat",
             Syscall::Symlink => "symlink",
             Syscall::Symlinkat => "symlinkat",
             Syscall::Unlink => "unlink",
@@ -669,7 +745,7 @@ const SYSCALLS: &[Syscall] = &[
     Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat, Syscall::Rmdir,
     Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
     Syscall::Symlink, Syscall::Symlinkat, Syscall::Execve, Syscall::Execveat,
-    Syscall::Futimesat, Syscall::Utimensat,
+    Syscall::Futimesat, Syscall::Utimensat, Syscall::Rename, Syscall::Renameat,
 ];
 
 fn seccomp_context() -> std::io::Result<seccomp::Context> {
