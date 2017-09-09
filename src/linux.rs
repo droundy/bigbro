@@ -316,7 +316,9 @@ impl Status {
                                     self.read_from_files.remove(&path);
                                     self.written_to_files.insert(path);
                                 } else {
-                                    self.read_from_files.insert(path);
+                                    if !self.written_to_files.contains(&path) {
+                                        self.read_from_files.insert(path);
+                                    }
                                 }
                             }
                         }
@@ -399,7 +401,9 @@ impl Status {
                             let from = self.realpath_at(child, fromfd, from, follow);
                             println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
                                      &from, &to);
-                            self.read_from_files.insert(from);
+                            if !self.written_to_files.contains(&from) {
+                                self.read_from_files.insert(from);
+                            }
                             self.written_to_files.insert(to);
                         }
                     },
@@ -520,7 +524,9 @@ impl Status {
                                                     LastSymlink::Followed);
                         if path != std::path::Path::new("") {
                             println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(), path);
-                            self.read_from_files.insert(path);
+                            if !self.written_to_files.contains(&path) {
+                                self.read_from_files.insert(path);
+                            }
                         }
                     },
                     Syscall::Unlink | Syscall::Unlinkat => {
@@ -568,7 +574,9 @@ impl Status {
                         if retval == 0 {
                             println!("{}({}) -> {}", SYSCALLS[syscall_num].tostr(),
                                      dirfd, retval);
-                            self.read_from_directories.insert(path);
+                            if !self.mkdir_directories.contains(&path) {
+                                self.read_from_directories.insert(path);
+                            }
                         }
                     },
                     Syscall::Chdir => {
@@ -585,7 +593,9 @@ impl Status {
                         if let Ok(md) = path.symlink_metadata() {
                             if md.file_type().is_symlink() || md.file_type().is_file() {
                                 println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
-                                self.read_from_files.insert(path);
+                                if !self.written_to_files.contains(&path) {
+                                    self.read_from_files.insert(path);
+                                }
                             }
                         }
                     },
@@ -600,7 +610,9 @@ impl Status {
                             println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
                                      path, retval);
                             println!("readdir path is {:?}", path);
-                            self.read_from_files.insert(path);
+                            if !self.written_to_files.contains(&path) {
+                                self.read_from_files.insert(path);
+                            }
                         }
                     },
                     Syscall::Stat => {
@@ -612,7 +624,9 @@ impl Status {
                             if md.file_type().is_symlink() || md.file_type().is_file() {
                                 println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
                                          path);
-                                self.read_from_files.insert(path);
+                                if !self.written_to_files.contains(&path) {
+                                    self.read_from_files.insert(path);
+                                }
                             }
                         }
                     },
