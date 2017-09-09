@@ -393,68 +393,79 @@ impl Status {
                     },
                     Syscall::Rename | Syscall::Renameat => {
                         let args = get_args(child);
+                        let tofd;
+                        let to;
+                        let fromfd;
+                        let from;
+                        if SYSCALLS[syscall_num] == Syscall::Rename {
+                            from = read_a_string(child, args[0]);
+                            to = read_a_string(child, args[1]);
+                            tofd = libc::AT_FDCWD;
+                            fromfd = libc::AT_FDCWD;
+                        } else {
+                            fromfd = args[0] as i32;
+                            from = read_a_string(child, args[1]);
+                            tofd = args[2] as i32;
+                            to = read_a_string(child, args[3]);
+                        }
+                        let from = self.realpath_at(child, fromfd, from,
+                                                    LastSymlink::Returned);
                         let retval = wait_for_return(child);
                         if retval == 0 {
-                            let tofd;
-                            let fromfd;
-                            let to;
-                            let from;
-                            let follow;
-                            if SYSCALLS[syscall_num] == Syscall::Rename {
-                                from = read_a_string(child, args[0]);
-                                to = read_a_string(child, args[1]);
-                                tofd = libc::AT_FDCWD;
-                                fromfd = libc::AT_FDCWD;
-                                follow = LastSymlink::Returned;
-                            } else {
-                                fromfd = args[0] as i32;
-                                from = read_a_string(child, args[1]);
-                                tofd = args[2] as i32;
-                                to = read_a_string(child, args[3]);
-                                follow = if args[4] as i32 & libc::AT_SYMLINK_FOLLOW != 0 {
-                                    LastSymlink::Followed
-                                } else {
-                                    LastSymlink::Returned
-                                };
-                            }
-                            let to = self.realpath_at(child, tofd, to, follow);
-                            let from = self.realpath_at(child, fromfd, from, follow);
+                            let to = self.realpath_at(child, tofd, to,
+                                                      LastSymlink::Returned);
                             println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
                                      &from, &to);
                             if to.is_dir() {
-                                self.mkdir_directories.remove(&from);
+                                if to != from {
+                                    self.mkdir_directories.remove(&from);
 
-                                let mkdir_directories =
-                                    self.mkdir_directories.drain().map(|d| {
-                                        if let Ok(x) = d.strip_prefix(&from) {
+                                    let mut mkdir_directories: HashSet<_> =
+                                        self.mkdir_directories.drain().map(|d| {
+                                            if let Ok(x) = d.strip_prefix(&from) {
                                             return to.join(x)
-                                        }
+                                            }
                                         d
-                                    }).collect();
-                                self.mkdir_directories = mkdir_directories;
+                                        }).collect();
 
-                                let written_to_files =
-                                    self.written_to_files.drain().map(|d| {
-                                        if let Ok(x) = d.strip_prefix(&from) {
-                                            return to.join(x)
-                                        }
-                                        d
-                                    }).collect();
-                                self.written_to_files = written_to_files;
+                                    let mut written_to_files: HashSet<_> =
+                                        self.written_to_files.drain().map(|d| {
+                                            if let Ok(x) = d.strip_prefix(&from) {
+                                                println!("changed {:?} to {:?}",
+                                                         d, to.join(x));
+                                                return to.join(x)
+                                            }
+                                            println!("Unaffected: {:?}", d);
+                                            d
+                                        }).collect();
 
-                                let read_from_files =
-                                    self.read_from_files.drain().filter(|d| {
-                                        d.strip_prefix(&from).is_err()
-                                    }).collect();
-                                self.read_from_files = read_from_files;
+                                    let read_from_files =
+                                        self.read_from_files.drain().filter(|d| {
+                                            if let Ok(x) = d.strip_prefix(&from) {
+                                                written_to_files.insert(to.join(x));
+                                                false
+                                            } else {
+                                                true
+                                            }
+                                        }).collect();
+                                    self.read_from_files = read_from_files;
 
-                                let read_from_directories =
-                                    self.read_from_directories.drain().filter(|d| {
-                                        d.strip_prefix(&from).is_err()
-                                    }).collect();
-                                self.read_from_directories = read_from_directories;
+                                    let read_from_directories =
+                                        self.read_from_directories.drain().filter(|d| {
+                                            if let Ok(x) = d.strip_prefix(&from) {
+                                                mkdir_directories.insert(to.join(x));
+                                                false
+                                            } else {
+                                                true
+                                            }
+                                        }).collect();
+                                    self.read_from_directories = read_from_directories;
+                                    self.mkdir_directories = mkdir_directories;
+                                    self.written_to_files = written_to_files;
 
-                                self.mkdir_directories.insert(to);
+
+                                    self.mkdir_directories.insert(to);
+                                }
                             } else {
                                 self.read_from_files.remove(&from);
                                 self.written_to_files.remove(&from);
