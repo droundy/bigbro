@@ -279,6 +279,18 @@ impl Status {
                 let mut syscall_num = 0;
                 libc::ptrace(libc::PTRACE_GETEVENTMSG, child, 0, &mut syscall_num);
                 match SYSCALLS[syscall_num] {
+                    Syscall::CreatOrSimilar => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        if retval >= 0 {
+                            let path = read_a_string(child, args[0]);
+                            let path = self.realpath_at(child, libc::AT_FDCWD, path,
+                                                        LastSymlink::Followed);
+                            println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
+                                     path, retval);
+                            self.written_to_files.insert(path);
+                        }
+                    },
                     Syscall::Open | Syscall::OpenAt => {
                         let args = get_args(child);
                         let retval = wait_for_return(child);
@@ -688,12 +700,17 @@ enum LastSymlink {
 #[derive(Debug,Clone,Copy,Eq,PartialEq)]
 enum Syscall {
     Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat, Rmdir,
+    CreatOrSimilar,
     Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
     Execve, Execveat, Futimesat, Utimensat, Rename, Renameat,
 }
 impl Syscall {
     fn seccomp(&self) -> Vec<seccomp::Syscall> {
         match *self {
+            Syscall::CreatOrSimilar => vec![seccomp::Syscall::creat,
+                                            seccomp::Syscall::truncate,
+                                            seccomp::Syscall::utime,
+                                            seccomp::Syscall::utimes],
             Syscall::Open => vec![seccomp::Syscall::open],
             Syscall::OpenAt => vec![seccomp::Syscall::openat],
             Syscall::Getdents => vec![seccomp::Syscall::getdents,
@@ -725,6 +742,7 @@ impl Syscall {
     }
     fn tostr(&self) -> &'static str {
         match *self {
+            Syscall::CreatOrSimilar => "creat-or-similar",
             Syscall::Open => "open",
             Syscall::OpenAt => "openat",
             Syscall::Getdents => "getdents",
@@ -757,6 +775,7 @@ const SYSCALLS: &[Syscall] = &[
     Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
     Syscall::Symlink, Syscall::Symlinkat, Syscall::Execve, Syscall::Execveat,
     Syscall::Futimesat, Syscall::Utimensat, Syscall::Rename, Syscall::Renameat,
+    Syscall::CreatOrSimilar,
 ];
 
 fn seccomp_context() -> std::io::Result<seccomp::Context> {
