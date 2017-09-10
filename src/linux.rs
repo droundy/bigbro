@@ -222,7 +222,7 @@ impl Status {
         }
     }
 
-    fn bigbro_process(&mut self, pid: i32) {
+    fn seccomp_bigbro_process(&mut self, pid: i32) {
         let mut status = 0;
         unsafe {
             libc::waitpid(pid, &mut status, 0);
@@ -804,6 +804,24 @@ fn seccomp_context() -> std::io::Result<seccomp::Context> {
     }
     Ok(ctx)
 }
+unsafe fn seccomp_load(ctx: seccomp::Context) -> std::io::Result<()> {
+    match ctx.load() {
+        Ok(()) => Ok(()),
+        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
+    }?;
+    if libc::ptrace(libc::PTRACE_TRACEME,0,0,0) != 0 {
+        // UNABLE TO USE ptrace! This probably means seccomp is in use
+        // through docker or the like, and means bigbro won't work at
+        // all.  Currently, bigbro ignores this situation, but avoid
+        // stopping here, since if we stop we won't be able to restart
+        // using ptrace.  Perhaps we should return with an error?
+        eprint!("Unable to trace child, perhaps seccomp too strict?!\n");
+    } else {
+        libc::kill(libc::getpid(), libc::SIGSTOP);
+    }
+    Ok(())
+}
+
 
 fn get_args(child: i32) -> [usize;6] {
     let mut regs: libc::user_regs_struct = unsafe { std::mem::zeroed() };
@@ -1046,22 +1064,7 @@ impl Command {
                 if let Some(fd) = stderr {
                         libc::dup2(fd, libc::STDERR_FILENO);
                 }
-                match ctx.load() {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
-                }?;
-                if libc::ptrace(libc::PTRACE_TRACEME,0,0,0) != 0 {
-                    // UNABLE TO USE ptrace! This probably means
-                    // seccomp is in use through docker or the like,
-                    // and means bigbro won't work at all.  Currently,
-                    // bigbro ignores this situation, but avoid
-                    // stopping here, since if we stop we won't be
-                    // able to restart using ptrace.  Perhaps we
-                    // should return with an error?
-                    eprint!("Unable to trace child, perhaps seccomp too strict?!\n");
-                } else {
-                    libc::kill(libc::getpid(), libc::SIGSTOP);
-                }
+                seccomp_load(ctx)?;
                 libc::execvp(args_raw[0], args_raw.as_ptr());
                 libc::_exit(137)
             }
@@ -1089,7 +1092,7 @@ impl Command {
                 } else { None }
             } else { None },
         };
-        status.bigbro_process(pid);
+        status.seccomp_bigbro_process(pid);
         Ok(status)
     }
 
@@ -1116,6 +1119,7 @@ impl Command {
             let stdinfd = self.stdin.to_child_fd()?;
             let stdoutfd = self.stdout.to_child_fd()?;
             let stderrfd = self.stderr.to_child_fd()?;
+            let ctx = seccomp_context()?;
             let pid = unsafe {
                 let pid = cvt(libc::fork())?;
                 private::setpgid(pid, pid);
@@ -1143,7 +1147,7 @@ impl Command {
                     if let Some(fd) = stderrfd {
                         libc::dup2(fd, libc::STDERR_FILENO);
                     }
-                    private::bigbro_before_exec();
+                    seccomp_load(ctx)?;
                     libc::execvp(args_raw[0], args_raw.as_ptr());
                     libc::exit(137)
                 }
@@ -1160,31 +1164,19 @@ impl Command {
             if stderrfd != stdoutfd {
                 self.stderr.close_fd_if_appropriate(stderrfd);
             }
-            let mut rd = std::ptr::null_mut();
-            let mut rf = std::ptr::null_mut();
-            let mut wf = std::ptr::null_mut();
-            let mut md = std::ptr::null_mut();
-            let exitcode = unsafe {
-                private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
-            };
-            let status = Status {
-                status: std::process::ExitStatus::from_raw(exitcode),
-                read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
-                read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
-                written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
-                mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
+            let mut status = Status {
+                status: std::process::ExitStatus::from_raw(137),
+                read_from_directories: HashSet::new(),
+                read_from_files: HashSet::new(),
+                written_to_files: HashSet::new(),
+                mkdir_directories: HashSet::new(),
                 stdout_fd: if self.can_read_stdout {
                     if let Some(ref fd) = stdoutfd {
                         Some (unsafe { std::fs::File::from_raw_fd(*fd) })
                     } else { None }
                 } else { None },
             };
-            unsafe {
-                libc::free(rd as *mut libc::c_void);
-                libc::free(md as *mut libc::c_void);
-                libc::free(rf as *mut libc::c_void);
-                libc::free(wf as *mut libc::c_void);
-            }
+            status.seccomp_bigbro_process(pid);
             have_completed_two.store(true, std::sync::atomic::Ordering::Relaxed);
             Ok(status)
         }));
