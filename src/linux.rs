@@ -36,26 +36,9 @@ fn cstr(x: &OsStr) -> CString {
 }
 
 mod private {
-    use libc::c_char;
     use libc::c_int;
 
-    #[link(name="bigbro")]
     extern "C" {
-        // fn bigbro(workingdir: *const c_char, child_ptr: *mut c_int,
-        //           stdoutfd: c_int, stderrfd: c_int,
-        //           envp: *const *const c_char,
-        //           commandline: *const *const c_char,
-        //           read_from_directories: *mut *mut *mut c_char,
-        //           mkdir_directories: *mut *mut *mut c_char,
-        //           read_from_files: *mut *mut *mut c_char,
-        //           written_to_files: *mut *mut *mut c_char) -> c_int;
-        pub fn bigbro_before_exec();
-        pub fn bigbro_process(child: c_int,
-                              read_from_directories: *mut *mut *mut c_char,
-                              mkdir_directories: *mut *mut *mut c_char,
-                              read_from_files: *mut *mut *mut c_char,
-                              written_to_files: *mut *mut *mut c_char) -> c_int;
-
         pub fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     }
 }
@@ -888,32 +871,6 @@ fn read_a_string(child: i32, addr: usize) -> std::path::PathBuf {
     std::ffi::OsString::from_vec(val).into()
 }
 
-fn null_c_array_to_pathbuf(a: *const *const c_char) -> std::collections::HashSet<PathBuf> {
-    if a == std::ptr::null() {
-        return vec![].into_iter().collect(); // surely there is a nicer way to get empty set?
-    }
-    let mut count = 0;
-    unsafe {
-        while *a.offset(count as isize) != std::ptr::null() {
-            count += 1;
-        }
-    }
-    let sl = unsafe { std::slice::from_raw_parts(a, count) };
-    let mut v = vec![];
-    for s in sl {
-        let mut strlen = 0;
-        unsafe {
-            while *s.offset(strlen as isize) != 0 {
-                strlen += 1;
-            }
-        }
-        let osstr = std::ffi::OsStr::from_bytes(unsafe {
-            std::slice::from_raw_parts(*s as *const u8, strlen) });
-        v.push(PathBuf::from(osstr));
-    }
-    v.into_iter().collect()
-}
-
 pub struct Command {
     argv: Vec<CString>,
     workingdir: Option<std::path::PathBuf>,
@@ -1207,6 +1164,7 @@ impl Command {
             let mut args_raw: Vec<*const c_char> =
                 self.argv.iter().map(|arg| arg.as_ptr()).collect();
             args_raw.push(std::ptr::null());
+            let ctx = seccomp_context().expect("trouble with seccomp_context");
             let pid = unsafe {
                 let pid = match cvt(libc::fork()) {
                     Ok(pid) => pid,
@@ -1248,7 +1206,7 @@ impl Command {
                     if let Some(fd) = stderrfd {
                         libc::dup2(fd, libc::STDERR_FILENO);
                     }
-                    private::bigbro_before_exec();
+                    seccomp_load(ctx).unwrap();
                     libc::execvp(args_raw[0], args_raw.as_ptr());
                     libc::exit(137)
                 }
@@ -1265,31 +1223,19 @@ impl Command {
             if stderrfd != stdoutfd {
                 self.stderr.close_fd_if_appropriate(stderrfd);
             }
-            let mut rd = std::ptr::null_mut();
-            let mut rf = std::ptr::null_mut();
-            let mut wf = std::ptr::null_mut();
-            let mut md = std::ptr::null_mut();
-            let exitcode = unsafe {
-                private::bigbro_process(pid, &mut rd, &mut md, &mut rf, &mut wf)
-            };
-            let status = Status {
-                status: std::process::ExitStatus::from_raw(exitcode),
-                read_from_directories: null_c_array_to_pathbuf(rd as *const *const i8),
-                read_from_files: null_c_array_to_pathbuf(rf as *const *const i8),
-                written_to_files: null_c_array_to_pathbuf(wf as *const *const i8),
-                mkdir_directories: null_c_array_to_pathbuf(md as *const *const i8),
+            let mut status = Status {
+                status: std::process::ExitStatus::from_raw(137),
+                read_from_directories: HashSet::new(),
+                read_from_files: HashSet::new(),
+                written_to_files: HashSet::new(),
+                mkdir_directories: HashSet::new(),
                 stdout_fd: if self.can_read_stdout {
                     if let Some(ref fd) = stdoutfd {
                         Some (unsafe { std::fs::File::from_raw_fd(*fd) })
                     } else { None }
                 } else { None },
             };
-            unsafe {
-                libc::free(rd as *mut libc::c_void);
-                libc::free(md as *mut libc::c_void);
-                libc::free(rf as *mut libc::c_void);
-                libc::free(wf as *mut libc::c_void);
-            }
+            status.seccomp_bigbro_process(pid);
             status_hook(Ok(::Status { inner: status }));
         });
         match rx.recv() {
