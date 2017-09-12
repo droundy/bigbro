@@ -805,7 +805,7 @@ unsafe fn seccomp_load(ctx: seccomp::Context) -> std::io::Result<()> {
     Ok(())
 }
 
-
+#[cfg(target_arch = "x86_64")]
 fn get_args(child: i32) -> [usize;6] {
     let mut regs: libc::user_regs_struct = unsafe { std::mem::zeroed() };
     if unsafe { libc::ptrace(libc::PTRACE_GETREGS, child, 0, &mut regs) } == -1 {
@@ -830,7 +830,7 @@ fn get_args(child: i32) -> [usize;6] {
         }
     }
 }
-
+#[cfg(target_arch = "x86_64")]
 fn wait_for_return(child: i32) -> i32 {
     let mut status = 0;
     unsafe {
@@ -841,6 +841,35 @@ fn wait_for_return(child: i32) -> i32 {
             println!("error getting registers for {}!\n", child);
         }
         regs.rax as i32
+    }
+}
+
+#[cfg(target_arch = "x86")]
+fn get_args(child: i32) -> [usize;6] {
+    let mut regs: libc::user_regs_struct = unsafe { std::mem::zeroed() };
+    if unsafe { libc::ptrace(libc::PTRACE_GETREGS, child, 0, &mut regs) } == -1 {
+        println!("error getting registers for {}!\n", child);
+        unsafe { std::mem::zeroed() }
+    } else {
+        [regs.ebx as usize,
+         regs.ecx as usize,
+         regs.edx as usize,
+         regs.esi as usize,
+         regs.edi as usize,
+         regs.ebp as usize]
+    }
+}
+#[cfg(target_arch = "x86")]
+fn wait_for_return(child: i32) -> i32 {
+    let mut status = 0;
+    unsafe {
+        libc::ptrace(libc::PTRACE_SYSCALL, child, 0, 0); // ignore return value
+        libc::waitpid(child, &mut status, 0);
+        let mut regs: libc::user_regs_struct = std::mem::zeroed();
+        if libc::ptrace(libc::PTRACE_GETREGS, child, 0, &mut regs) == -1 {
+            println!("error getting registers for {}!\n", child);
+        }
+        regs.eax as i32
     }
 }
 
