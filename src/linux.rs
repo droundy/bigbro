@@ -269,8 +269,8 @@ impl Status {
                             let path = read_a_string(child, args[0]);
                             let path = self.realpath_at(child, libc::AT_FDCWD, path,
                                                         LastSymlink::Followed);
-                            println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
-                                     path, retval);
+                            // println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
+                            //          path, retval);
                             self.written_to_files.insert(path);
                         }
                     },
@@ -291,8 +291,8 @@ impl Status {
                         }
                         let path = self.realpath_at(child, dirfd, path,
                                                     LastSymlink::Followed);
-                        println!("{}({:?},{}) -> {}", SYSCALLS[syscall_num].tostr(),
-                                 path, flag, retval);
+                        // println!("{}({:?},{}) -> {}", SYSCALLS[syscall_num].tostr(),
+                        //          path, flag, retval);
                         if path.is_file() {
                             if retval >= 0 {
                                 if flag & libc::O_WRONLY != 0 || flag & libc::O_RDWR != 0 {
@@ -321,12 +321,12 @@ impl Status {
                             }
                             let path = self.realpath_at(child, dirfd, path,
                                                         LastSymlink::Followed);
-                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     path);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          path);
                             self.mkdir_directories.insert(path);
-                        } else {
-                            println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
-                        }
+                        } // else {
+                            // println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
+                        // }
                     },
                     Syscall::Futimesat | Syscall::Utimensat => {
                         let args = get_args(child);
@@ -349,8 +349,8 @@ impl Status {
                                 }
                             };
                             let path = self.realpath_at(child, dirfd, path, follow);
-                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     path);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          path);
                             self.written_to_files.insert(path);
                         }
                     },
@@ -382,8 +382,8 @@ impl Status {
                             }
                             let to = self.realpath_at(child, tofd, to, follow);
                             let from = self.realpath_at(child, fromfd, from, follow);
-                            println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     &from, &to);
+                            // println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          &from, &to);
                             if !self.written_to_files.contains(&from) {
                                 self.read_from_files.insert(from);
                             }
@@ -413,8 +413,8 @@ impl Status {
                         if retval == 0 {
                             let to = self.realpath_at(child, tofd, to,
                                                       LastSymlink::Returned);
-                            println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     &from, &to);
+                            // println!("{}({:?} -> {:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          &from, &to);
                             if to.is_dir() {
                                 if to != from {
                                     self.mkdir_directories.remove(&from);
@@ -430,11 +430,11 @@ impl Status {
                                     let mut written_to_files: HashSet<_> =
                                         self.written_to_files.drain().map(|d| {
                                             if let Ok(x) = d.strip_prefix(&from) {
-                                                println!("changed {:?} to {:?}",
-                                                         d, to.join(x));
+                                                // println!("changed {:?} to {:?}",
+                                                //          d, to.join(x));
                                                 return to.join(x)
                                             }
-                                            println!("Unaffected: {:?}", d);
+                                            // println!("Unaffected: {:?}", d);
                                             d
                                         }).collect();
 
@@ -487,8 +487,8 @@ impl Status {
                             }
                             let path = self.realpath_at(child, dirfd, path,
                                                         LastSymlink::Returned);
-                            println!("{}({:?} -> ?) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     &path);
+                            // println!("{}({:?} -> ?) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          &path);
                             self.written_to_files.insert(path);
                         }
                     },
@@ -506,7 +506,7 @@ impl Status {
                         let path = self.realpath_at(child, dirfd, path,
                                                     LastSymlink::Followed);
                         if path != std::path::Path::new("") {
-                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(), path);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(), path);
                             if !self.written_to_files.contains(&path) {
                                 self.read_from_files.insert(path);
                             }
@@ -527,14 +527,14 @@ impl Status {
                             }
                             let path = self.realpath_at(child, dirfd, path,
                                                         LastSymlink::Followed);
-                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     path);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          path);
                             self.read_from_files.remove(&path);
                             self.written_to_files.remove(&path);
                             self.mkdir_directories.remove(&path);
-                        } else {
-                            println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
-                        }
+                        }//  else {
+                        //     println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
+                        // }
                     },
                     Syscall::Rmdir => {
                         let args = get_args(child);
@@ -543,8 +543,8 @@ impl Status {
                             let path = read_a_string(child, args[0]);
                             let path = self.realpath_at(child, libc::AT_FDCWD, path,
                                                         LastSymlink::Followed);
-                            println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                                     path);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          path);
                             self.mkdir_directories.remove(&path);
                         }
                     },
@@ -555,19 +555,19 @@ impl Status {
                                                     LastSymlink::Followed);
                         let retval = wait_for_return(child);
                         if retval == 0 {
-                            println!("{}({}) -> {}", SYSCALLS[syscall_num].tostr(),
-                                     dirfd, retval);
+                            // println!("{}({}) -> {}", SYSCALLS[syscall_num].tostr(),
+                            //          dirfd, retval);
                             if !self.mkdir_directories.contains(&path) {
                                 self.read_from_directories.insert(path);
                             }
                         }
                     },
                     Syscall::Chdir => {
-                        let args = get_args(child);
-                        let path = read_a_string(child, args[0]);
-                        let path = self.realpath_at(child, libc::AT_FDCWD, path,
-                                                    LastSymlink::Followed);
-                        println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
+                        // let args = get_args(child);
+                        // let path = read_a_string(child, args[0]);
+                        // let path = self.realpath_at(child, libc::AT_FDCWD, path,
+                        //                             LastSymlink::Followed);
+                        // println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
                     },
                     Syscall::Lstat => {
                         let args = get_args(child);
@@ -575,7 +575,7 @@ impl Status {
                         let path = self.realpath(path, LastSymlink::Returned);
                         if let Ok(md) = path.symlink_metadata() {
                             if md.file_type().is_symlink() || md.file_type().is_file() {
-                                println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
+                                // println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
                                 if !self.written_to_files.contains(&path) {
                                     self.read_from_files.insert(path);
                                 }
@@ -590,9 +590,9 @@ impl Status {
                                                     LastSymlink::Returned);
                         let retval = wait_for_return(child);
                         if retval == 0 {
-                            println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
-                                     path, retval);
-                            println!("readdir path is {:?}", path);
+                            // println!("{}({:?}) -> {}", SYSCALLS[syscall_num].tostr(),
+                            //          path, retval);
+                            // println!("readdir path is {:?}", path);
                             if !self.written_to_files.contains(&path) {
                                 self.read_from_files.insert(path);
                             }
@@ -605,8 +605,8 @@ impl Status {
                                                     path, LastSymlink::Followed);
                         if let Ok(md) = path.metadata() {
                             if md.file_type().is_symlink() || md.file_type().is_file() {
-                                println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
-                                         path);
+                                // println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
+                                //          path);
                                 if !self.written_to_files.contains(&path) {
                                     self.read_from_files.insert(path);
                                 }
@@ -627,10 +627,10 @@ impl Status {
                     true
                 }
             } else if libc::WIFSIGNALED(status) {
-                println!("process {} died of a signal!\n", child);
+                // println!("process {} died of a signal!\n", child);
                 if child == pid {
                     self.status = std::process::ExitStatus::from_raw(-libc::WTERMSIG(status));
-                    println!("child died of signal");
+                    // println!("child died of signal");
                     false
                 } else {
                     true  /* no need to do anything more for this guy */
@@ -672,7 +672,7 @@ impl Status {
                 };
                 true
             } else {
-                println!("Saw someting else?");
+                // println!("Saw someting else?");
                 true
             }
         };
