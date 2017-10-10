@@ -737,6 +737,9 @@ impl Syscall {
             Syscall::Utimensat => vec![seccomp::Syscall::utimensat],
         }
     }
+    /// tostr is used for debugging, so we want to implement it, even
+    /// if we aren't currently using it.
+    #[allow(dead_code)]
     fn tostr(&self) -> &'static str {
         match *self {
             Syscall::CreatOrSimilar => "creat-or-similar",
