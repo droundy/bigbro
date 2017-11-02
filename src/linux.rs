@@ -104,7 +104,7 @@ impl Killer {
         Ok(())
     }
     /// Ask the child process to exit
-    pub fn terminate(&self) -> std::io::Result<()> {
+    pub fn terminate(&mut self) -> std::io::Result<()> {
         let code = unsafe { libc::kill(self.pid, libc::SIGTERM) };
         if code < 0 {
             return Err(io::Error::last_os_error());
