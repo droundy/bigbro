@@ -96,7 +96,7 @@ pub struct Killer {
 
 impl Killer {
     /// Force the child process to exit
-    pub fn kill(&self) -> std::io::Result<()> {
+    pub fn kill(&mut self) -> std::io::Result<()> {
         let code = unsafe { libc::kill(self.pid, libc::SIGKILL) };
         if code < 0 {
             return Err(io::Error::last_os_error());
