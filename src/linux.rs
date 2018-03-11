@@ -2,7 +2,8 @@
 #![cfg_attr(feature = "strict", deny(missing_docs))]
 
 extern crate libc;
-extern crate seccomp;
+extern crate seccomp_droundy;
+use seccomp_droundy as seccomp;
 
 use std;
 use std::ffi::{OsStr, OsString, CString};

@@ -53,7 +53,7 @@ libc = "^0.2"
 cpuprofiler = { version = "^0.0.3", optional = true}
 
 [target.'cfg(target_os = "linux")'.dependencies]
-seccomp = { git = 'https://github.com/droundy/seccomp' }
+seccomp-droundy = "0.1"
 
 [features]
 # Treat warnings as a build error.
