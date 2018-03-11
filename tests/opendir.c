@@ -11,9 +11,7 @@ int main() {
   int subd = openat(tmpd, "subdir1", O_RDONLY | O_DIRECTORY);
   fprintf(stderr, "subd is %d\n", subd);
   openat(subd, "openat", O_WRONLY | O_CREAT | O_EXCL, 0666);
-  struct timespec ts[2] = {{ UTIME_NOW, UTIME_NOW },
-                           { UTIME_NOW, UTIME_NOW }};
-  int retval = utimensat(subd, "foo_symlink", ts, 0);
+  int retval = openat(subd, "foo_symlink", O_WRONLY);
   if (retval < 0) {
     perror("trouble");
   }
