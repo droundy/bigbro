@@ -329,32 +329,32 @@ impl Status {
                             // println!("{}(?) -> {}", SYSCALLS[syscall_num].tostr(), retval);
                         // }
                     },
-                    // Syscall::Futimesat | Syscall::Utimensat => {
-                    //     let args = get_args(child);
-                    //     let retval = wait_for_return(child);
-                    //     // I don't understand why the args[1] != 0
-                    //     // check below is needed.  The function should
-                    //     // not succeed with a null pointer for the
-                    //     // path, but somehow it seems to sometimes do
-                    //     // so.  :(
-                    //     if retval == 0 && args[1] != 0 {
-                    //         let dirfd = args[0] as i32;
-                    //         let path = read_a_string(child, args[1]);
-                    //         let follow = if SYSCALLS[syscall_num] == Syscall::Futimesat {
-                    //             LastSymlink::Followed
-                    //         } else {
-                    //             if args[3] as i32 & libc::AT_SYMLINK_NOFOLLOW != 0 {
-                    //                 LastSymlink::Returned
-                    //             } else {
-                    //                 LastSymlink::Followed
-                    //             }
-                    //         };
-                    //         let path = self.realpath_at(child, dirfd, path, follow);
-                    //         // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
-                    //         //          path);
-                    //         self.written_to_files.insert(path);
-                    //     }
-                    // },
+                    Syscall::Futimesat | Syscall::Utimensat => {
+                        let args = get_args(child);
+                        let retval = wait_for_return(child);
+                        // I don't understand why the args[1] != 0
+                        // check below is needed.  The function should
+                        // not succeed with a null pointer for the
+                        // path, but somehow it seems to sometimes do
+                        // so.  :(
+                        if retval == 0 && args[1] != 0 {
+                            let dirfd = args[0] as i32;
+                            let path = read_a_string(child, args[1]);
+                            let follow = if SYSCALLS[syscall_num] == Syscall::Futimesat {
+                                LastSymlink::Followed
+                            } else {
+                                if args[3] as i32 & libc::AT_SYMLINK_NOFOLLOW != 0 {
+                                    LastSymlink::Returned
+                                } else {
+                                    LastSymlink::Followed
+                                }
+                            };
+                            let path = self.realpath_at(child, dirfd, path, follow);
+                            // println!("{}({:?}) -> 0", SYSCALLS[syscall_num].tostr(),
+                            //          path);
+                            self.written_to_files.insert(path);
+                        }
+                    },
                     Syscall::Link | Syscall::Linkat => {
                         let args = get_args(child);
                         let retval = wait_for_return(child);
@@ -564,13 +564,13 @@ impl Status {
                         }
                     },
                     Syscall::Chdir => {
-                        let args = get_args(child);
-                        let path = read_a_string(child, args[0]);
-                        self.realpath_at(child, libc::AT_FDCWD, path,
-                                         LastSymlink::Followed);
+                        // let args = get_args(child);
+                        // let path = read_a_string(child, args[0]);
+                        // let path = self.realpath_at(child, libc::AT_FDCWD, path,
+                        //                             LastSymlink::Followed);
                         // println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
                     },
-                    Syscall::Readlink => {
+                    Syscall::Lstat => {
                         let args = get_args(child);
                         let path = read_a_string(child, args[0]);
                         let path = self.realpath(path, LastSymlink::Returned);
@@ -599,21 +599,21 @@ impl Status {
                             }
                         }
                     },
-                    // Syscall::Stat => {
-                    //     let args = get_args(child);
-                    //     let path = read_a_string(child, args[0]);
-                    //     let path = self.realpath_at(child, libc::AT_FDCWD,
-                    //                                 path, LastSymlink::Followed);
-                    //     if let Ok(md) = path.metadata() {
-                    //         if md.file_type().is_symlink() || md.file_type().is_file() {
-                    //             // println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
-                    //             //          path);
-                    //             if !self.written_to_files.contains(&path) {
-                    //                 self.read_from_files.insert(path);
-                    //             }
-                    //         }
-                    //     }
-                    // },
+                    Syscall::Stat => {
+                        let args = get_args(child);
+                        let path = read_a_string(child, args[0]);
+                        let path = self.realpath_at(child, libc::AT_FDCWD,
+                                                    path, LastSymlink::Followed);
+                        if let Ok(md) = path.metadata() {
+                            if md.file_type().is_symlink() || md.file_type().is_file() {
+                                // println!("{}({:?})", SYSCALLS[syscall_num].tostr(),
+                                //          path);
+                                if !self.written_to_files.contains(&path) {
+                                    self.read_from_files.insert(path);
+                                }
+                            }
+                        }
+                    },
                 }
                 true
             } else if libc::WIFEXITED(status) {
@@ -697,12 +697,10 @@ enum LastSymlink {
 
 #[derive(Debug,Clone,Copy,Eq,PartialEq)]
 enum Syscall {
-    Open, OpenAt, Getdents, Readlink, Readlinkat, Mkdir, Mkdirat, Rmdir,
-    CreatOrSimilar, Chdir,
-    Unlink, Unlinkat, Link, Linkat, Symlink, Symlinkat,
-    Execve, Execveat,
-    // Futimesat, Utimensat, Stat,
-    Rename, Renameat,
+    Open, OpenAt, Getdents, Lstat, Stat, Readlinkat, Mkdir, Mkdirat, Rmdir,
+    CreatOrSimilar,
+    Unlink, Unlinkat, Chdir, Link, Linkat, Symlink, Symlinkat,
+    Execve, Execveat, Futimesat, Utimensat, Rename, Renameat,
 }
 impl Syscall {
     fn seccomp(&self) -> Vec<seccomp::Syscall> {
@@ -715,11 +713,11 @@ impl Syscall {
             Syscall::OpenAt => vec![seccomp::Syscall::openat],
             Syscall::Getdents => vec![seccomp::Syscall::getdents,
                                       seccomp::Syscall::getdents64],
-            Syscall::Readlink => vec![// seccomp::Syscall::lstat,
-                                   // seccomp::Syscall::lstat64,
+            Syscall::Lstat => vec![seccomp::Syscall::lstat,
+                                   seccomp::Syscall::lstat64,
                                    seccomp::Syscall::readlink,],
-            // Syscall::Stat => vec![seccomp::Syscall::stat,
-            //                       seccomp::Syscall::stat64],
+            Syscall::Stat => vec![seccomp::Syscall::stat,
+                                  seccomp::Syscall::stat64],
             Syscall::Readlinkat => vec![seccomp::Syscall::readlinkat],
             Syscall::Mkdir => vec![seccomp::Syscall::mkdir],
             Syscall::Mkdirat => vec![seccomp::Syscall::mkdirat],
@@ -736,8 +734,8 @@ impl Syscall {
             Syscall::Execve => vec![seccomp::Syscall::execve],
             Syscall::Execveat => vec![seccomp::Syscall::execveat],
             Syscall::Chdir => vec![seccomp::Syscall::chdir],
-            // Syscall::Futimesat => vec![seccomp::Syscall::futimesat],
-            // Syscall::Utimensat => vec![seccomp::Syscall::utimensat],
+            Syscall::Futimesat => vec![seccomp::Syscall::futimesat],
+            Syscall::Utimensat => vec![seccomp::Syscall::utimensat],
         }
     }
     /// tostr is used for debugging, so we want to implement it, even
@@ -749,9 +747,8 @@ impl Syscall {
             Syscall::Open => "open",
             Syscall::OpenAt => "openat",
             Syscall::Getdents => "getdents",
-            // Syscall::Lstat => "lstat/readlink",
-            Syscall::Readlink => "readlink",
-            // Syscall::Stat => "stat",
+            Syscall::Lstat => "lstat/readlink",
+            Syscall::Stat => "stat",
             Syscall::Readlinkat => "readlinkat",
             Syscall::Mkdir => "mkdir",
             Syscall::Mkdirat => "mkdirat",
@@ -767,19 +764,18 @@ impl Syscall {
             Syscall::Execve => "execve",
             Syscall::Execveat => "execveat",
             Syscall::Chdir => "chdir",
-            // Syscall::Futimesat => "futimesat",
-            // Syscall::Utimensat => "utimensat",
+            Syscall::Futimesat => "futimesat",
+            Syscall::Utimensat => "utimensat",
         }
     }
 }
 
 const SYSCALLS: &[Syscall] = &[
-    Syscall::Open, Syscall::OpenAt, Syscall::Getdents, Syscall::Readlink,
+    Syscall::Open, Syscall::OpenAt, Syscall::Getdents, Syscall::Lstat, Syscall::Stat,
     Syscall::Readlinkat, Syscall::Mkdir, Syscall::Mkdirat, Syscall::Rmdir,
-    Syscall::Unlink, Syscall::Unlinkat, Syscall::Link, Syscall::Linkat,
+    Syscall::Unlink, Syscall::Unlinkat, Syscall::Chdir, Syscall::Link, Syscall::Linkat,
     Syscall::Symlink, Syscall::Symlinkat, Syscall::Execve, Syscall::Execveat,
-    // Syscall::Futimesat, Syscall::Utimensat, Syscall::Stat,
-    Syscall::Rename, Syscall::Renameat, Syscall::Chdir,
+    Syscall::Futimesat, Syscall::Utimensat, Syscall::Rename, Syscall::Renameat,
     Syscall::CreatOrSimilar,
 ];
 
