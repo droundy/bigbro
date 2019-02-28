@@ -564,10 +564,10 @@ impl Status {
                         }
                     },
                     Syscall::Chdir => {
-                        // let args = get_args(child);
-                        // let path = read_a_string(child, args[0]);
-                        // let path = self.realpath_at(child, libc::AT_FDCWD, path,
-                        //                             LastSymlink::Followed);
+                        let args = get_args(child);
+                        let path = read_a_string(child, args[0]);
+                        self.realpath_at(child, libc::AT_FDCWD, path,
+                                         LastSymlink::Followed);
                         // println!("{}({:?})", SYSCALLS[syscall_num].tostr(), path);
                     },
                     Syscall::Lstat => {

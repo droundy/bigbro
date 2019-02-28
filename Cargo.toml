@@ -1,13 +1,12 @@
 [package]
 name = "bigbro"
-version = "0.3.17"
+version = "0.5.0"
 authors = ["David Roundy <daveroundy@gmail.com>"]
 
 description = "Library for tracking file accesses of processes"
 license = "GPL-2.0+"
 repository = "https://github.com/droundy/bigbro"
 homepage = "https://facio.gitlab.io/bigbro"
-documentation = "http://facio.gitlab.io/bigbro/doc/bigbro/index.html"
 
 [badges]
 gitlab = { repository = "facio/bigbro", branch = "master" }
