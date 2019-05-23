@@ -10,4 +10,11 @@ jobs:
        - run: cargo build --features strict
        - run: cargo build --release --features strict
        - run: cargo test --features strict
+   windows:
+     docker:
+       - image: circleci/rust:latest
+     steps:
+       - checkout
+       - run: rustup target add x86_64-pc-windows-gnu
        - run: cargo build --features strict --target x86_64-pc-windows-gnu
+       - run: cargo test --features strict --target x86_64-pc-windows-gnu
