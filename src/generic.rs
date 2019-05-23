@@ -251,8 +251,8 @@ impl Command {
                                envs_removed: std::collections::HashSet<OsString>,
                                envs_set: std::collections::HashMap<OsString,OsString>,
                                status_hook: F,)
-                               -> io::Result<::Killer>
-        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+                               -> io::Result<crate::Killer>
+        where F: FnOnce(std::io::Result<crate::Status>) + Send + 'static
     {
         self.spawn_hook(envs_cleared, envs_removed, envs_set, status_hook)
     }
@@ -260,8 +260,8 @@ impl Command {
                          envs_removed: std::collections::HashSet<OsString>,
                          envs_set: std::collections::HashMap<OsString,OsString>,
                          status_hook: F,)
-                         -> io::Result<::Killer>
-        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+                         -> io::Result<crate::Killer>
+        where F: FnOnce(std::io::Result<crate::Status>) + Send + 'static
     {
         if envs_cleared {
             self.cmd.env_clear();
@@ -279,9 +279,9 @@ impl Command {
             log_stdouterr: self.log_stdouterr.clone(),
         };
         std::thread::spawn(move || {
-            status_hook(myc.wait().map(|c| ::Status { inner: c }));
+            status_hook(myc.wait().map(|c| crate::Status { inner: c }));
         });
-        Ok(::Killer { inner: Killer {}})
+        Ok(crate::Killer { inner: Killer {}})
     }
 }
 
