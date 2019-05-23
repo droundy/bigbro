@@ -18,3 +18,9 @@ jobs:
        - run: rustup target add x86_64-pc-windows-gnu
        - run: cargo build --features strict --target x86_64-pc-windows-gnu
        - run: cargo test --features strict --target x86_64-pc-windows-gnu
+workflows:
+  version: 2
+  everything:
+    jobs:
+      - one
+      - two
