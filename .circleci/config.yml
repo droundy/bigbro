@@ -7,6 +7,7 @@ jobs:
        - image: circleci/rust:latest
      steps:
        - checkout
-       - run: cargo build
-       - run: cargo build --release
-       - run: cargo test
+       - run: cargo build --features strict
+       - run: cargo build --release --features strict
+       - run: cargo test --features strict
+       - run: cargo build --features strict --target x86_64-pc-windows-gnu
