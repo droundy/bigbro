@@ -541,6 +541,7 @@ impl Status {
     ///    println!("read file {:#?}", f);
     /// }
     /// if bigbro::TRACKS_CHANGES {
+    ///   println!("The above list should have {:?}", p);
     ///   assert!(status.read_from_files().contains(&p) );
     /// }
     pub fn read_from_files(&self) -> std::collections::HashSet<PathBuf> {
