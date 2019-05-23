@@ -1,10 +1,7 @@
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/w0uttk4ayga2f45w?svg=true)](https://ci.appveyor.com/project/droundy/bigbro)
-[![build status](https://gitlab.com/facio/bigbro/badges/master/build.svg)](https://gitlab.com/facio/bigbro/commits/master)
-[![build status](https://semaphoreci.com/api/v1/droundy/bigbro/branches/master/shields_badge.svg)](https://semaphoreci.com/droundy/bigbro)
 [![Build Status](https://travis-ci.org/droundy/bigbro.svg?branch=master)](https://travis-ci.org/droundy/bigbro)
 
 [![Coverage Status](https://coveralls.io/repos/droundy/bigbro/badge.svg?branch=master&service=github)](https://coveralls.io/github/droundy/bigbro?branch=master)
-[![coverage report](https://gitlab.com/facio/bigbro/badges/master/coverage.svg)](coverage.html)
 [![codecov](https://codecov.io/gl/facio/bigbro/branch/master/graph/badge.svg)](https://codecov.io/gl/facio/bigbro)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/203/badge)](https://bestpractices.coreinfrastructure.org/projects/203)
 
