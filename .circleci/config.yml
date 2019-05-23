@@ -2,7 +2,7 @@
 version: 2.1
 
 jobs:
-   build:
+   linux:
      docker:
        - image: circleci/rust:latest
      steps:
@@ -22,5 +22,5 @@ workflows:
   version: 2
   everything:
     jobs:
-      - one
-      - two
+      - linux
+      - windows
