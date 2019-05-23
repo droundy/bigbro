@@ -29,12 +29,12 @@ mod linux;
 mod generic;
 
 #[cfg(target_os = "linux")]
-use linux as imp;
+use crate::linux as imp;
 
 #[cfg(not(target_os = "linux"))]
 use generic as imp;
 
-pub use imp::{Stdio};
+pub use crate::imp::{Stdio};
 
 use std::ffi::{OsString, OsStr};
 use std::path::PathBuf;

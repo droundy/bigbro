@@ -1184,8 +1184,8 @@ impl Command {
                          envs_removed: std::collections::HashSet<OsString>,
                          envs_set: std::collections::HashMap<OsString,OsString>,
                          status_hook: F,)
-                         -> io::Result<::Killer>
-        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+                         -> io::Result<crate::Killer>
+        where F: FnOnce(std::io::Result<crate::Status>) + Send + 'static
     {
         self.assert_no_error()?;
 
@@ -1269,10 +1269,10 @@ impl Command {
                 } else { None },
             };
             status.seccomp_bigbro_process(pid);
-            status_hook(Ok(::Status { inner: status }));
+            status_hook(Ok(crate::Status { inner: status }));
         });
         match rx.recv() {
-            Ok(pid) => Ok(::Killer { inner: Killer { pid: pid }}),
+            Ok(pid) => Ok(crate::Killer { inner: Killer { pid: pid }}),
             Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other,e)),
         }
     }
@@ -1282,8 +1282,8 @@ impl Command {
                                envs_removed: std::collections::HashSet<OsString>,
                                envs_set: std::collections::HashMap<OsString,OsString>,
                                status_hook: F,)
-                               -> io::Result<::Killer>
-        where F: FnOnce(std::io::Result<::Status>) + Send + 'static
+                               -> io::Result<crate::Killer>
+        where F: FnOnce(std::io::Result<crate::Status>) + Send + 'static
     {
         self.assert_no_error()?;
 
@@ -1364,9 +1364,9 @@ impl Command {
                     } else { None }
                 } else { None },
             };
-            status_hook(Ok(::Status { inner: status }));
+            status_hook(Ok(crate::Status { inner: status }));
         });
-        Ok(::Killer { inner: Killer { pid: pid, }})
+        Ok(crate::Killer { inner: Killer { pid: pid, }})
     }
 
     /// Run the Command blind, wait for it to complete, and return its results.
