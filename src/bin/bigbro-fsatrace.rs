@@ -7,8 +7,24 @@ use std::io::Write;
 
 pub fn main() {
     let mut args = std::env::args();
-    args.next(); // throw away argv[0]
-    let _flags = args.next().unwrap();
+    let my_name = args.next(); // throw away argv[0]
+    let flags = args.next().unwrap();
+    if flags == "-h" || flags == "--help" {
+        println!("Usage: {} IGNORED OUTPUT-FILENAME -- ./the-program --and --its --args
+
+You can put anything you want in the IGNORED spot.  The OUTPUT-FILENAME is where
+you put the name of the file you want created.
+
+The output looks like:
+
+r|/file/path/that/was/read/or/had/stat/called
+w|/file/path/that/was/created/or/written/to
+l|/directory/path/that/was/readdired
+d|/directory/path/that/was/created
+",
+                 my_name);
+        return;
+    }
     let output_file = args.next().unwrap();
     assert_eq!(Some("--".to_string()), args.next());
     let mut cmd = bigbro::Command::new(args.next().unwrap());
