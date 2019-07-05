@@ -7,7 +7,7 @@ use std::io::Write;
 
 pub fn main() {
     let mut args = std::env::args();
-    let my_name = args.next(); // throw away argv[0]
+    let my_name = args.next().unwrap(); // throw away argv[0]
     let flags = args.next().unwrap();
     if flags == "-h" || flags == "--help" {
         println!("Usage: {} IGNORED OUTPUT-FILENAME -- ./the-program --and --its --args
