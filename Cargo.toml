@@ -1,6 +1,6 @@
 [package]
 name = "bigbro"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["David Roundy <daveroundy@gmail.com>"]
 
 edition = "2018"
