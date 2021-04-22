@@ -141,7 +141,7 @@ impl Status {
         self.mkdir_directories.clone()
     }
 
-    pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
+    pub fn stdout(&mut self) -> std::io::Result<Option<Box<dyn std::io::Read>>> {
         if let Some(mut f) = self.stdout_fd.take() {
             f.seek(std::io::SeekFrom::Start(0))?;
             return Ok(Some(Box::new(f)));

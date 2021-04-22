@@ -619,7 +619,7 @@ impl Status {
     /// println!("ls gives: {}", contents);
     /// assert!(contents.contains("Cargo.toml"));
     /// assert!(contents.contains("src"));
-    pub fn stdout(&mut self) -> std::io::Result<Option<Box<std::io::Read>>> {
+    pub fn stdout(&mut self) -> std::io::Result<Option<Box<dyn std::io::Read>>> {
         self.inner.stdout()
     }
 }
